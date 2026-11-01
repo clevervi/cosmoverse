@@ -16,6 +16,7 @@ from cosmoverse.validation.benchmarks import (
 )
 from cosmoverse.validation.coverage import EmpiricalCoverage
 from cosmoverse.validation.misspecification import ScaleDependentMisspecification
+from cosmoverse.validation.reporting import ScientificBenchmarkReporter
 from cosmoverse.validation.sbc import SimulationBasedCalibration
 from cosmoverse.validation.tarp import TARPCalibration
 from cosmoverse.validation.transfer import (
@@ -30,6 +31,7 @@ __all__ = [
     "ScaleDependentMisspecification",
     "DatasetPartitionProtocol",
     "CrossSimulationTransferEvaluator",
+    "ScientificBenchmarkReporter",
     "generate_latin_hypercube_samples",
     "camels_latin_hypercube_benchmark",
     "camels_gen2_catalog_metadata",
