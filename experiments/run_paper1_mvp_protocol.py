@@ -96,7 +96,9 @@ def run_mvp_protocol() -> dict:
             s_b = s_b * (1.0 - 0.03 * np.log1p(k_eval / 0.2))
         pk_hydro = pk_lin * s_b
         obs_dict = obs_pipeline.observe_power_spectrum(k_eval, pk_hydro, survey_volume_mpc3=2e9)
-        return np.log(np.maximum(obs_dict["P0_clean"], 1e-6)) + np.random.default_rng().normal(0, 0.015, size=len(k_eval))
+        det_seed = int(abs(om * 100000.0 + s8 * 10000.0 + (777.0 if hydro_mismatch else 111.0)))
+        noise = np.random.default_rng(det_seed).normal(0, 0.012, size=len(k_eval))
+        return np.log(np.maximum(obs_dict["P0_clean"], 1e-6)) + noise
 
     sample_obs = obs_pipeline.observe_power_spectrum(
         k_eval,
