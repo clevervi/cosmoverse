@@ -45,6 +45,10 @@ class PMEmulatorSBIPipeline:
         rsd_noise_floor_fraction: float = 0.01,
         n_training_simulations: int = 400,
         covariance_inflation: float = 1.5,
+        density_estimator: str = "regression",
+        flow_epochs: int = 800,
+        flow_scale_bound: float = 5.0,
+        flow_n_layers: int = 6,
         seed: int = 42,
     ) -> None:
         self.param_bounds = param_bounds or {
@@ -93,6 +97,8 @@ class PMEmulatorSBIPipeline:
         self.n_training_simulations = int(n_training_simulations)
         self.seed = int(seed)
         self.rng = np.random.default_rng(seed)
+        self.density_estimator = density_estimator
+        self.flow_n_layers = int(flow_n_layers)
 
         self.sbi = SBIEngine(
             simulator_fn=self.forward_model,
@@ -100,6 +106,10 @@ class PMEmulatorSBIPipeline:
             seed=seed,
             feature_mode="quadratic",
             covariance_inflation=covariance_inflation,
+            density_estimator=density_estimator,
+            flow_epochs=flow_epochs,
+            flow_scale_bound=flow_scale_bound,
+            flow_n_layers=flow_n_layers,
         )
         self.is_fitted = False
 
@@ -192,7 +202,8 @@ class PMEmulatorSBIPipeline:
             else int(n_simulations)
         )
         self.sbi.generate_training_bank(n_simulations=n_sims, verbose=verbose)
-        self.sbi.fit_density_estimator(n_layers=3)
+        n_layers = self.flow_n_layers if self.density_estimator == "flow" else 3
+        self.sbi.fit_density_estimator(n_layers=n_layers)
         self.is_fitted = True
         return self
 
