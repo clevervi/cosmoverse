@@ -9,7 +9,7 @@ Copyright (c) 2026 clevervi (adriandariov@gmail.com)
 Licensed under the MIT License.
 """
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __author__ = "clevervi (Adrian Dario V.)"
 __email__ = "adriandariov@gmail.com"
 
