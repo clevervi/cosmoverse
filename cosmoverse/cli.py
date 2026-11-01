@@ -27,6 +27,10 @@ from cosmoverse.datasets.remote import CAMELSArchiveFetcher, CheckpointManager
 from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
+from cosmoverse.observations.hod_and_mocks import (
+    HaloOccupationModel,
+    StageIVMockCatalogExporter,
+)
 from cosmoverse.observations.three_x_two_pt import Joint3x2ptObservationalPipeline
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
 from cosmoverse.validation.arxiv_packager import ArxivSubmissionPackager
@@ -347,8 +351,27 @@ def cmd_neutrinos_hmf() -> None:
     console.print(table)
 
 
+def cmd_hod_mocks(args: argparse.Namespace) -> None:
+    """Evaluates HOD + Secondary Assembly Bias P_gm(k) and exports a Stage-IV synthetic mock catalog."""
+    hod = HaloOccupationModel()
+    ab_res = hod.evaluate_assembly_bias_marginalization()
+    manifest = StageIVMockCatalogExporter.export_mock_catalog(
+        out_dir=args.out_dir, n_galaxies=args.n_galaxies, seed=42
+    )
+    table = Table(title="Level 2: HOD + Secondary Assembly Bias P_gm(k) & Stage-IV Mock Catalog")
+    table.add_column("Diagnostic / Artifact", style="cyan")
+    table.add_column("Measured Value / Path", justify="right", style="green")
+    table.add_row("Effective Galaxy Bias b_eff (with Assembly Bias)", f"{ab_res['b_eff_with_assembly_bias']:.4f}")
+    table.add_row("Satellite Galaxy Fraction f_sat", f"{ab_res['satellite_fraction']*100:.2f}%")
+    table.add_row("Mean Cross-Correlation r_gm(k <= 1 h/Mpc)", f"{ab_res['mean_r_gm_k_le_1']:.4f}")
+    table.add_row("Unmarginalized vs Marginalized S8 Bias", f"{ab_res['unmarginalized_s8_bias_sigma']:.2f} -> {ab_res['marginalized_s8_bias_sigma']:.2f} sigma")
+    table.add_row("Mock Catalog NPZ (SHA-256 Verified)", f"{manifest['npz_file']} ({str(manifest['sha256_npz'])[:12]}...)")
+    table.add_row("Mock Catalog CSV", f"{manifest['csv_file']} ({manifest['n_galaxies']} galaxies)")
+    console.print(table)
+
+
 def cmd_doctor() -> None:
-    """Runs the 10-point Master Document scientific & methodological verification suite."""
+    """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
     frontier_res = BiasVarianceFrontier().compute_frontier_curve(
         k_max_values=[0.5, 1.0], marginalization_weights=[0.0, 1.0]
@@ -359,6 +382,7 @@ def cmd_doctor() -> None:
     joint_ok = Joint3x2ptObservationalPipeline().evaluate_probe_degeneracy_breaking()[
         "passes_joint_degeneracy_breaking_gate"
     ]
+    hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     mangrove_ok = MangroveMergerTreeGNN(
         allow_post_v1_extension=True, seed=42
     ).benchmark_merger_tree_vs_halo_mlp(n_trees=20, seed=42)["passes_2x_improvement_benchmark"]
@@ -368,6 +392,7 @@ def cmd_doctor() -> None:
         ("Level 1: TUNeS Emulator & Halo Mass Function Gate (<1% MAPE)", hmf_ok),
         ("Level 1: BCEmu3 Baryonic Bias-Variance Frontier (<0.30 sigma_S4)", frontier_ok),
         ("Level 2: RSD (P0,P2,P4) + Joint 3x2pt Degeneracy Breaking", joint_ok),
+        ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Level 3: Simulation Budget Scaling Law (N_min=8 TUNeS, N_min=16 Stage-IV)", budget_ok),
         ("Stage 5 & Post-v1: Preconditioned MCLMC + Mangrove Merger-Tree GNN (>=2x)", mangrove_ok),
         ("Publications: Paper 1, Paper 2 & JOSS BibTeX/Cross-Ref Integrity", arxiv_ok),
@@ -494,8 +519,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     # Massive neutrinos & Halo Mass Function
     subparsers.add_parser("neutrinos-hmf", help="Evaluate Massive Neutrinos S_nu(k) and Halo Mass Function dn/dlnM")
 
+    # HOD + Secondary Assembly Bias + Stage-IV Mock Catalog exporter
+    hm_parser = subparsers.add_parser("hod-mocks", help="Evaluate HOD P_gm(k) assembly bias and export Stage-IV mock catalog")
+    hm_parser.add_argument("--out-dir", type=str, default="dist/mocks", help="Output directory for synthetic mock catalogs")
+    hm_parser.add_argument("--n-galaxies", type=int, default=200, help="Number of synthetic galaxies to export")
+
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 6-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 7-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -533,6 +563,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_fetch_camels(args)
     elif args.command == "neutrinos-hmf":
         cmd_neutrinos_hmf()
+    elif args.command == "hod-mocks":
+        cmd_hod_mocks(args)
     elif args.command == "doctor":
         cmd_doctor()
     else:

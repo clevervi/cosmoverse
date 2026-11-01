@@ -161,7 +161,10 @@ uv run cosmoverse fetch-camels --cache-dir dist/camels_cache
 # Evaluate Massive Neutrinos (sum m_nu) & Result 1 Tinker (2008) Halo Mass Function dn/dlnM
 uv run cosmoverse neutrinos-hmf
 
-# Run Master 10-Gate End-to-End Scientific System Doctor
+# Evaluate HOD + Secondary Assembly Bias P_gm(k) & export Stage-IV synthetic galaxy/shear catalog
+uv run cosmoverse hod-mocks --out-dir dist/mocks --n-galaxies 250
+
+# Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor
 ```
 
