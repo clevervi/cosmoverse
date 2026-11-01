@@ -13,6 +13,7 @@ from cosmoverse.observations.noise import (
 )
 from cosmoverse.observations.selection import SelectionFunction
 from cosmoverse.observations.survey import SurveySpecification
+from cosmoverse.observations.three_x_two_pt import Joint3x2ptObservationalPipeline
 
 __all__ = [
     "SurveySpecification",
@@ -22,4 +23,5 @@ __all__ = [
     "GalaxyBiasModel",
     "RedshiftSpaceDistortionModel",
     "ObservationalForwardPipeline",
+    "Joint3x2ptObservationalPipeline",
 ]
