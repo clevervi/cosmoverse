@@ -4,6 +4,10 @@ Core cosmological parameters, physics models, and configuration.
 
 from cosmoverse.core.configuration import CosmoverseConfig
 from cosmoverse.core.cosmology import C_KM_S, Cosmology
+from cosmoverse.core.halos_and_neutrinos import (
+    HaloMassFunctionModel,
+    MassiveNeutrinoPhysics,
+)
 from cosmoverse.core.parameters import (
     BaryonParameters,
     CosmologicalParameters,
@@ -19,4 +23,6 @@ __all__ = [
     "Cosmology",
     "C_KM_S",
     "CosmoverseConfig",
+    "MassiveNeutrinoPhysics",
+    "HaloMassFunctionModel",
 ]

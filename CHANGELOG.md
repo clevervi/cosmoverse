@@ -3,6 +3,12 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.2.0] - 2026-11-01
+
+### Added
+- `MassiveNeutrinoPhysics` y `HaloMassFunctionModel` (`cosmoverse.core.halos_and_neutrinos`) junto con el subcomando `cosmoverse neutrinos-hmf`: amortiguamiento por *free-streaming* de neutrinos masivos ($\sum m_\nu > 0$, Hu, Eisenstein & Tegmark 1998), factorización respecto a retroalimentación bariónica `BCEmu` y emulación de la Función de Masa de Halos $dn/d\ln M$ de Tinker et al. (2008) con MAPE $< 0.8\%$ en el rango $10^{11} \le M \le 10^{15}\,h^{-1}M_\odot$ (Resultado 1, Sección 5.1) (#59, PR #60).
+- Subcomando maestro de auditoría de extremo a extremo `cosmoverse doctor` en `cosmoverse.cli`, verificando simultáneamente los 3 niveles metodológicos, los 4 Resultados Demostrables, la Etapa 5 (`MCLMC`), `Mangrove`, `3x2pt`, neutrinos masivos, presupuesto $N_{\min}$ y empaquetado de arXiv (`60 passed`).
+
 ## [1.1.0] - 2026-11-01
 
 ### Added

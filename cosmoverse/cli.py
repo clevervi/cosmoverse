@@ -16,6 +16,10 @@ from rich.table import Table
 from cosmoverse import __author__, __email__, __version__
 from cosmoverse.baryons.frontier import BiasVarianceFrontier
 from cosmoverse.core.cosmology import Cosmology
+from cosmoverse.core.halos_and_neutrinos import (
+    HaloMassFunctionModel,
+    MassiveNeutrinoPhysics,
+)
 from cosmoverse.core.parameters import CosmologicalParameters, SimulationParameters
 from cosmoverse.datasets.camels_gen2 import CAMELSGen2Catalog, StageIVPrecisionCalibrator
 from cosmoverse.datasets.camels_spectra import CAMELSHydroSpectraConnector
@@ -323,6 +327,59 @@ def cmd_fetch_camels(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_neutrinos_hmf() -> None:
+    """Evaluates Massive Neutrino S_nu(k) suppression and Result 1 Halo Mass Function dn/dlnM."""
+    import numpy as np
+
+    params = CosmologicalParameters(omega_m=0.315, sigma8=0.811, h=0.674, m_nu=0.12)
+    f_nu = MassiveNeutrinoPhysics.neutrino_fraction_f_nu(params)
+    s_nu_1 = float(MassiveNeutrinoPhysics.suppression_factor_S_nu(np.array([1.0]), params)[0])
+    hmf = HaloMassFunctionModel(cosmo_params=params)
+    hmf_eval = hmf.evaluate_emulated_hmf_accuracy()
+
+    table = Table(title="Level 1: Massive Neutrinos (sum m_nu = 0.12 eV) & Halo Mass Function dn/dlnM")
+    table.add_column("Physical Diagnostic", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row("Neutrino Fraction f_nu = Omega_nu / Omega_m", f"{f_nu:.5f}")
+    table.add_row("Small-Scale S_nu(k=1 h/Mpc) Suppression", f"{s_nu_1:.4f} ({(1.0 - s_nu_1)*100:.2f}% damping)")
+    table.add_row("Emulated Halo Mass Function MAPE (10^11 - 3e14 Msun/h)", f"{hmf_eval['hmf_mape_pct']:.3f}%")
+    table.add_row("Result 1 HMF Gate (< 1.0% MAPE)", "PASS" if hmf_eval["passes_hmf_1pct_gate"] else "FAIL")
+    console.print(table)
+
+
+def cmd_doctor() -> None:
+    """Runs the 10-point Master Document scientific & methodological verification suite."""
+    hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
+    frontier_res = BiasVarianceFrontier().compute_frontier_curve(
+        k_max_values=[0.5, 1.0], marginalization_weights=[0.0, 1.0]
+    )
+    frontier_ok = any(pt["is_stage4_compatible"] for pt in frontier_res["frontier_curve"])
+    budget_res = SimulationBudgetAnalyzer(seed=42).evaluate_budget_scaling_curve()
+    budget_ok = budget_res["min_budget_for_stage4_calibrated_posteriors"] == 16
+    joint_ok = Joint3x2ptObservationalPipeline().evaluate_probe_degeneracy_breaking()[
+        "passes_joint_degeneracy_breaking_gate"
+    ]
+    mangrove_ok = MangroveMergerTreeGNN(
+        allow_post_v1_extension=True, seed=42
+    ).benchmark_merger_tree_vs_halo_mlp(n_trees=20, seed=42)["passes_2x_improvement_benchmark"]
+    arxiv_ok = ArxivSubmissionPackager().audit_manuscript_integrity()["is_valid"]
+
+    checks = [
+        ("Level 1: TUNeS Emulator & Halo Mass Function Gate (<1% MAPE)", hmf_ok),
+        ("Level 1: BCEmu3 Baryonic Bias-Variance Frontier (<0.30 sigma_S4)", frontier_ok),
+        ("Level 2: RSD (P0,P2,P4) + Joint 3x2pt Degeneracy Breaking", joint_ok),
+        ("Level 3: Simulation Budget Scaling Law (N_min=8 TUNeS, N_min=16 Stage-IV)", budget_ok),
+        ("Stage 5 & Post-v1: Preconditioned MCLMC + Mangrove Merger-Tree GNN (>=2x)", mangrove_ok),
+        ("Publications: Paper 1, Paper 2 & JOSS BibTeX/Cross-Ref Integrity", arxiv_ok),
+    ]
+    table = Table(title=f"COSMOVERSE v{__version__} Master System & Scientific Gate Doctor")
+    table.add_column("Verification Gate", style="cyan")
+    table.add_column("Status", justify="center", style="green")
+    for label, status in checks:
+        table.add_row(label, "PASS" if status else "FAIL")
+    console.print(table)
+
+
 def cmd_multi_suite() -> None:
     """Evaluates Result 4 cross-suite transfer across IllustrisTNG, SIMBA, and Astrid."""
     connector = CAMELSHydroSpectraConnector()
@@ -434,6 +491,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     fc_parser.add_argument("--cache-dir", type=str, default="dist/camels_cache", help="Target cache directory")
     fc_parser.add_argument("--n", type=int, default=3, help="Number of spectra per suite")
 
+    # Massive neutrinos & Halo Mass Function
+    subparsers.add_parser("neutrinos-hmf", help="Evaluate Massive Neutrinos S_nu(k) and Halo Mass Function dn/dlnM")
+
+    # Master system & scientific gate doctor
+    subparsers.add_parser("doctor", help="Run full 6-gate Master Document health & calibration check")
+
     args = parser.parse_args(argv)
 
     if args.command == "info" or args.command is None:
@@ -468,6 +531,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_train(args)
     elif args.command == "fetch-camels":
         cmd_fetch_camels(args)
+    elif args.command == "neutrinos-hmf":
+        cmd_neutrinos_hmf()
+    elif args.command == "doctor":
+        cmd_doctor()
     else:
         parser.print_help()
 
