@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cosmoverse"
-version = "1.6.0"
+version = "1.7.0"
 description = "Cosmological Modeling and Inference Engine - An Open Framework for Computational Cosmology"
 readme = "README.md"
 authors = [

@@ -3,6 +3,12 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.7.0] - 2026-11-01
+
+### Added
+- `LightConeGeometry` y `RelativisticLightConePipeline` (`cosmoverse.observations.light_cone`) para el Nivel 2: geometría del cono de luz ($dV/(dz\,d\Omega)$, tiempo de mirada y shells tomográficos), bias de magnificación por lentes $(5s-2)\kappa$ en los espectros angulares de galaxias y mapeo RSD wide-angle a lo largo de la dirección radial local, reduciendo el sesgo en $S_8$ de $3.88\,\sigma$ a $0.19\,\sigma$ al marginalizar la pendiente de magnificación $s$ (#74, PR #75).
+- Subcomando `cosmoverse light-cone`, undécima compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_light_cone.py` (`73 passed`).
+
 ## [1.6.0] - 2026-11-01
 
 ### Added
