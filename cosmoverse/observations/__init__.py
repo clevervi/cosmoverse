@@ -12,6 +12,10 @@ from cosmoverse.observations.hod_and_mocks import (
     HODAssemblyBiasParameters,
     StageIVMockCatalogExporter,
 )
+from cosmoverse.observations.intrinsic_alignments import (
+    IntrinsicAlignmentModel,
+    IntrinsicAlignmentParameters,
+)
 from cosmoverse.observations.noise import (
     compute_gaussian_covariance_diagonal,
     inject_observational_noise,
@@ -32,4 +36,6 @@ __all__ = [
     "HODAssemblyBiasParameters",
     "HaloOccupationModel",
     "StageIVMockCatalogExporter",
+    "IntrinsicAlignmentParameters",
+    "IntrinsicAlignmentModel",
 ]
