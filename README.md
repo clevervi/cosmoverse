@@ -66,6 +66,14 @@
    - Enforces a strict **Leakage-Free Data Partition Protocol** by disjoint `(ic_seed, cosmo_id, family_id)` (forbidding naive random 80/20 splits).
    - Quantifies coverage and bias degradation when transferring from Family A (e.g. `CAMELS-DMO + BCEmu`) to Family B (e.g. `CAMELS-IllustrisTNG`).
 
+<div align="center">
+  <img src="docs/figures/fig1_result1_emulator.svg" width="48%" alt="Result 1: TUNeS Emulator Precision" />
+  <img src="docs/figures/fig2_result2_frontier.svg" width="48%" alt="Result 2: Bias-Variance Frontier" />
+  <br/>
+  <img src="docs/figures/fig3_result3_calibration.svg" width="48%" alt="Result 3: SBI TARP/SBC Calibration" />
+  <img src="docs/figures/fig4_result4_transfer.svg" width="48%" alt="Result 4: Cross-Simulation Family Transfer" />
+</div>
+
 ---
 
 ## 4. Roadmap by Stages & Publishable MVP
@@ -91,16 +99,20 @@ cd cosmoverse
 uv pip install -e ".[all]"
 ```
 
-### Run the Full Paper 1 MVP Protocol (Results 1–4)
+### Run the Full Paper 1 MVP Protocol (Results 1–4) & Paper 2 Field-Level Benchmark
 
 ```bash
 uv run python experiments/run_paper1_mvp_protocol.py
+uv run python experiments/run_paper2_field_level_benchmark.py
+uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (33 Unit Tests)
+### Run the Test Suite (47 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
+./scripts/ci.ps1   # Windows
+./scripts/ci.sh    # Linux / macOS / Git Bash
 ```
 
 ### CLI Commands
@@ -112,11 +124,17 @@ uv run cosmoverse info
 # Compute Result 2 Bias-Variance Frontier table
 uv run cosmoverse frontier
 
-# Run a fast Particle-Mesh simulation
-uv run cosmoverse simulate --mesh 32 --box 100.0 --steps 5
+# Inspect CAMELS Gen-2 (1,192 IllustrisTNG simulations) & Stage-IV thresholds
+uv run cosmoverse camels
 
-# Generate CAMELS Latin Hypercube parameter design
-uv run cosmoverse benchmark --n 10
+# Run Stage 5 (Paper 2) Differentiable Field-Level MCLMC vs HMC benchmark
+uv run cosmoverse field-level --grid 6 --samples 40
+
+# Audit verified emulator DOIs and blocked references (Section 8)
+uv run cosmoverse audit-citations
+
+# Generate all 4 Paper 1 vector SVG scientific figures
+uv run cosmoverse figures --out-dir docs/figures
 ```
 
 ---

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" width="760" height="460">
+  <rect width="100%" height="100%" fill="#0f172a" rx="10" />
+  <rect x="85.0" y="65.0" width="630.0" height="325.0" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+  <text x="400.0" y="30" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle">Resultado 4 — Transferencia entre Familias de Simulación</text>
+  <text x="400.0" y="50" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Degradación cuantificada de calibración al transferir de DMO+BCEmu a IllustrisTNG</text>
+  <text x="400.0" y="442" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle">Nominal Credibility Level alpha</text>
+  <text x="24" y="227.5" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" transform="rotate(-90, 24, 227.5)">Empirical Coverage Probability</text>
+  <line x1="85.0" y1="390.0" x2="715.0" y2="65.0" stroke="#64748b" stroke-width="1.8" stroke-dasharray="4,4" />
+  <polyline fill="none" stroke="#22c55e" stroke-width="3" points="85.0,390.0 211.0,321.8 337.0,256.8 513.4,165.8 620.5,110.5 683.5,81.2 715.0,65.0" />
+  <polyline fill="none" stroke="#f97316" stroke-width="3" points="85.0,390.0 211.0,341.2 337.0,289.2 513.4,201.5 620.5,143.0 683.5,100.8 715.0,65.0" />
+  <text x="105.0" y="93.0" fill="#4ade80" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Pre-Transfer (In-Family: CAMELS-DMO + BCEmu)</text>
+  <text x="105.0" y="113.0" fill="#fb923c" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Post-Transfer (Cross-Sim: CAMELS-Gen2-IllustrisTNG)</text>
+  <text x="105.0" y="133.0" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11">Disjoint (ic_seed, cosmo_id, family_id) verified: Zero Leakage</text>
+</svg>

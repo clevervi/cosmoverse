@@ -3,6 +3,12 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.4.0] - 2026-11-01
+
+### Added
+- `CAMELSFieldSnapshotDataset` y `build_leakage_guarded_dataloaders` en `cosmoverse.datasets.loaders`: carga y síntesis determinista de campos de densidad 3D $\delta(\mathbf{x})$ con bloqueo automático de fugas (`ic_seed`, `cosmo_id`) antes de entregar tensores de entrenamiento o prueba (#32, PR #34).
+- `Paper1FigureGenerator` en `cosmoverse.validation.plotting`, script `experiments/generate_paper1_figures.py` y subcomando `cosmoverse figures`: generación determinista de las 4 figuras vectoriales SVG para los 4 Resultados Demostrables en `docs/figures/` embebidas en `README.md` (#33, PR #35).
+
 ## [0.3.0] - 2026-11-01
 
 ### Added
