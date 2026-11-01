@@ -16,6 +16,7 @@ from rich.table import Table
 from cosmoverse import __author__, __email__, __version__
 from cosmoverse.baryons.frontier import BiasVarianceFrontier
 from cosmoverse.core.cosmology import Cosmology
+from cosmoverse.core.dark_energy import DynamicDarkEnergyCosmology
 from cosmoverse.core.halos_and_neutrinos import (
     HaloMassFunctionModel,
     MassiveNeutrinoPhysics,
@@ -27,6 +28,7 @@ from cosmoverse.datasets.remote import CAMELSArchiveFetcher, CheckpointManager
 from cosmoverse.emulators.bispectrum import ReducedBispectrumModel
 from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
+from cosmoverse.inference.compression import FisherScoreCompressor
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.observations.hod_and_mocks import (
     HaloOccupationModel,
@@ -403,6 +405,37 @@ def cmd_bispectrum_ia() -> None:
     console.print(table)
 
 
+def cmd_dark_energy_imnn() -> None:
+    """Evaluates Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN Score Compression."""
+    de_eval = DynamicDarkEnergyCosmology().evaluate_desi_w0wa_signatures()
+    imnn_eval = FisherScoreCompressor.benchmark_multiprobe_compression()
+
+    table = Table(title="Level 1 & Level 3: Dynamic w0-wa CPL Dark Energy & Fisher/IMNN Score Compression")
+    table.add_column("Diagnostic / Metric", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row(
+        f"CPL Equation of State (w0={de_eval['w0']}, wa={de_eval['wa']})",
+        f"LambdaCDM Limit Verified={de_eval['recovers_lcdm_limit']}",
+    )
+    table.add_row(
+        "Alcock-Paczynski Dilation (z=0.85)",
+        f"alpha_par={de_eval['alpha_parallel_z085']:.4f}, alpha_perp={de_eval['alpha_perp_z085']:.4f}",
+    )
+    table.add_row(
+        "Mean DESI f*sigma8(z) Shift vs LambdaCDM",
+        f"{de_eval['mean_fsigma8_shift_pct']:.2f}%",
+    )
+    table.add_row(
+        "Multi-Probe Summary Compression Ratio",
+        f"{imnn_eval['n_data_raw']} bins -> {imnn_eval['n_summary_compressed']} scores ({imnn_eval['compression_ratio']:.1f}x)",
+    )
+    table.add_row(
+        "Fisher Information Preserved (det(F_comp)/det(F_full))^(1/p)",
+        f"{imnn_eval['fisher_info_preserved_pct']:.2f}% (>= 98.0% Gate)",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -420,6 +453,10 @@ def cmd_doctor() -> None:
         ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
         and IntrinsicAlignmentModel().evaluate_ia_marginalization_impact()["passes_stage4_ia_gate"]
     )
+    de_imnn_ok = bool(
+        DynamicDarkEnergyCosmology().evaluate_desi_w0wa_signatures()["recovers_lcdm_limit"]
+        and FisherScoreCompressor.benchmark_multiprobe_compression()["passes_98pct_fisher_preservation_gate"]
+    )
     mangrove_ok = MangroveMergerTreeGNN(
         allow_post_v1_extension=True, seed=42
     ).benchmark_merger_tree_vs_halo_mlp(n_trees=20, seed=42)["passes_2x_improvement_benchmark"]
@@ -431,6 +468,7 @@ def cmd_doctor() -> None:
         ("Level 2: RSD (P0,P2,P4) + Joint 3x2pt Degeneracy Breaking", joint_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
+        ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
         ("Level 3: Simulation Budget Scaling Law (N_min=8 TUNeS, N_min=16 Stage-IV)", budget_ok),
         ("Stage 5 & Post-v1: Preconditioned MCLMC + Mangrove Merger-Tree GNN (>=2x)", mangrove_ok),
         ("Publications: Paper 1, Paper 2 & JOSS BibTeX/Cross-Ref Integrity", arxiv_ok),
@@ -565,8 +603,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     # Reduced Bispectrum Q(theta) + NLA/TATT Intrinsic Alignments
     subparsers.add_parser("bispectrum-ia", help="Evaluate Result 1 Reduced Bispectrum Q(theta) and Level 2 NLA/TATT IA")
 
+    # Dynamic w0-wa CPL Dark Energy + Fisher/IMNN Score Compression
+    subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
+
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 8-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 9-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -608,6 +649,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_hod_mocks(args)
     elif args.command == "bispectrum-ia":
         cmd_bispectrum_ia()
+    elif args.command == "dark-energy-imnn":
+        cmd_dark_energy_imnn()
     elif args.command == "doctor":
         cmd_doctor()
     else:

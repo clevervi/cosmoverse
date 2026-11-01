@@ -167,6 +167,9 @@ uv run cosmoverse hod-mocks --out-dir dist/mocks --n-galaxies 250
 # Evaluate Result 1 Reduced Bispectrum Q(theta) & Level 2 NLA/TATT Weak Lensing Intrinsic Alignments
 uv run cosmoverse bispectrum-ia
 
+# Evaluate Level 1 Dynamic w0-wa CPL Dark Energy (DESI) & Level 3 Fisher/IMNN Score Compression
+uv run cosmoverse dark-energy-imnn
+
 # Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor
 ```
