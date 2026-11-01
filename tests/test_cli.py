@@ -10,7 +10,7 @@ from cosmoverse.cli import main
 
 
 def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
-    assert __version__ == "1.0.0"
+    assert __version__ == "1.1.0"
     main(["info"])
     main(["frontier"])
     main(["camels"])
@@ -20,6 +20,9 @@ def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
     main(["multi-suite"])
     main(["mangrove"])
     main(["budget"])
+    main(["joint-3x2pt"])
+    main(["train", "--out-dir", str(tmp_path / "ckpt")])
+    main(["fetch-camels", "--cache-dir", str(tmp_path / "cache"), "--n", "1"])
     main(["dashboard"])
     main(["figures", "--out-dir", str(tmp_path / "figs")])
     assert (tmp_path / "figs" / "fig1_result1_emulator.svg").exists()
@@ -34,5 +37,5 @@ def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
     root = pathlib.Path(__file__).resolve().parents[1]
     assert (root / "docs" / "index.html").exists()
     zenodo = json.loads((root / ".zenodo.json").read_text(encoding="utf-8"))
-    assert zenodo["version"] == "1.0.0"
+    assert zenodo["version"] == "1.1.0"
     assert zenodo["license"] == "MIT"

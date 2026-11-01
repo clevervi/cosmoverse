@@ -19,9 +19,11 @@ from cosmoverse.core.cosmology import Cosmology
 from cosmoverse.core.parameters import CosmologicalParameters, SimulationParameters
 from cosmoverse.datasets.camels_gen2 import CAMELSGen2Catalog, StageIVPrecisionCalibrator
 from cosmoverse.datasets.camels_spectra import CAMELSHydroSpectraConnector
+from cosmoverse.datasets.remote import CAMELSArchiveFetcher, CheckpointManager
 from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
+from cosmoverse.observations.three_x_two_pt import Joint3x2ptObservationalPipeline
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
 from cosmoverse.validation.arxiv_packager import ArxivSubmissionPackager
 from cosmoverse.validation.benchmarks import camels_latin_hypercube_benchmark
@@ -257,12 +259,67 @@ def cmd_arxiv_bundle(args: argparse.Namespace) -> None:
     """Audits LaTeX manuscripts and builds arXiv (.tar.gz) submission bundles."""
     packager = ArxivSubmissionPackager()
     out = packager.build_arxiv_bundles(out_dir=args.out_dir)
-    table = Table(title="COSMOVERSE arXiv (astro-ph.CO) Submission Bundles & BibTeX Audit")
+    table = Table(title="COSMOVERSE arXiv (astro-ph.CO) & JOSS Submission Audit")
     table.add_column("Artifact / Check", style="cyan")
     table.add_column("Status / Path", style="green")
     table.add_row("Manuscript & BibTeX Integrity", f"VALID={out['audit']['is_valid']} (Blocked keys={len(out['audit']['leaked_blocked_keys'])})")
     table.add_row("Paper 1 Bundle (Stages 1-4 MVP)", str(out["paper1_bundle"]))
     table.add_row("Paper 2 Bundle (Stage 5 Extension)", str(out["paper2_bundle"]))
+    console.print(table)
+
+
+def cmd_joint_3x2pt() -> None:
+    """Evaluates Joint Stage-IV 3x2pt + RSD degeneracy breaking."""
+    pipeline = Joint3x2ptObservationalPipeline()
+    res = pipeline.evaluate_probe_degeneracy_breaking()
+    table = Table(
+        title=(
+            f"Level 2-3: Joint Stage-IV 3x2pt + RSD Degeneracy Breaking "
+            f"(Inflation Reduction = {res['inflation_reduction_pct']:.1f}%, FoM Gain = {res['fom_gain_vs_rsd_only']:.2f}x)"
+        )
+    )
+    table.add_column("Probe Combination", style="cyan")
+    table.add_column("Unmarg. |Bias|", justify="right", style="red")
+    table.add_column("Marg. |Bias|", justify="right", style="green")
+    table.add_column("Error Inflation", justify="right", style="yellow")
+    table.add_column("S8 FoM", justify="right", style="magenta")
+    for p in res["probes"]:
+        table.add_row(
+            str(p["probe_combination"]),
+            f"{p['unmarginalized_bias_sigma']:.2f} sigma",
+            f"{p['marginalized_bias_sigma']:.2f} sigma",
+            f"{p['error_inflation_factor']:.2f}x",
+            f"{p['s8_figure_of_merit']:.1f}",
+        )
+    console.print(table)
+
+
+def cmd_train(args: argparse.Namespace) -> None:
+    """Trains and saves a SHA-256 verified checkpoint (.npz) for TUNeS + SBIEngine."""
+    manifest = CheckpointManager.train_and_save_checkpoint(
+        out_dir=args.out_dir, grid_size=16, n_sbi_sims=32, seed=42
+    )
+    table = Table(title="Trained Model Checkpoint & SHA-256 Verification")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+    table.add_row("Checkpoint Path", str(manifest["checkpoint_file"]))
+    table.add_row("SHA-256", str(manifest["sha256"])[:24] + "...")
+    table.add_row("TUNeS Residual Scale", f"{manifest['tunes_residual_scale']:.6f}")
+    table.add_row("SBI Final Loss", f"{manifest['sbi_final_loss']:.4f}")
+    console.print(table)
+
+
+def cmd_fetch_camels(args: argparse.Namespace) -> None:
+    """Populates a local multi-suite CAMELS power spectrum cache."""
+    res = CAMELSArchiveFetcher.fetch_and_cache_public_spectra(
+        cache_dir=args.cache_dir, n_per_suite=args.n
+    )
+    table = Table(title="CAMELS Multi-Suite Local Spectrum Cache")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value", style="green")
+    table.add_row("Cache Directory", str(res["cache_dir"]))
+    table.add_row("Suites Cached", ", ".join(res["suites"]))
+    table.add_row("Total Files Written", str(res["n_files_cached"]))
     console.print(table)
 
 
@@ -365,6 +422,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     ax_parser = subparsers.add_parser("arxiv-bundle", help="Audit LaTeX manuscripts and build arXiv .tar.gz bundles")
     ax_parser.add_argument("--out-dir", type=str, default=None, help="Output directory for .tar.gz archives")
 
+    # Joint 3x2pt + RSD degeneracy breaking
+    subparsers.add_parser("joint-3x2pt", help="Evaluate Joint Stage-IV 3x2pt + RSD degeneracy breaking")
+
+    # Train & checkpoint persistence
+    tr_parser = subparsers.add_parser("train", help="Train and save a SHA-256 verified checkpoint (.npz)")
+    tr_parser.add_argument("--out-dir", type=str, default="dist/checkpoints", help="Checkpoint output directory")
+
+    # Fetch/cache CAMELS public spectra
+    fc_parser = subparsers.add_parser("fetch-camels", help="Populate local CAMELS multi-suite spectrum cache")
+    fc_parser.add_argument("--cache-dir", type=str, default="dist/camels_cache", help="Target cache directory")
+    fc_parser.add_argument("--n", type=int, default=3, help="Number of spectra per suite")
+
     args = parser.parse_args(argv)
 
     if args.command == "info" or args.command is None:
@@ -393,6 +462,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_budget()
     elif args.command == "arxiv-bundle":
         cmd_arxiv_bundle(args)
+    elif args.command == "joint-3x2pt":
+        cmd_joint_3x2pt()
+    elif args.command == "train":
+        cmd_train(args)
+    elif args.command == "fetch-camels":
+        cmd_fetch_camels(args)
     else:
         parser.print_help()
 
