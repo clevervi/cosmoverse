@@ -164,6 +164,9 @@ uv run cosmoverse neutrinos-hmf
 # Evaluate HOD + Secondary Assembly Bias P_gm(k) & export Stage-IV synthetic galaxy/shear catalog
 uv run cosmoverse hod-mocks --out-dir dist/mocks --n-galaxies 250
 
+# Evaluate Result 1 Reduced Bispectrum Q(theta) & Level 2 NLA/TATT Weak Lensing Intrinsic Alignments
+uv run cosmoverse bispectrum-ia
+
 # Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor
 ```
