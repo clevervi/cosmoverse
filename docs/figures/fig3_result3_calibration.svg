@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" width="760" height="460">
+  <rect width="100%" height="100%" fill="#0f172a" rx="10" />
+  <rect x="85.0" y="65.0" width="630.0" height="325.0" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+  <text x="400.0" y="30" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle">Resultado 3 — Calibración Posterior SBI (SBC y TARP)</text>
+  <text x="400.0" y="50" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Cobertura empírica multivariada frente a credibilidad nominal (criterio bloqueante)</text>
+  <text x="400.0" y="442" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle">Nominal Credibility Level alpha</text>
+  <text x="24" y="227.5" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" transform="rotate(-90, 24, 227.5)">Empirical Coverage Probability</text>
+  <line x1="85.0" y1="390.0" x2="715.0" y2="65.0" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5" />
+  <polyline fill="none" stroke="#a855f7" stroke-width="3" points="85.0,390.0 211.0,328.2 337.0,266.5 463.0,201.5 513.4,175.5 589.0,133.2 683.5,84.5 715.0,65.0" />
+  <text x="105.0" y="95.0" fill="#e9d5ff" font-family="system-ui, sans-serif" font-size="12" font-weight="600">TARP Multivariate Coverage (Gate Passed = True)</text>
+  <text x="105.0" y="115.0" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Dashed 1:1 Line: Perfect Posterior Calibration</text>
+</svg>
