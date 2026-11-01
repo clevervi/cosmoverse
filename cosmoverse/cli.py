@@ -30,6 +30,7 @@ from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.compression import FisherScoreCompressor
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
+from cosmoverse.observations.cmb_and_sz import CMBLensingAndSZPipeline
 from cosmoverse.observations.hod_and_mocks import (
     HaloOccupationModel,
     StageIVMockCatalogExporter,
@@ -436,6 +437,52 @@ def cmd_dark_energy_imnn() -> None:
     console.print(table)
 
 
+def cmd_cmb_sz() -> None:
+    """Evaluates Level 2 CMB lensing cross-spectra and tSZ/kSZ BCEmu gas calibration."""
+    import numpy as np
+
+    pipeline = CMBLensingAndSZPipeline()
+    spec = pipeline.compute_cmb_lensing_and_tsz_spectra()
+    gain = pipeline.evaluate_sz_baryon_calibration_gain()
+
+    table = Table(title="Level 2: CMB Lensing Cross-Spectra & tSZ/kSZ BCEmu Gas Calibration")
+    table.add_column("Diagnostic / Metric", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row(
+        "CMB Lensing x Galaxy C_ell^{kappa_CMB g}",
+        f"{float(np.min(spec['c_ell_kcmb_g'])):.3e} - {float(np.max(spec['c_ell_kcmb_g'])):.3e}",
+    )
+    table.add_row(
+        "CMB Lensing x Cosmic Shear C_ell^{kCMB kgal}",
+        f"{float(np.min(spec['c_ell_kcmb_kgal'])):.3e} - {float(np.max(spec['c_ell_kcmb_kgal'])):.3e}",
+    )
+    table.add_row(
+        "tSZ Peak D_ell^{yy} (10^12 ell(ell+1)C_ell/2pi)",
+        f"{float(np.max(spec['d_ell_yy_1e12'])):.3f}",
+    )
+    table.add_row(
+        "Mean kSZ Optical Depth tau_kSZ",
+        f"{gain['mean_ksz_optical_depth']:.4f}",
+    )
+    table.add_row(
+        "BCEmu Bound Gas Fraction Proxy",
+        f"{spec['bound_gas_fraction_proxy']:.4f}",
+    )
+    table.add_row(
+        "tSZ Low/High A_AGN Power Ratio",
+        f"{gain['tsz_low_to_high_agn_power_ratio']:.3f}",
+    )
+    table.add_row(
+        "S8 Error Inflation 3x2pt+RSD -> +CMB/SZ",
+        f"{gain['s8_inflation_3x2pt_rsd_only']:.2f}x -> {gain['s8_inflation_with_cmb_sz']:.2f}x",
+    )
+    table.add_row(
+        "CMB Lensing + tSZ/kSZ Calibration Gate",
+        "PASS" if gain["passes_cmb_sz_calibration_gate"] else "FAIL",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -448,6 +495,9 @@ def cmd_doctor() -> None:
     joint_ok = Joint3x2ptObservationalPipeline().evaluate_probe_degeneracy_breaking()[
         "passes_joint_degeneracy_breaking_gate"
     ]
+    cmb_sz_ok = bool(
+        CMBLensingAndSZPipeline().evaluate_sz_baryon_calibration_gain()["passes_cmb_sz_calibration_gate"]
+    )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     bisp_ia_ok = bool(
         ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
@@ -466,6 +516,7 @@ def cmd_doctor() -> None:
         ("Level 1: TUNeS Emulator & Halo Mass Function Gate (<1% MAPE)", hmf_ok),
         ("Level 1: BCEmu3 Baryonic Bias-Variance Frontier (<0.30 sigma_S4)", frontier_ok),
         ("Level 2: RSD (P0,P2,P4) + Joint 3x2pt Degeneracy Breaking", joint_ok),
+        ("Level 2: CMB Lensing (kappa_CMB x g / kappa_gal) + tSZ/kSZ BCEmu Gas Gate", cmb_sz_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -595,6 +646,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     # Massive neutrinos & Halo Mass Function
     subparsers.add_parser("neutrinos-hmf", help="Evaluate Massive Neutrinos S_nu(k) and Halo Mass Function dn/dlnM")
 
+    # CMB Lensing cross-spectra + tSZ/kSZ BCEmu gas calibration
+    subparsers.add_parser("cmb-sz", help="Evaluate Level 2 CMB lensing cross-spectra and tSZ/kSZ gas calibration")
+
     # HOD + Secondary Assembly Bias + Stage-IV Mock Catalog exporter
     hm_parser = subparsers.add_parser("hod-mocks", help="Evaluate HOD P_gm(k) assembly bias and export Stage-IV mock catalog")
     hm_parser.add_argument("--out-dir", type=str, default="dist/mocks", help="Output directory for synthetic mock catalogs")
@@ -607,7 +661,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 9-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 10-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -645,6 +699,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_fetch_camels(args)
     elif args.command == "neutrinos-hmf":
         cmd_neutrinos_hmf()
+    elif args.command == "cmb-sz":
+        cmd_cmb_sz()
     elif args.command == "hod-mocks":
         cmd_hod_mocks(args)
     elif args.command == "bispectrum-ia":
