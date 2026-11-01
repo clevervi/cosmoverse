@@ -34,6 +34,7 @@ class SBIEngine:
         flow_learning_rate: float = 1e-3,
         flow_scale_bound: float = 5.0,
         flow_n_layers: int = 6,
+        flow_hidden_dim: int = 0,
     ):
         if feature_mode not in {"linear", "quadratic"}:
             raise ValueError("feature_mode must be 'linear' or 'quadratic'")
@@ -47,6 +48,8 @@ class SBIEngine:
             raise ValueError("flow_scale_bound must be positive")
         if flow_n_layers < 2:
             raise ValueError("flow_n_layers must be >= 2")
+        if flow_hidden_dim < 0:
+            raise ValueError("flow_hidden_dim must be non-negative")
 
         self.simulator_fn = simulator_fn
         self.param_bounds = param_bounds
@@ -62,6 +65,7 @@ class SBIEngine:
         self.flow_learning_rate = float(flow_learning_rate)
         self.flow_scale_bound = float(flow_scale_bound)
         self.flow_n_layers = int(flow_n_layers)
+        self.flow_hidden_dim = int(flow_hidden_dim)
         self._is_fitted = False
 
         self.theta_bank: Optional[np.ndarray] = None
@@ -135,6 +139,7 @@ class SBIEngine:
                 n_layers=self.flow_n_layers,
                 seed=self.seed,
                 scale_bound=self.flow_scale_bound,
+                hidden_dim=self.flow_hidden_dim,
             )
             self.flow.fit(
                 theta_norm,

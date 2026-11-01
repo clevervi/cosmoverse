@@ -79,6 +79,7 @@ class MultiProbeSBIPipeline:
         flow_epochs: int = 800,
         flow_scale_bound: float = 5.0,
         flow_n_layers: int = 6,
+        flow_hidden_dim: int = 0,
         seed: int = 42,
     ) -> None:
         self.param_bounds = param_bounds or {
@@ -132,6 +133,7 @@ class MultiProbeSBIPipeline:
             flow_epochs=flow_epochs,
             flow_scale_bound=flow_scale_bound,
             flow_n_layers=flow_n_layers,
+            flow_hidden_dim=flow_hidden_dim,
         )
         self.is_fitted = False
 
