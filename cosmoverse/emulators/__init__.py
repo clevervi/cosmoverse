@@ -5,7 +5,13 @@ Neural emulator models:
   - Summary Statistics (Resultado 1): Gaussian P(k) MAPE, 1-point PDF, 3D Peak Counts, 3D Minkowski Functionals
 """
 
-from cosmoverse.emulators.fno import FNO3dEmulator, SpectralConv3dNumPy
+from cosmoverse.emulators.fno import (
+    EMULATOR_BIBLIOGRAPHY_REGISTRY,
+    CitationVerificationError,
+    FNO3dEmulator,
+    SpectralConv3dNumPy,
+    verify_emulator_citation,
+)
 from cosmoverse.emulators.statistics import (
     compute_minkowski_functionals_3d,
     compute_one_point_pdf,
@@ -26,6 +32,9 @@ __all__ = [
     "ResidualBlock3D",
     "FNO3dEmulator",
     "SpectralConv3dNumPy",
+    "EMULATOR_BIBLIOGRAPHY_REGISTRY",
+    "CitationVerificationError",
+    "verify_emulator_citation",
     "power_spectrum_loss",
     "cross_correlation_coefficient",
     "EmulatorTrainer",
