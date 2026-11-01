@@ -31,6 +31,7 @@ from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.compression import FisherScoreCompressor
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.inference.light_cone_sbi import LightConeSBIPipeline
+from cosmoverse.inference.multiprobe_sbi import MultiProbeSBIPipeline
 from cosmoverse.observations.cmb_and_sz import CMBLensingAndSZPipeline
 from cosmoverse.observations.hod_and_mocks import (
     HaloOccupationModel,
@@ -658,6 +659,50 @@ def cmd_light_cone_sbi(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_multiprobe_sbi(args: argparse.Namespace) -> None:
+    """Runs four-parameter SBI on the joint w(theta) + RSD data vector."""
+    pipeline = MultiProbeSBIPipeline(
+        n_training_simulations=int(args.n_sims)
+    )
+    pipeline.fit()
+    result = pipeline.run_calibration(
+        n_sbc_trials=int(args.n_sbc),
+        n_tarp_trials=int(args.n_tarp),
+    )
+
+    table = Table(title="Level 3: Multi-Probe SBI (w(theta) + RSD) with SBC + TARP")
+    table.add_column("Calibration Diagnostic", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row(
+        "Parameters",
+        "Omega_m, sigma8, b1, A_AGN (b1 free)",
+    )
+    table.add_row("Training Simulations", f"{result['n_training_simulations']}")
+    table.add_row(
+        "Data Vector",
+        f"{len(result['theta_deg'])} w(theta) + 3 x {len(result['k_rsd'])} RSD bins",
+    )
+    for name in result["param_names"]:
+        metric = result["sbc"][name]
+        table.add_row(
+            f"SBC {name}",
+            f"68%={metric['coverage_68']*100:.1f}%, "
+            f"95%={metric['coverage_95']*100:.1f}%, "
+            f"KS p={metric['p_value']:.3f}",
+        )
+    table.add_row(
+        "TARP 68% / 95%",
+        f"{result['tarp']['coverage_68']*100:.1f}% / "
+        f"{result['tarp']['coverage_95']*100:.1f}% "
+        f"(KS p={result['tarp']['ks_p_value']:.3f})",
+    )
+    table.add_row(
+        "Joint SBC + TARP Gate",
+        "PASS" if result["passes_joint_sbi_gate"] else "FAIL",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -692,6 +737,9 @@ def cmd_doctor() -> None:
     light_cone_sbi_ok = bool(
         LightConeSBIPipeline().fit().run_calibration()["passes_joint_sbi_gate"]
     )
+    multiprobe_sbi_ok = bool(
+        MultiProbeSBIPipeline().fit().run_calibration()["passes_joint_sbi_gate"]
+    )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     bisp_ia_ok = bool(
         ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
@@ -715,6 +763,7 @@ def cmd_doctor() -> None:
         ("Level 2: Light-Cone Snapshot Stacking & Wide-Angle RSD Catalog Gate", light_cone_build_ok),
         ("Level 2: Light-Cone Galaxy Bias, Survey Mask & w(theta) Clustering Gate", light_cone_survey_ok),
         ("Level 3: End-to-End SBI on Light-Cone w(theta) with SBC + TARP", light_cone_sbi_ok),
+        ("Level 3: Multi-Probe SBI (w(theta) + RSD, b1 free) with SBC + TARP", multiprobe_sbi_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -860,6 +909,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     lc_sbi_parser.add_argument("--n-sbc", type=int, default=50, help="Number of SBC calibration trials")
     lc_sbi_parser.add_argument("--n-tarp", type=int, default=50, help="Number of TARP calibration trials")
 
+    # Multi-probe SBI on w(theta) + RSD with free b1
+    mp_sbi_parser = subparsers.add_parser("multiprobe-sbi", help="Run multi-probe SBI (w(theta) + RSD, b1 free) with SBC + TARP")
+    mp_sbi_parser.add_argument("--n-sims", type=int, default=400, help="Number of SBI training simulations")
+    mp_sbi_parser.add_argument("--n-sbc", type=int, default=50, help="Number of SBC calibration trials")
+    mp_sbi_parser.add_argument("--n-tarp", type=int, default=50, help="Number of TARP calibration trials")
+
     # CMB Lensing cross-spectra + tSZ/kSZ BCEmu gas calibration
     subparsers.add_parser("cmb-sz", help="Evaluate Level 2 CMB lensing cross-spectra and tSZ/kSZ gas calibration")
 
@@ -875,7 +930,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 14-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 15-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -921,6 +976,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_light_cone_survey()
     elif args.command == "light-cone-sbi":
         cmd_light_cone_sbi(args)
+    elif args.command == "multiprobe-sbi":
+        cmd_multiprobe_sbi(args)
     elif args.command == "cmb-sz":
         cmd_cmb_sz()
     elif args.command == "hod-mocks":
