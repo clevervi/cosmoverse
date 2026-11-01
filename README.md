@@ -107,7 +107,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (83 Unit Tests & Local CI Gate)
+### Run the Test Suite (86 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -181,6 +181,9 @@ uv run cosmoverse light-cone-build --out-dir dist/light_cone
 
 # Apply survey mask + galaxy bias and measure w(theta) from a light-cone catalog
 uv run cosmoverse light-cone-survey
+
+# Run end-to-end SBI on light-cone w(theta) with SBC + TARP calibration
+uv run cosmoverse light-cone-sbi --n-sims 200 --n-sbc 50 --n-tarp 50
 
 # Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor
