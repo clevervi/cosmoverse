@@ -18,9 +18,13 @@ from cosmoverse.observations.intrinsic_alignments import (
     IntrinsicAlignmentParameters,
 )
 from cosmoverse.observations.light_cone import (
+    AngularClusteringMeasurer,
+    GalaxyBiasSampler,
     LightConeBuilder,
     LightConeGeometry,
+    LightConeSurveyPipeline,
     RelativisticLightConePipeline,
+    SurveyMask,
 )
 from cosmoverse.observations.noise import (
     compute_gaussian_covariance_diagonal,
@@ -48,4 +52,8 @@ __all__ = [
     "LightConeGeometry",
     "RelativisticLightConePipeline",
     "LightConeBuilder",
+    "SurveyMask",
+    "GalaxyBiasSampler",
+    "AngularClusteringMeasurer",
+    "LightConeSurveyPipeline",
 ]

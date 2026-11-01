@@ -3,6 +3,15 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.9.0] - 2026-11-01
+
+### Added
+- `SurveyMask`, `GalaxyBiasSampler`, `AngularClusteringMeasurer` y `LightConeSurveyPipeline` (`cosmoverse.observations.light_cone`) para el Nivel 2: máscara esférica RA/Dec/redshift, muestreo de galaxias con sesgo lineal sobre un proxy de densidad kNN, estimadores Davis-Peebles auto y cruzados, y medición de $w(\theta)$ frente a la predicción Limber. El catálogo de prueba produce 12,799 objetos de materia, 2,843 galaxias, $b_{\mathrm{eff}}=1.09$ y $r(w_{gm},w_{mm})=0.964$; el control sin sesgo ($b_1=0$) falla con $b_{\mathrm{eff}}=0.90$ (#80, PR #81).
+- Subcomando `cosmoverse light-cone-survey`, decimotercera compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_light_cone_survey.py` (`83 passed`).
+
+### Notes
+- El sesgo efectivo recuperado (1.09) es menor que el $b_1$ de entrada (1.50) porque el proxy de densidad kNN atenúa la señal. La compuerta valida la presencia de un sesgo positivo ($b_{\mathrm{eff}}>1$) y la coherencia espacial $w_{gm}\propto w_{mm}$, no la recuperación exacta de $b_1$.
+
 ## [1.8.0] - 2026-11-01
 
 ### Added

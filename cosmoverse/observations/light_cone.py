@@ -17,7 +17,7 @@ import pathlib
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from scipy import integrate
+from scipy import integrate, ndimage, spatial, special
 
 from cosmoverse.core.cosmology import C_KM_S, Cosmology
 from cosmoverse.core.parameters import CosmologicalParameters
@@ -347,6 +347,7 @@ class LightConeBuilder:
         z_max: float,
         n_radial_bins: int = 8,
         apply_wide_angle_rsd: bool = True,
+        density_smoothing_cells: float = 1.5,
     ) -> dict[str, Any]:
         """
         Selects particles from each snapshot into radial comoving shells between
@@ -406,6 +407,28 @@ class LightConeBuilder:
             pos_sel = positions_image[mask]
             vel_sel = velocities[mask]
             radius_sel = radius[mask]
+
+            delta_matter = np.zeros(int(np.count_nonzero(mask)), dtype=np.float64)
+            if "density" in snapshots[z_snapshot]:
+                density = np.asarray(snapshots[z_snapshot]["density"])
+                if density_smoothing_cells > 0.0:
+                    density = ndimage.gaussian_filter(
+                        density,
+                        sigma=float(density_smoothing_cells),
+                        mode="wrap",
+                    )
+                dx = self.box_size / density.shape[0]
+                coordinates = np.vstack(
+                    [
+                        positions[mask, 0] / dx,
+                        positions[mask, 1] / dx,
+                        positions[mask, 2] / dx,
+                    ]
+                )
+                delta_matter = ndimage.map_coordinates(
+                    density, coordinates, order=1, mode="wrap"
+                )
+
             n_hat = rel_sel / np.maximum(radius_sel[:, np.newaxis], 1e-12)
             v_parallel = np.sum(vel_sel * n_hat, axis=1)
 
@@ -444,6 +467,10 @@ class LightConeBuilder:
                     "chi_real_mpc_h": radius_sel,
                     "chi_redshift_space_mpc_h": chi_redshift_space,
                     "v_parallel_km_s": v_parallel,
+                    "delta_matter": delta_matter,
+                    "x_mpc_h": rel_sel[:, 0],
+                    "y_mpc_h": rel_sel[:, 1],
+                    "z_mpc_h": rel_sel[:, 2],
                     "particle_index": np.nonzero(mask)[0],
                     "shell_index": np.full(
                         radius_sel.shape, shell_index, dtype=np.int64
@@ -479,8 +506,9 @@ class LightConeBuilder:
         n_radial_bins: int = 8,
         apply_wide_angle_rsd: bool = True,
         seed: int | None = None,
-        include_density: bool = False,
+        include_density: bool = True,
         reinitialize: bool = True,
+        density_smoothing_cells: float = 1.5,
     ) -> dict[str, Any]:
         """
         Runs a `ParticleMeshSimulator` with intermediate snapshots and builds
@@ -503,6 +531,7 @@ class LightConeBuilder:
             z_max=z_max,
             n_radial_bins=n_radial_bins,
             apply_wide_angle_rsd=apply_wide_angle_rsd,
+            density_smoothing_cells=density_smoothing_cells,
         )
 
     def evaluate_catalog(
@@ -560,4 +589,484 @@ class LightConeBuilder:
             "path": str(output_path),
             "sha256": hashlib.sha256(output_path.read_bytes()).hexdigest(),
             "n_objects": int(len(arrays["ra_deg"])),
+        }
+
+
+class SurveyMask:
+    """
+    Spherical-rectangle survey mask in RA/Dec and observed redshift.
+    """
+
+    def __init__(
+        self,
+        ra_min: float = 0.0,
+        ra_max: float = 360.0,
+        dec_min: float = 70.0,
+        dec_max: float = 90.0,
+        z_min: float = 0.0,
+        z_max: float = 0.2,
+    ) -> None:
+        if not 0.0 <= ra_min < ra_max <= 360.0:
+            raise ValueError("RA bounds must satisfy 0 <= ra_min < ra_max <= 360")
+        if not -90.0 <= dec_min < dec_max <= 90.0:
+            raise ValueError("Dec bounds must satisfy -90 <= dec_min < dec_max <= 90")
+        if not 0.0 <= z_min < z_max:
+            raise ValueError("redshift bounds must satisfy 0 <= z_min < z_max")
+
+        self.ra_min = float(ra_min)
+        self.ra_max = float(ra_max)
+        self.dec_min = float(dec_min)
+        self.dec_max = float(dec_max)
+        self.z_min = float(z_min)
+        self.z_max = float(z_max)
+
+    @property
+    def area_deg2(self) -> float:
+        """Area of the spherical rectangle in square degrees."""
+        ra_span = np.deg2rad(self.ra_max - self.ra_min)
+        dec_span = np.sin(np.deg2rad(self.dec_max)) - np.sin(
+            np.deg2rad(self.dec_min)
+        )
+        return float(ra_span * dec_span * (180.0 / np.pi) ** 2)
+
+    @staticmethod
+    def subset(catalog: dict[str, Any], mask: np.ndarray) -> dict[str, Any]:
+        """Applies a boolean mask to per-object arrays, preserving metadata."""
+        n_objects = int(np.count_nonzero(mask))
+        result: dict[str, Any] = {}
+        for key, value in catalog.items():
+            if (
+                isinstance(value, np.ndarray)
+                and value.ndim >= 1
+                and value.shape[0] == mask.shape[0]
+            ):
+                result[key] = value[mask]
+            else:
+                result[key] = value
+        if "ra_deg" in result:
+            result["n_objects"] = n_objects
+        return result
+
+    def apply(self, catalog: dict[str, Any]) -> dict[str, Any]:
+        """Selects objects inside the mask footprint and redshift range."""
+        ra = np.mod(np.asarray(catalog["ra_deg"], dtype=np.float64), 360.0)
+        dec = np.asarray(catalog["dec_deg"], dtype=np.float64)
+        z_obs = np.asarray(catalog["z_obs"], dtype=np.float64)
+        mask = (
+            (ra >= self.ra_min)
+            & (ra <= self.ra_max)
+            & (dec >= self.dec_min)
+            & (dec <= self.dec_max)
+            & (z_obs >= self.z_min)
+            & (z_obs <= self.z_max)
+        )
+        return self.subset(catalog, mask)
+
+
+class GalaxyBiasSampler:
+    """
+    Poisson-samples a galaxy catalog from a matter light-cone catalog using
+    a local linear bias model p_g ∝ 1 + b1 * delta_m.
+    """
+
+    def __init__(
+        self,
+        b1: float = 1.5,
+        sampling_rate: float = 0.5,
+        seed: int = 42,
+        density_proxy: str = "knn",
+        knn_radius_mpc_h: float = 10.0,
+    ) -> None:
+        if b1 < 0.0:
+            raise ValueError("b1 must be non-negative")
+        if not 0.0 < sampling_rate <= 1.0:
+            raise ValueError("sampling_rate must lie in (0, 1]")
+        if density_proxy not in {"knn", "snapshot"}:
+            raise ValueError("density_proxy must be 'knn' or 'snapshot'")
+        self.b1 = float(b1)
+        self.sampling_rate = float(sampling_rate)
+        self.seed = int(seed)
+        self.density_proxy = density_proxy
+        self.knn_radius_mpc_h = float(knn_radius_mpc_h)
+
+    def sample(self, catalog: dict[str, Any]) -> dict[str, Any]:
+        """Returns a biased galaxy subsample of the input matter catalog."""
+        n_objects = len(catalog["ra_deg"])
+        if self.density_proxy == "knn":
+            required = ("x_mpc_h", "y_mpc_h", "z_mpc_h")
+            if not all(key in catalog for key in required):
+                raise ValueError(
+                    "kNN density proxy requires x_mpc_h, y_mpc_h and z_mpc_h"
+                )
+            positions = np.column_stack(
+                [
+                    np.asarray(catalog["x_mpc_h"], dtype=np.float64),
+                    np.asarray(catalog["y_mpc_h"], dtype=np.float64),
+                    np.asarray(catalog["z_mpc_h"], dtype=np.float64),
+                ]
+            )
+            if positions.shape != (n_objects, 3):
+                raise ValueError("Cartesian positions have an invalid shape")
+            tree = spatial.cKDTree(positions)
+            counts = tree.query_ball_point(
+                positions, self.knn_radius_mpc_h, return_length=True
+            ).astype(np.float64) - 1.0
+            delta = (counts - float(np.mean(counts))) / max(
+                float(np.std(counts)), 1e-12
+            )
+        else:
+            if "delta_matter" not in catalog:
+                raise ValueError("catalog must contain the delta_matter field")
+            delta = np.asarray(catalog["delta_matter"], dtype=np.float64)
+            if delta.shape != (n_objects,):
+                raise ValueError("delta_matter must be a 1D per-object array")
+            delta = delta - float(np.mean(delta))
+            if float(np.std(delta)) < 1e-12:
+                raise ValueError(
+                    "delta_matter has zero variance; cannot apply bias"
+                )
+            delta = delta / float(np.std(delta))
+
+        weight = np.clip(1.0 + self.b1 * delta, 1e-6, None)
+        probability = self.sampling_rate * weight / float(np.mean(weight))
+        probability = np.clip(probability, 0.0, 1.0)
+
+        rng = np.random.default_rng(self.seed)
+        selected = rng.random(delta.shape) < probability
+        result = SurveyMask.subset(catalog, selected)
+        result["b1_input"] = self.b1
+        result["sampling_rate_input"] = self.sampling_rate
+        result["selection_probability"] = probability[selected]
+        result["selection_mask"] = selected
+        return result
+
+
+class AngularClusteringMeasurer:
+    """
+    Measures the angular correlation function w(theta) with the Davis-Peebles
+    estimator DD/DR - 1 using a random catalog matched to the survey footprint.
+    """
+
+    def __init__(
+        self,
+        cosmo_params: CosmologicalParameters | None = None,
+        theta_min_deg: float = 1.0,
+        theta_max_deg: float = 20.0,
+        n_theta_bins: int = 12,
+        n_random_multiplier: float = 2.0,
+        seed: int = 42,
+    ) -> None:
+        if theta_min_deg <= 0.0 or theta_max_deg <= theta_min_deg:
+            raise ValueError("theta bounds must satisfy 0 < theta_min < theta_max")
+        if n_theta_bins < 2:
+            raise ValueError("n_theta_bins must be >= 2")
+        self.geometry = LightConeGeometry(cosmo_params=cosmo_params)
+        self.theta_min_deg = float(theta_min_deg)
+        self.theta_max_deg = float(theta_max_deg)
+        self.n_theta_bins = int(n_theta_bins)
+        self.n_random_multiplier = float(n_random_multiplier)
+        self.seed = int(seed)
+
+    @staticmethod
+    def unit_vectors(ra_deg: np.ndarray, dec_deg: np.ndarray) -> np.ndarray:
+        ra = np.deg2rad(np.asarray(ra_deg, dtype=np.float64))
+        dec = np.deg2rad(np.asarray(dec_deg, dtype=np.float64))
+        return np.column_stack(
+            [
+                np.cos(dec) * np.cos(ra),
+                np.cos(dec) * np.sin(ra),
+                np.sin(dec),
+            ]
+        )
+
+    def generate_random_catalog(
+        self,
+        catalog: dict[str, Any],
+        box_size: float,
+        theta_cap_deg: float = 20.0,
+    ) -> dict[str, np.ndarray]:
+        """
+        Generates a random catalog with the same redshift distribution and an
+        approximate z-dependent angular cap matching the periodic box footprint.
+        """
+        z_obs = np.asarray(catalog["z_obs"], dtype=np.float64)
+        n_random = int(self.n_random_multiplier * len(z_obs))
+        rng = np.random.default_rng(self.seed)
+
+        z_random = rng.choice(z_obs, size=n_random, replace=True)
+        chi = np.asarray(
+            self.geometry.cosmo.comoving_distance(z_random), dtype=np.float64
+        )
+        transverse_radius = float(box_size) / np.sqrt(2.0)
+        theta_cap = np.deg2rad(float(theta_cap_deg))
+        theta_max = np.minimum(
+            theta_cap,
+            np.arctan(transverse_radius / np.maximum(chi, 1e-6)),
+        )
+        cos_theta = rng.uniform(np.cos(theta_max), 1.0, n_random)
+        theta = np.arccos(np.clip(cos_theta, -1.0, 1.0))
+        phi = rng.uniform(0.0, 2.0 * np.pi, n_random)
+
+        return {
+            "ra_deg": np.degrees(phi),
+            "dec_deg": 90.0 - np.degrees(theta),
+            "z_obs": z_random,
+        }
+
+    def measure_w_theta(
+        self,
+        data: dict[str, Any],
+        random: dict[str, Any],
+    ) -> dict[str, np.ndarray | float | int]:
+        """Computes w(theta) in angular bins via the Davis-Peebles estimator."""
+        theta_edges = np.linspace(
+            np.deg2rad(self.theta_min_deg),
+            np.deg2rad(self.theta_max_deg),
+            self.n_theta_bins + 1,
+        )
+        theta_centers = 0.5 * (theta_edges[:-1] + theta_edges[1:])
+        chord_edges = 2.0 * np.sin(theta_edges / 2.0)
+
+        data_vectors = self.unit_vectors(data["ra_deg"], data["dec_deg"])
+        random_vectors = self.unit_vectors(random["ra_deg"], random["dec_deg"])
+        data_tree = spatial.cKDTree(data_vectors)
+        random_tree = spatial.cKDTree(random_vectors)
+
+        dd_cumulative = data_tree.count_neighbors(data_tree, chord_edges)
+        dr_cumulative = data_tree.count_neighbors(random_tree, chord_edges)
+        dd = np.diff(dd_cumulative) / 2.0
+        dr = np.diff(dr_cumulative)
+
+        n_data = int(len(data_vectors))
+        n_random = int(len(random_vectors))
+        # DD is stored as unique pairs (i < j), while DR counts ordered
+        # data-random pairs, hence the factor of 2 in the normalization.
+        w_theta = (
+            2.0
+            * (n_random / max(n_data, 1))
+            * dd
+            / np.maximum(dr, 1e-12)
+            - 1.0
+        )
+
+        return {
+            "theta_deg": np.degrees(theta_centers),
+            "w_theta": w_theta,
+            "dd": dd,
+            "dr": dr,
+            "n_data": n_data,
+            "n_random": n_random,
+        }
+
+    def measure_cross_w_theta(
+        self,
+        data1: dict[str, Any],
+        data2: dict[str, Any],
+        random: dict[str, Any],
+    ) -> dict[str, np.ndarray | float | int]:
+        """
+        Cross-correlation between two data catalogs using the Davis-Peebles
+        estimator w12 = (N_r / N_2) * D1D2 / D1R - 1.
+        """
+        theta_edges = np.linspace(
+            np.deg2rad(self.theta_min_deg),
+            np.deg2rad(self.theta_max_deg),
+            self.n_theta_bins + 1,
+        )
+        theta_centers = 0.5 * (theta_edges[:-1] + theta_edges[1:])
+        chord_edges = 2.0 * np.sin(theta_edges / 2.0)
+
+        tree1 = spatial.cKDTree(
+            self.unit_vectors(data1["ra_deg"], data1["dec_deg"])
+        )
+        tree2 = spatial.cKDTree(
+            self.unit_vectors(data2["ra_deg"], data2["dec_deg"])
+        )
+        random_tree = spatial.cKDTree(
+            self.unit_vectors(random["ra_deg"], random["dec_deg"])
+        )
+
+        dd = np.diff(tree1.count_neighbors(tree2, chord_edges))
+        dr1 = np.diff(tree1.count_neighbors(random_tree, chord_edges))
+
+        n1 = len(data1["ra_deg"])
+        n2 = len(data2["ra_deg"])
+        n_random = len(random["ra_deg"])
+        w_cross = (
+            (n_random / max(n2, 1))
+            * dd
+            / np.maximum(dr1, 1e-12)
+            - 1.0
+        )
+        return {
+            "theta_deg": np.degrees(theta_centers),
+            "w_theta": w_cross,
+            "dd": dd,
+            "dr": dr1,
+            "n_data1": n1,
+            "n_data2": n2,
+            "n_random": n_random,
+        }
+
+
+class LightConeSurveyPipeline:
+    """
+    Converts a particle light-cone catalog into a masked, biased galaxy catalog
+    and validates the measured w(theta) against the analytic Limber prediction.
+    """
+
+    def __init__(
+        self,
+        cosmo_params: CosmologicalParameters | None = None,
+        b1: float = 1.5,
+        sampling_rate: float = 0.5,
+        mask: SurveyMask | None = None,
+        measurer: AngularClusteringMeasurer | None = None,
+        seed: int = 42,
+    ) -> None:
+        self.geometry = LightConeGeometry(cosmo_params=cosmo_params)
+        self.b1 = float(b1)
+        self.sampling_rate = float(sampling_rate)
+        self.seed = int(seed)
+        self.mask = mask or SurveyMask()
+        self.sampler = GalaxyBiasSampler(
+            b1=self.b1, sampling_rate=self.sampling_rate, seed=seed
+        )
+        self.measurer = measurer or AngularClusteringMeasurer(
+            cosmo_params=cosmo_params, seed=seed
+        )
+
+    def analytic_w_theta(
+        self,
+        theta_deg: np.ndarray,
+        z_eff: float,
+        b1: float | None = None,
+        ell_max: float = 5000.0,
+        n_ell: int = 512,
+    ) -> np.ndarray:
+        """
+        Computes the flat-sky Hankel transform of the Limber C_ell^{gg}:
+          w(theta) = int ell d ell / (2 pi) C_ell J0(ell theta).
+        """
+        bias = self.b1 if b1 is None else float(b1)
+        chi = max(float(self.geometry.cosmo.comoving_distance(z_eff)), 100.0)
+        ell = np.linspace(1.0, float(ell_max), int(n_ell))
+        k = (ell + 0.5) / chi
+        pk_m = np.asarray(
+            self.geometry.cosmo.linear_matter_power_spectrum(k, z=z_eff),
+            dtype=np.float64,
+        ) * (1.0 + 0.45 * ((k / 0.25) ** 0.8))
+        c_ell = (bias**2) * pk_m / (chi**2)
+
+        theta_rad = np.deg2rad(np.asarray(theta_deg, dtype=np.float64))
+        w_theta = np.array(
+            [
+                integrate.simpson(
+                    ell * c_ell * special.j0(ell * theta) / (2.0 * np.pi),
+                    x=ell,
+                )
+                for theta in theta_rad
+            ]
+        )
+        return w_theta
+
+    def evaluate(
+        self,
+        catalog: dict[str, Any],
+        box_size: float,
+        theta_cap_deg: float = 20.0,
+    ) -> dict[str, Any]:
+        """Builds the galaxy catalog and validates w(theta) and the effective bias."""
+        matter = self.mask.apply(catalog)
+        if len(matter["ra_deg"]) == 0:
+            raise ValueError("survey mask selects no objects")
+
+        # Split the matter catalog into two disjoint halves: galaxies are
+        # sampled from half A and cross-correlated with half B, eliminating
+        # self-pair shot noise without using a density-selected complement.
+        rng = np.random.default_rng(self.seed)
+        split = rng.random(len(matter["ra_deg"])) < 0.5
+        matter_a = SurveyMask.subset(matter, split)
+        matter_b = SurveyMask.subset(matter, ~split)
+
+        galaxy = self.sampler.sample(matter_a)
+        if len(galaxy["ra_deg"]) == 0:
+            raise ValueError("galaxy sampler selects no objects")
+        if len(matter_b["ra_deg"]) == 0:
+            raise ValueError("matter split leaves no cross-correlation sample")
+
+        random = self.measurer.generate_random_catalog(
+            matter, box_size=box_size, theta_cap_deg=theta_cap_deg
+        )
+        w_mm = self.measurer.measure_w_theta(matter, random)
+        w_gg = self.measurer.measure_w_theta(galaxy, random)
+        w_gm = self.measurer.measure_cross_w_theta(galaxy, matter_b, random)
+
+        theta = np.asarray(w_gm["theta_deg"], dtype=np.float64)
+        w_gg_values = np.asarray(w_gg["w_theta"], dtype=np.float64)
+        w_mm_values = np.asarray(w_mm["w_theta"], dtype=np.float64)
+        w_gm_values = np.asarray(w_gm["w_theta"], dtype=np.float64)
+
+        # Least-squares slope through the origin, w_gm = b_eff * w_mm.
+        # This is more stable than averaging per-bin ratios when w_mm is noisy.
+        fit_mask = (w_mm_values > 0.0) & np.isfinite(w_gm_values)
+        if np.count_nonzero(fit_mask) >= 2:
+            b_eff = float(
+                np.sum(w_gm_values[fit_mask] * w_mm_values[fit_mask])
+                / np.sum(w_mm_values[fit_mask] ** 2)
+            )
+        else:
+            b_eff = 0.0
+
+        z_eff = float(np.median(np.asarray(galaxy["z_obs"], dtype=np.float64)))
+        analytic = self.analytic_w_theta(theta, z_eff=z_eff)
+
+        valid_cross = np.isfinite(w_gm_values) & np.isfinite(w_mm_values)
+        if (
+            np.count_nonzero(valid_cross) >= 2
+            and np.std(w_gm_values[valid_cross]) > 0.0
+            and np.std(w_mm_values[valid_cross]) > 0.0
+        ):
+            pearson_gm_mm = float(
+                np.corrcoef(
+                    w_gm_values[valid_cross], w_mm_values[valid_cross]
+                )[0, 1]
+            )
+        else:
+            pearson_gm_mm = 0.0
+
+        valid_analytic = np.isfinite(w_gm_values) & np.isfinite(analytic)
+        if (
+            np.count_nonzero(valid_analytic) >= 2
+            and np.std(w_gm_values[valid_analytic]) > 0.0
+            and np.std(analytic[valid_analytic]) > 0.0
+        ):
+            pearson_analytic = float(
+                np.corrcoef(
+                    w_gm_values[valid_analytic], analytic[valid_analytic]
+                )[0, 1]
+            )
+        else:
+            pearson_analytic = 0.0
+
+        bias_ratio = b_eff / self.b1 if self.b1 > 0.0 else 0.0
+        return {
+            "n_matter": int(len(matter["ra_deg"])),
+            "n_galaxies": int(len(galaxy["ra_deg"])),
+            "mask_area_deg2": self.mask.area_deg2,
+            "b1_input": self.b1,
+            "b1_effective": b_eff,
+            "bias_ratio": float(bias_ratio),
+            "theta_deg": theta,
+            "w_theta_gg": w_gg_values,
+            "w_theta_mm": w_mm_values,
+            "w_theta_gm": w_gm_values,
+            "w_theta_analytic": analytic,
+            "pearson_r_gm_mm": pearson_gm_mm,
+            "pearson_r_analytic": pearson_analytic,
+            "passes_light_cone_survey_gate": bool(
+                len(galaxy["ra_deg"]) > 100
+                and b_eff > 1.0
+                and pearson_gm_mm > 0.8
+            ),
         }
