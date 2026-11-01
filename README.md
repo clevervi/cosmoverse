@@ -107,7 +107,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (92 Unit Tests & Local CI Gate)
+### Run the Test Suite (94 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -190,6 +190,9 @@ uv run cosmoverse multiprobe-sbi --n-sims 400 --n-sbc 50 --n-tarp 50
 
 # Run multi-probe SBI with a PM-trained P(k) emulator and SBC + TARP
 uv run cosmoverse pm-emulator-sbi --n-sims 400 --n-sbc 50 --n-tarp 50
+
+# Run multi-probe SBI with a gradient-trained ConditionalRealNVP flow
+uv run cosmoverse flow-sbi --n-sims 400 --n-sbc 50 --n-tarp 50
 
 # Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor
