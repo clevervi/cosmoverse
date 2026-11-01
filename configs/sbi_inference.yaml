@@ -1,0 +1,31 @@
+project_name: "sbi-power-spectrum-inference"
+description: "Neural Posterior Estimation (NPE) on matter power spectrum with cosmic variance"
+cosmology:
+  omega_m: 0.315
+  omega_b: 0.049
+  h: 0.674
+  sigma8: 0.811
+  ns: 0.965
+  w0: -1.0
+  wa: 0.0
+simulation:
+  box_size: 500.0
+  n_mesh: 128
+  z_initial: 50.0
+  z_final: 0.0
+  n_steps: 15
+  seed: 42
+baryons:
+  A_AGN: 1.0
+  A_SN: 1.0
+  log10_Mcrit: 13.5
+  eta_b: 0.5
+extra_settings:
+  inference:
+    algorithm: "SNPE"
+    n_simulations: 2000
+    n_posterior_samples: 5000
+    priors:
+      omega_m: [0.1, 0.5]
+      sigma8: [0.6, 1.0]
+      h: [0.6, 0.8]

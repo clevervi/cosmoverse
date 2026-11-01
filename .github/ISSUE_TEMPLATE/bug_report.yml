@@ -1,0 +1,60 @@
+name: Bug report
+description: Reportar un error numérico, estadístico o de ejecución en COSMOVERSE
+title: "[fix] "
+labels: ["type:fix", "status:needs-info"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. No incluyas tokens, credenciales ni datos privados.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: ¿Qué comportamiento físico, estadístico o de software ocurrió y cuál era el esperado?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1. Ejecutar `uv run python ...` con semilla `seed=42`
+        2. Observar salida en módulo ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Nivel / Módulo afectado
+      options:
+        - "Nivel 1: Core & Simulación (cosmoverse.core / cosmoverse.simulation)"
+        - "Nivel 1: Emuladores (cosmoverse.emulators — TUNeS / FNO)"
+        - "Nivel 1: Bariones (cosmoverse.baryons — BCEmu / Frontera Sesgo-Varianza)"
+        - "Nivel 2: Proceso Observacional (cosmoverse.observations — Máscaras / Bias / RSD)"
+        - "Nivel 3: Inferencia (cosmoverse.inference — SBI / Normalizing Flows / MCLMC)"
+        - "Nivel 3: Validación (cosmoverse.validation — SBC / TARP / Transfer)"
+        - "Infraestructura / CI / CLI"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Versión / Commit de COSMOVERSE
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: Busqué issues duplicadas.
+          required: true
+        - label: Incluí la semilla aleatoria (`seed`) o configuración reproducible.
+          required: true

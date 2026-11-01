@@ -1,0 +1,25 @@
+project_name: "camels-lhs-benchmark"
+description: "CAMELS Latin Hypercube Simulation Suite configuration"
+cosmology:
+  omega_m: 0.30
+  omega_b: 0.049
+  h: 0.6711
+  sigma8: 0.80
+  ns: 0.9624
+  w0: -1.0
+  wa: 0.0
+simulation:
+  box_size: 25.0
+  n_mesh: 128
+  z_initial: 127.0
+  z_final: 0.0
+  n_steps: 25
+  seed: 1337
+baryons:
+  A_AGN: 1.5
+  A_SN: 1.2
+  log10_Mcrit: 13.8
+  eta_b: 0.6
+extra_settings:
+  hydro_code: "SIMBA"
+  feedback_mode: "kinetic+thermal"

@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -eu
+
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+        if command -v powershell.exe >/dev/null 2>&1; then
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ci.ps1
+            exit $?
+        fi
+        ;;
+esac
+
+if [ -f scripts/ci.sh ]; then
+    sh scripts/ci.sh
+fi
