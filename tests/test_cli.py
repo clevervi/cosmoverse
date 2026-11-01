@@ -9,7 +9,7 @@ from cosmoverse.cli import main
 
 
 def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
-    assert __version__ == "0.4.0"
+    assert __version__ == "0.5.0"
     main(["info"])
     main(["frontier"])
     main(["camels"])

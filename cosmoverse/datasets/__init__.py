@@ -10,6 +10,7 @@ from cosmoverse.datasets.camels_gen2 import (
     CAMELSGen2Record,
     StageIVPrecisionCalibrator,
 )
+from cosmoverse.datasets.camels_spectra import CAMELSHydroSpectraConnector
 from cosmoverse.datasets.loaders import (
     CAMELSFieldSnapshotDataset,
     build_camels_gen2_lh_dataloaders,
@@ -23,4 +24,5 @@ __all__ = [
     "CAMELSFieldSnapshotDataset",
     "build_leakage_guarded_dataloaders",
     "build_camels_gen2_lh_dataloaders",
+    "CAMELSHydroSpectraConnector",
 ]

@@ -3,6 +3,12 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.5.0] - 2026-11-01
+
+### Added
+- `CAMELSHydroSpectraConnector` en `cosmoverse.datasets.camels_spectra`: conector de espectros hidrodinámicos $P_{\mathrm{hydro}}(k, z)$ para `CAMELS-IllustrisTNG`, `CAMELS-SIMBA` y `CAMELS-Astrid` con evaluación de transferencia cruzada entre suites y verificación de fuga cero (#37, PR #39).
+- Manuscrito científico completo en LaTeX para el **Paper 1** (`paper/main.tex`), bibliografía BibTeX verificada (`paper/references.bib` sin referencias no verificadas) y exportador automático de tablas `booktabs` (`experiments/export_paper1_tables.py` -> `paper/tables/table_results_summary.tex` y `paper/tables/table_suite_transfer.tex`) (#38, PR #40).
+
 ## [0.4.0] - 2026-11-01
 
 ### Added
