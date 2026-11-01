@@ -3,6 +3,13 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.7.0] - 2026-11-01
+
+### Added
+- Módulo opcional post-v1 `MangroveMergerTreeGNN` (`cosmoverse.emulators.mangrove`, Sección 6.1 del Documento Maestro) para emulación de 6 propiedades bariónicas y galácticas sobre árboles de fusión de halos (`log10_M_star`, `log10_M_cold_gas`, `metallicity_Z`, `SFR_inst`, `SFR_100Myr`, `log10_M_BH`) con guardia de exclusividad `allow_post_v1_extension` y reducción $>2.3\times$ del error RMS frente a estimadores sin historia de ensamblaje (#45, PR #47).
+- Manuscrito científico completo en LaTeX para el **Paper 2** (`paper/paper2_field_level.tex`), tabla automática `paper/tables/table_paper2_field_level.tex` y figuras vectoriales SVG de Etapa 5 (`docs/figures/fig5_paper2_ic_reconstruction.svg` y `docs/figures/fig6_paper2_mclmc_vs_hmc.svg`) (#46, PR #48).
+- Subcomando del CLI `cosmoverse mangrove` y pruebas unitarias en `tests/test_mangrove.py` (`53 passed`).
+
 ## [0.6.0] - 2026-11-01
 
 ### Added

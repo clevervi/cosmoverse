@@ -20,6 +20,7 @@ from cosmoverse.core.parameters import CosmologicalParameters, SimulationParamet
 from cosmoverse.datasets.camels_gen2 import CAMELSGen2Catalog, StageIVPrecisionCalibrator
 from cosmoverse.datasets.camels_spectra import CAMELSHydroSpectraConnector
 from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
+from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
 from cosmoverse.validation.benchmarks import camels_latin_hypercube_benchmark
@@ -196,13 +197,29 @@ def cmd_audit_citations() -> None:
 
 
 def cmd_figures(args: argparse.Namespace) -> None:
-    """Generates all 4 Paper 1 vector SVG figures into --out-dir."""
+    """Generates all Paper 1 and Paper 2 vector SVG figures into --out-dir."""
     saved = Paper1FigureGenerator.generate_all_paper1_figures(args.out_dir)
-    table = Table(title="Generated Paper 1 Scientific Figures (Vector SVG)")
+    saved.update(Paper1FigureGenerator.generate_all_paper2_figures(args.out_dir))
+    table = Table(title="Generated Paper 1 & Paper 2 Scientific Figures (Vector SVG)")
     table.add_column("Figure Key", style="cyan")
     table.add_column("Path", style="green")
     for k, p in saved.items():
         table.add_row(k, str(p))
+    console.print(table)
+
+
+def cmd_mangrove() -> None:
+    """Runs the post-v1 Mangrove Halo Merger-Tree GNN benchmark (Section 6.1)."""
+    gnn = MangroveMergerTreeGNN(allow_post_v1_extension=True, seed=42)
+    res = gnn.benchmark_merger_tree_vs_halo_mlp(n_trees=40, seed=42)
+    table = Table(title="Post-v1 Mangrove Merger-Tree GNN Benchmark (75 Mpc/h Box, 6 Galaxy Properties)")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", justify="right", style="green")
+    table.add_row("Target Properties", ", ".join(res["target_properties"]))
+    table.add_row("Mangrove GNN RMS Error", f"{res['mangrove_gnn_rms']:.4f}")
+    table.add_row("Halo-Only Baseline RMS", f"{res['halo_only_baseline_rms']:.4f}")
+    table.add_row("RMS Reduction Factor", f"{res['rms_improvement_factor']:.2f}x (>= 2.0x Gate)")
+    table.add_row("Status", "PASS" if res["passes_2x_improvement_benchmark"] else "FAIL")
     console.print(table)
 
 
@@ -295,6 +312,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     dash_parser = subparsers.add_parser("dashboard", help="Display or launch the interactive HTML5/3D explorer")
     dash_parser.add_argument("--open", action="store_true", help="Open docs/index.html in the default web browser")
 
+    # Mangrove GNN post-v1 extension
+    subparsers.add_parser("mangrove", help="Run post-v1 Mangrove merger-tree GNN benchmark (Section 6.1)")
+
     args = parser.parse_args(argv)
 
     if args.command == "info" or args.command is None:
@@ -317,6 +337,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_multi_suite()
     elif args.command == "dashboard":
         cmd_dashboard(args)
+    elif args.command == "mangrove":
+        cmd_mangrove()
     else:
         parser.print_help()
 
