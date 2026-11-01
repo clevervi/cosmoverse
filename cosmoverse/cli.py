@@ -20,6 +20,7 @@ from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
 from cosmoverse.validation.benchmarks import camels_latin_hypercube_benchmark
+from cosmoverse.validation.plotting import Paper1FigureGenerator
 
 console = Console()
 
@@ -191,6 +192,17 @@ def cmd_audit_citations() -> None:
     console.print(table)
 
 
+def cmd_figures(args: argparse.Namespace) -> None:
+    """Generates all 4 Paper 1 vector SVG figures into --out-dir."""
+    saved = Paper1FigureGenerator.generate_all_paper1_figures(args.out_dir)
+    table = Table(title="Generated Paper 1 Scientific Figures (Vector SVG)")
+    table.add_column("Figure Key", style="cyan")
+    table.add_column("Path", style="green")
+    for k, p in saved.items():
+        table.add_row(k, str(p))
+    console.print(table)
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="cosmoverse",
@@ -230,6 +242,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     # Citations audit
     subparsers.add_parser("audit-citations", help="Display verified emulator DOIs and blocked references")
 
+    # Figures generator
+    fig_parser = subparsers.add_parser("figures", help="Generate all 4 Paper 1 vector SVG figures")
+    fig_parser.add_argument("--out-dir", type=str, default="docs/figures", help="Target directory for SVG figures")
+
     args = parser.parse_args(argv)
 
     if args.command == "info" or args.command is None:
@@ -246,6 +262,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_field_level(args)
     elif args.command == "audit-citations":
         cmd_audit_citations()
+    elif args.command == "figures":
+        cmd_figures(args)
     else:
         parser.print_help()
 
