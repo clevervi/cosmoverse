@@ -23,7 +23,9 @@ from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
+from cosmoverse.validation.arxiv_packager import ArxivSubmissionPackager
 from cosmoverse.validation.benchmarks import camels_latin_hypercube_benchmark
+from cosmoverse.validation.budget import SimulationBudgetAnalyzer
 from cosmoverse.validation.plotting import Paper1FigureGenerator
 
 console = Console()
@@ -223,6 +225,47 @@ def cmd_mangrove() -> None:
     console.print(table)
 
 
+def cmd_budget() -> None:
+    """Evaluates the Simulation Budget Scaling Law (N_sims = 4..128) for the Central Hypothesis."""
+    analyzer = SimulationBudgetAnalyzer(seed=42)
+    res = analyzer.evaluate_budget_scaling_curve()
+    table = Table(
+        title=(
+            f"Simulation Budget Scaling Law (N_min Emulator={res['min_budget_for_emulator_1pct_mape']}, "
+            f"N_min Stage-IV={res['min_budget_for_stage4_calibrated_posteriors']})"
+        )
+    )
+    table.add_column("N_sims", justify="right", style="cyan")
+    table.add_column("TUNeS P(k) MAPE", justify="right", style="green")
+    table.add_column("Hybrid |Bias|", justify="right", style="yellow")
+    table.add_column("Direct SBI |Bias|", justify="right", style="red")
+    table.add_column("TARP 68%", justify="right", style="magenta")
+    table.add_column("Stage-IV Gate", justify="center", style="white")
+    for pt in res["curve"]:
+        table.add_row(
+            str(pt["n_sims"]),
+            f"{pt['pk_mape_pct']:.2f}%",
+            f"{pt['hybrid_bias_stage4_sigma']:.3f} sigma",
+            f"{pt['direct_no_emulator_bias_sigma']:.2f} sigma",
+            f"{pt['tarp_coverage_68']*100:.1f}%",
+            "PASS" if pt["passes_stage4_calibrated_gate"] else "FAIL",
+        )
+    console.print(table)
+
+
+def cmd_arxiv_bundle(args: argparse.Namespace) -> None:
+    """Audits LaTeX manuscripts and builds arXiv (.tar.gz) submission bundles."""
+    packager = ArxivSubmissionPackager()
+    out = packager.build_arxiv_bundles(out_dir=args.out_dir)
+    table = Table(title="COSMOVERSE arXiv (astro-ph.CO) Submission Bundles & BibTeX Audit")
+    table.add_column("Artifact / Check", style="cyan")
+    table.add_column("Status / Path", style="green")
+    table.add_row("Manuscript & BibTeX Integrity", f"VALID={out['audit']['is_valid']} (Blocked keys={len(out['audit']['leaked_blocked_keys'])})")
+    table.add_row("Paper 1 Bundle (Stages 1-4 MVP)", str(out["paper1_bundle"]))
+    table.add_row("Paper 2 Bundle (Stage 5 Extension)", str(out["paper2_bundle"]))
+    console.print(table)
+
+
 def cmd_multi_suite() -> None:
     """Evaluates Result 4 cross-suite transfer across IllustrisTNG, SIMBA, and Astrid."""
     connector = CAMELSHydroSpectraConnector()
@@ -315,6 +358,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     # Mangrove GNN post-v1 extension
     subparsers.add_parser("mangrove", help="Run post-v1 Mangrove merger-tree GNN benchmark (Section 6.1)")
 
+    # Simulation budget scaling law
+    subparsers.add_parser("budget", help="Evaluate Simulation Budget Scaling Law (N_sims = 4..128)")
+
+    # arXiv submission bundler
+    ax_parser = subparsers.add_parser("arxiv-bundle", help="Audit LaTeX manuscripts and build arXiv .tar.gz bundles")
+    ax_parser.add_argument("--out-dir", type=str, default=None, help="Output directory for .tar.gz archives")
+
     args = parser.parse_args(argv)
 
     if args.command == "info" or args.command is None:
@@ -339,6 +389,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_dashboard(args)
     elif args.command == "mangrove":
         cmd_mangrove()
+    elif args.command == "budget":
+        cmd_budget()
+    elif args.command == "arxiv-bundle":
+        cmd_arxiv_bundle(args)
     else:
         parser.print_help()
 
