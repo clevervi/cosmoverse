@@ -14,6 +14,7 @@ from cosmoverse.emulators.fno import (
     verify_emulator_citation,
 )
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
+from cosmoverse.emulators.pm_pk import PMPowerSpectrumEmulator
 from cosmoverse.emulators.statistics import (
     compute_minkowski_functionals_3d,
     compute_one_point_pdf,
@@ -35,6 +36,7 @@ __all__ = [
     "FNO3dEmulator",
     "SpectralConv3dNumPy",
     "MangroveMergerTreeGNN",
+    "PMPowerSpectrumEmulator",
     "ReducedBispectrumModel",
     "EMULATOR_BIBLIOGRAPHY_REGISTRY",
     "CitationVerificationError",
