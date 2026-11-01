@@ -3,6 +3,23 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.0.0] - 2026-11-01
+
+### Added
+- Entrenamiento por gradiente del `ConditionalRealNVP` (`cosmoverse.inference.flows`): `log_prob`, `inverse` con caché, `backward_log_prob` con backprop manual en NumPy, optimizador Adam y `scale_bound` configurable para controlar la contracción de escala.
+- Modo `density_estimator="flow"` en `SBIEngine`: la posterior se aprende con un flujo condicional entrenado de verdad, sin la regresión cuadrática + residuales aleatorios del modo `"regression"`.
+- Subcomando `cosmoverse flow-sbi`, decimoséptima compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_flow_training.py` (`94 passed`).
+
+### Validation
+- Multi-sonda 4D \(w(\theta)+P_0+P_2+P_4\), 400 simulaciones de entrenamiento.
+- Flujo de 6 capas, 800 épocas, Adam con `lr=1e-3`, `scale_bound=5.0`.
+- SBC 68%: \(\Omega_m=0.66\), \(\sigma_8=0.74\), \(b_1=0.74\), \(A_{\mathrm{AGN}}=0.66\); SBC 95%: 0.96-1.00; KS \(p>0.01\).
+- TARP 68%=0.74, 95%=0.96, KS \(p=0.256\); compuerta conjunta **PASS**.
+
+### Notes
+- Backprop manual en NumPy; no se añadió JAX ni PyTorch como dependencia obligatoria.
+- El pipeline PM-emulator (v2.2.0) sigue usando el modo `"regression"`; su calibración con flujo entrenado requiere ajuste adicional y queda para v3.1.
+
 ## [2.2.0] - 2026-11-01
 
 ### Added

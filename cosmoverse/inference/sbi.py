@@ -28,11 +28,25 @@ class SBIEngine:
         seed: int = 42,
         feature_mode: str = "linear",
         covariance_inflation: float = 1.0,
+        density_estimator: str = "regression",
+        flow_epochs: int = 800,
+        flow_batch_size: int = 64,
+        flow_learning_rate: float = 1e-3,
+        flow_scale_bound: float = 5.0,
+        flow_n_layers: int = 6,
     ):
         if feature_mode not in {"linear", "quadratic"}:
             raise ValueError("feature_mode must be 'linear' or 'quadratic'")
         if covariance_inflation <= 0.0:
             raise ValueError("covariance_inflation must be positive")
+        if density_estimator not in {"regression", "flow"}:
+            raise ValueError("density_estimator must be 'regression' or 'flow'")
+        if flow_epochs < 1 or flow_batch_size < 2:
+            raise ValueError("invalid flow training hyperparameters")
+        if flow_scale_bound <= 0.0:
+            raise ValueError("flow_scale_bound must be positive")
+        if flow_n_layers < 2:
+            raise ValueError("flow_n_layers must be >= 2")
 
         self.simulator_fn = simulator_fn
         self.param_bounds = param_bounds
@@ -42,6 +56,13 @@ class SBIEngine:
         self.rng = np.random.default_rng(seed)
         self.feature_mode = feature_mode
         self.covariance_inflation = float(covariance_inflation)
+        self.density_estimator = density_estimator
+        self.flow_epochs = int(flow_epochs)
+        self.flow_batch_size = int(flow_batch_size)
+        self.flow_learning_rate = float(flow_learning_rate)
+        self.flow_scale_bound = float(flow_scale_bound)
+        self.flow_n_layers = int(flow_n_layers)
+        self._is_fitted = False
 
         self.theta_bank: Optional[np.ndarray] = None
         self.x_bank: Optional[np.ndarray] = None
@@ -50,6 +71,8 @@ class SBIEngine:
         # Fitted conditional mean & covariance projection from simulation bank
         self._x_mean: Optional[np.ndarray] = None
         self._x_std: Optional[np.ndarray] = None
+        self._theta_mean: Optional[np.ndarray] = None
+        self._theta_std: Optional[np.ndarray] = None
         self._reg_weights: Optional[np.ndarray] = None
         self._reg_bias: Optional[np.ndarray] = None
         self._residual_cov_chol: Optional[np.ndarray] = None
@@ -101,6 +124,29 @@ class SBIEngine:
         self._x_mean = np.mean(self.x_bank, axis=0)
         self._x_std = np.std(self.x_bank, axis=0) + 1e-8
         x_norm = (self.x_bank - self._x_mean) / self._x_std
+
+        if self.density_estimator == "flow":
+            self._theta_mean = np.mean(self.theta_bank, axis=0)
+            self._theta_std = np.std(self.theta_bank, axis=0) + 1e-8
+            theta_norm = (self.theta_bank - self._theta_mean) / self._theta_std
+            self.flow = ConditionalRealNVP(
+                param_dim=self.param_dim,
+                context_dim=x_norm.shape[1],
+                n_layers=self.flow_n_layers,
+                seed=self.seed,
+                scale_bound=self.flow_scale_bound,
+            )
+            self.flow.fit(
+                theta_norm,
+                x_norm,
+                n_epochs=self.flow_epochs,
+                batch_size=self.flow_batch_size,
+                learning_rate=self.flow_learning_rate,
+                seed=self.seed,
+            )
+            self._is_fitted = True
+            return
+
         x_features = self._features(x_norm)
         context_dim = x_features.shape[1]
 
@@ -134,6 +180,7 @@ class SBIEngine:
             + 1e-6 * np.eye(self.param_dim)
         )
         self._residual_cov_chol = np.linalg.cholesky(cov_reg)
+        self._is_fitted = True
 
     def infer(
         self,
@@ -144,11 +191,26 @@ class SBIEngine:
         """
         Samples the posterior distribution p(theta | observed_x).
         """
-        if self.flow is None or self._reg_weights is None:
+        if not self._is_fitted:
             self.fit_density_estimator()
 
         obs_arr = np.atleast_1d(np.asarray(observed_x, dtype=np.float64))
         obs_norm = (obs_arr - self._x_mean) / self._x_std
+
+        if self.density_estimator == "flow":
+            theta_norm = self.flow.sample(
+                obs_norm,
+                n_samples=n_posterior_samples,
+                seed=seed,
+            )
+            samples = (
+                theta_norm * self._theta_std[np.newaxis, :]
+                + self._theta_mean[np.newaxis, :]
+            )
+            for j, (_name, (low, high)) in enumerate(self.param_bounds.items()):
+                samples[:, j] = np.clip(samples[:, j], low, high)
+            return PosteriorSummary(samples, param_names=self.param_names)
+
         obs_features = self._features(obs_norm)
 
         # Base flow latent samples (near standard normal)
