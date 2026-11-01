@@ -3,6 +3,13 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.5.0] - 2026-11-01
+
+### Added
+- `CPLDarkEnergyParameters` y `DynamicDarkEnergyCosmology` (`cosmoverse.core.dark_energy`) para el Nivel 1: ecuación de estado dinámica de energía oscura $w(z) = w_0 + w_a z / (1 + z)$ (Chevallier-Polarski-Linder), evolución exacta $\rho_{\mathrm{DE}}(z)/\rho_{\mathrm{DE},0}$, parámetros de distorsión geométrica de Alcock-Paczynski $(\alpha_\parallel(z), \alpha_\perp(z))$ y tasa de crecimiento $f\sigma_8(z)$ en los bines de DESI (#68, PR #69).
+- `FisherScoreCompressor` (`cosmoverse.inference.compression`) para el Nivel 3: compresión neuronal óptima por información de Fisher (IMNN / *score compression*, Alsing et al. 2018; Charnock et al. 2018) que proyecta vectores multi-sonda de 96 bines en 6 resúmenes suficientes preservando $\ge 99.9\%$ del determinante de información de Fisher $(\det F_{\mathrm{comp}}/\det F_{\mathrm{full}})^{1/p}$ (#68, PR #69).
+- Subcomando `cosmoverse dark-energy-imnn`, novena compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_dark_energy_and_compression.py` (`66 passed`).
+
 ## [1.4.0] - 2026-11-01
 
 ### Added
