@@ -7,6 +7,11 @@ from cosmoverse.observations.forward_model import (
     ObservationalForwardPipeline,
     RedshiftSpaceDistortionModel,
 )
+from cosmoverse.observations.hod_and_mocks import (
+    HaloOccupationModel,
+    HODAssemblyBiasParameters,
+    StageIVMockCatalogExporter,
+)
 from cosmoverse.observations.noise import (
     compute_gaussian_covariance_diagonal,
     inject_observational_noise,
@@ -24,4 +29,7 @@ __all__ = [
     "RedshiftSpaceDistortionModel",
     "ObservationalForwardPipeline",
     "Joint3x2ptObservationalPipeline",
+    "HODAssemblyBiasParameters",
+    "HaloOccupationModel",
+    "StageIVMockCatalogExporter",
 ]

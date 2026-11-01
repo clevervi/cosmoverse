@@ -3,6 +3,12 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-11-01
+
+### Added
+- `HODAssemblyBiasParameters`, `HaloOccupationModel` y `StageIVMockCatalogExporter` (`cosmoverse.observations.hod_and_mocks`) junto con el subcomando `cosmoverse hod-mocks`: distribución de ocupación de halos (HOD) de 5 parámetros (Zheng et al. 2007) decorada con sesgo secundario de ensamblaje ($A_{\mathrm{cent}}, A_{\mathrm{sat}}$), cálculo de los espectros de 1-halo + 2-halos $P_{gg}(k)$, espectro cruzado materia-galaxias $P_{gm}(k)$, coeficiente $r_{gm}(k)$ y exportador de catálogos sintéticos Stage-IV (`.npz` + `.csv` + manifiesto SHA-256) (#62, PR #63).
+- Compuerta adicional de validación de Nivel 2 (`HOD + Secondary Assembly Bias P_gm(k) Gate`) integrada en `cosmoverse doctor` y pruebas unitarias en `tests/test_hod_and_mocks.py` (`62 passed`).
+
 ## [1.2.0] - 2026-11-01
 
 ### Added
