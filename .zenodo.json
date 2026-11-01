@@ -1,0 +1,23 @@
+{
+  "title": "COSMOVERSE: Hybrid Cosmological Modeling, Uncertainty Marginalization & Calibrated Inference Protocol",
+  "version": "0.6.0",
+  "upload_type": "software",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "V., Adrian Dario",
+      "affiliation": "COSMOVERSE Open Computational Cosmology Project"
+    }
+  ],
+  "description": "Reproducible three-level cosmological inference protocol connecting TUNeS temporal U-Net emulation, BCEmu baryonic feedback marginalization, Stage-IV observational forward modeling (masks, selection, galaxy bias, RSD multipoles P0/P2/P4), Simulation-Based Inference calibrated via SBC/TARP, leakage-free data partitioning on CAMELS Generation 2 (1,192 simulations), and Stage 5 differentiable field-level inference with preconditioned MCLMC.",
+  "keywords": [
+    "cosmology",
+    "large-scale-structure",
+    "simulation-based-inference",
+    "baryonic-feedback",
+    "neural-emulators",
+    "CAMELS",
+    "Stage-IV-surveys",
+    "MCLMC"
+  ]
+}

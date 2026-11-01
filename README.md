@@ -135,6 +135,12 @@ uv run cosmoverse audit-citations
 
 # Generate all 4 Paper 1 vector SVG scientific figures
 uv run cosmoverse figures --out-dir docs/figures
+
+# Evaluate Result 4 cross-suite transfer across IllustrisTNG, SIMBA, and Astrid
+uv run cosmoverse multi-suite
+
+# Display or launch the interactive HTML5/3D Cosmic Web & 4-Result Explorer
+uv run cosmoverse dashboard
 ```
 
 ---

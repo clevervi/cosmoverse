@@ -5,6 +5,8 @@ frontiers, CAMELS Gen-2 catalog audits, Stage 5 field-level benchmarks, and cita
 """
 
 import argparse
+import pathlib
+import webbrowser
 from typing import Sequence
 
 from rich.console import Console
@@ -16,6 +18,7 @@ from cosmoverse.baryons.frontier import BiasVarianceFrontier
 from cosmoverse.core.cosmology import Cosmology
 from cosmoverse.core.parameters import CosmologicalParameters, SimulationParameters
 from cosmoverse.datasets.camels_gen2 import CAMELSGen2Catalog, StageIVPrecisionCalibrator
+from cosmoverse.datasets.camels_spectra import CAMELSHydroSpectraConnector
 from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
@@ -203,6 +206,45 @@ def cmd_figures(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_multi_suite() -> None:
+    """Evaluates Result 4 cross-suite transfer across IllustrisTNG, SIMBA, and Astrid."""
+    connector = CAMELSHydroSpectraConnector()
+    rows = connector.evaluate_multi_suite_transfer_table(n_test_sims=25, seed=42)
+    table = Table(title="Result 4: Multi-Suite Cross-Simulation Transfer (DMO+BCEmu3 -> Hydro)")
+    table.add_column("Target Suite", style="cyan")
+    table.add_column("Mean P(k) Mismatch", justify="right", style="white")
+    table.add_column("Unmarg. |Bias|", justify="right", style="red")
+    table.add_column("Marg. |Bias|", justify="right", style="green")
+    table.add_column("TARP 68%", justify="right", style="yellow")
+    table.add_column("Stage-IV Gate", justify="center", style="magenta")
+    for row in rows:
+        table.add_row(
+            str(row["target_suite"]),
+            f"{row['mean_pk_mismatch_pct']:.2f}%",
+            f"{row['unmarginalized_bias_sigma']:.2f} sigma",
+            f"{row['marginalized_bias_sigma']:.2f} sigma",
+            f"{row['post_transfer_cov68']*100:.1f}%",
+            "PASS" if row["stage4_compatible_after_marg"] else "FAIL",
+        )
+    console.print(table)
+
+
+def cmd_dashboard(args: argparse.Namespace) -> None:
+    """Displays or opens the interactive HTML5/3D Cosmic Web & 4-Result Explorer."""
+    root = pathlib.Path(__file__).resolve().parents[1]
+    html_path = root / "docs" / "index.html"
+    uri = html_path.as_uri()
+    console.print(
+        Panel(
+            f"[bold green]Interactive Explorer Ready:[/bold green] {html_path}\n[bold cyan]Browser URI:[/bold cyan] {uri}",
+            title="COSMOVERSE Section 10 Interactive Diffusion Layer",
+            expand=False,
+        )
+    )
+    if args.open:
+        webbrowser.open(uri)
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="cosmoverse",
@@ -246,6 +288,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     fig_parser = subparsers.add_parser("figures", help="Generate all 4 Paper 1 vector SVG figures")
     fig_parser.add_argument("--out-dir", type=str, default="docs/figures", help="Target directory for SVG figures")
 
+    # Multi-suite transfer
+    subparsers.add_parser("multi-suite", help="Evaluate Result 4 transfer across IllustrisTNG, SIMBA, and Astrid")
+
+    # Interactive HTML5/3D dashboard
+    dash_parser = subparsers.add_parser("dashboard", help="Display or launch the interactive HTML5/3D explorer")
+    dash_parser.add_argument("--open", action="store_true", help="Open docs/index.html in the default web browser")
+
     args = parser.parse_args(argv)
 
     if args.command == "info" or args.command is None:
@@ -264,6 +313,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_audit_citations()
     elif args.command == "figures":
         cmd_figures(args)
+    elif args.command == "multi-suite":
+        cmd_multi_suite()
+    elif args.command == "dashboard":
+        cmd_dashboard(args)
     else:
         parser.print_help()
 
