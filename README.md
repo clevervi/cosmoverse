@@ -107,7 +107,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (69 Unit Tests & Local CI Gate)
+### Run the Test Suite (73 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -172,6 +172,9 @@ uv run cosmoverse dark-energy-imnn
 
 # Evaluate Level 2 CMB Lensing (kappa_CMB x g / kappa_gal) & tSZ/kSZ BCEmu gas calibration
 uv run cosmoverse cmb-sz
+
+# Evaluate Level 2 relativistic light-cone geometry, magnification bias & wide-angle RSD
+uv run cosmoverse light-cone
 
 # Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor

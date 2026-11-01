@@ -36,6 +36,7 @@ from cosmoverse.observations.hod_and_mocks import (
     StageIVMockCatalogExporter,
 )
 from cosmoverse.observations.intrinsic_alignments import IntrinsicAlignmentModel
+from cosmoverse.observations.light_cone import RelativisticLightConePipeline
 from cosmoverse.observations.three_x_two_pt import Joint3x2ptObservationalPipeline
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
 from cosmoverse.validation.arxiv_packager import ArxivSubmissionPackager
@@ -483,6 +484,44 @@ def cmd_cmb_sz() -> None:
     console.print(table)
 
 
+def cmd_light_cone() -> None:
+    """Evaluates Level 2 relativistic light-cone geometry, magnification bias, and wide-angle RSD."""
+    import numpy as np
+
+    pipeline = RelativisticLightConePipeline()
+    shells = pipeline.geometry.build_shells(0.4, 1.1, n_shells=8)
+    impact = pipeline.evaluate_relativistic_light_cone_impact()
+
+    table = Table(title="Level 2: Relativistic Light-Cone Geometry, Magnification Bias & Wide-Angle RSD")
+    table.add_column("Diagnostic / Metric", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row(
+        "DESI-LRG Light-Cone Shells (z = 0.4 - 1.1)",
+        f"{len(shells['z_centers'])} shells, {float(np.sum(shells['shell_volume_mpc3'])) / 1.0e9:.3f} Gpc^3/h^3",
+    )
+    table.add_row(
+        "Lookback Time Range",
+        f"{float(shells['lookback_time_gyr'][0]):.2f} - {float(shells['lookback_time_gyr'][-1]):.2f} Gyr",
+    )
+    table.add_row(
+        "Mean Magnification Contamination",
+        f"{impact['mean_magnification_contamination_pct']:.2f}%",
+    )
+    table.add_row(
+        "S8 Bias Unmarginalized -> Marginalized",
+        f"{impact['unmarginalized_s8_bias_sigma']:.2f} -> {impact['marginalized_s8_bias_sigma']:.2f} sigma",
+    )
+    table.add_row(
+        "Wide-Angle RSD Fractional RMS Error (60 deg)",
+        f"{impact['wide_angle_fractional_rms_error_60deg']:.3f}",
+    )
+    table.add_row(
+        "Relativistic Light-Cone Gate",
+        "PASS" if impact["passes_relativistic_light_cone_gate"] else "FAIL",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -497,6 +536,11 @@ def cmd_doctor() -> None:
     ]
     cmb_sz_ok = bool(
         CMBLensingAndSZPipeline().evaluate_sz_baryon_calibration_gain()["passes_cmb_sz_calibration_gate"]
+    )
+    light_cone_ok = bool(
+        RelativisticLightConePipeline().evaluate_relativistic_light_cone_impact()[
+            "passes_relativistic_light_cone_gate"
+        ]
     )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     bisp_ia_ok = bool(
@@ -517,6 +561,7 @@ def cmd_doctor() -> None:
         ("Level 1: BCEmu3 Baryonic Bias-Variance Frontier (<0.30 sigma_S4)", frontier_ok),
         ("Level 2: RSD (P0,P2,P4) + Joint 3x2pt Degeneracy Breaking", joint_ok),
         ("Level 2: CMB Lensing (kappa_CMB x g / kappa_gal) + tSZ/kSZ BCEmu Gas Gate", cmb_sz_ok),
+        ("Level 2: Relativistic Light-Cone Magnification Bias + Wide-Angle RSD Gate", light_cone_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -646,6 +691,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     # Massive neutrinos & Halo Mass Function
     subparsers.add_parser("neutrinos-hmf", help="Evaluate Massive Neutrinos S_nu(k) and Halo Mass Function dn/dlnM")
 
+    # Relativistic light-cone geometry + magnification bias + wide-angle RSD
+    subparsers.add_parser("light-cone", help="Evaluate Level 2 relativistic light-cone magnification bias and wide-angle RSD")
+
     # CMB Lensing cross-spectra + tSZ/kSZ BCEmu gas calibration
     subparsers.add_parser("cmb-sz", help="Evaluate Level 2 CMB lensing cross-spectra and tSZ/kSZ gas calibration")
 
@@ -661,7 +709,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 10-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 11-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -699,6 +747,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_fetch_camels(args)
     elif args.command == "neutrinos-hmf":
         cmd_neutrinos_hmf()
+    elif args.command == "light-cone":
+        cmd_light_cone()
     elif args.command == "cmb-sz":
         cmd_cmb_sz()
     elif args.command == "hod-mocks":
