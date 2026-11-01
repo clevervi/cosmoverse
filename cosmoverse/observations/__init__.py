@@ -17,6 +17,10 @@ from cosmoverse.observations.intrinsic_alignments import (
     IntrinsicAlignmentModel,
     IntrinsicAlignmentParameters,
 )
+from cosmoverse.observations.light_cone import (
+    LightConeGeometry,
+    RelativisticLightConePipeline,
+)
 from cosmoverse.observations.noise import (
     compute_gaussian_covariance_diagonal,
     inject_observational_noise,
@@ -40,4 +44,6 @@ __all__ = [
     "StageIVMockCatalogExporter",
     "IntrinsicAlignmentParameters",
     "IntrinsicAlignmentModel",
+    "LightConeGeometry",
+    "RelativisticLightConePipeline",
 ]
