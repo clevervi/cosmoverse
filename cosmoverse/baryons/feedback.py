@@ -7,11 +7,24 @@ Decision of v1 (Master Document Section 6.2):
   BACCOemu is reserved for v2 or cross-validation so errors can be unambiguously attributed.
 """
 
-from typing import Union
+from typing import Protocol, Union, runtime_checkable
 
 import numpy as np
 
 from cosmoverse.core.parameters import BaryonParameters
+
+
+@runtime_checkable
+class BaryonicEmulatorProtocol(Protocol):
+    """Protocol for single-backend baryonic suppression emulators in COSMOVERSE."""
+
+    def suppression_factor(
+        self,
+        k: Union[float, np.ndarray],
+        z: float = 0.0,
+        f_baryon: float = 0.156,
+    ) -> Union[float, np.ndarray]:
+        ...
 
 
 class BCEmuModel:
@@ -105,3 +118,83 @@ def apply_baryonic_feedback_to_pk(
     """Modulates a dark-matter-only power spectrum with BCEmu baryonic feedback physics."""
     s_b = baryonic_suppression_factor(k, baryon_params, z=z)
     return pk_dmo * s_b
+
+
+class BACCOEmuPlanBModel:
+    """
+    Reversible v2 Plan B baryonic emulator (BACCOemu formulation).
+    Reference: Arico et al. (2021), MNRAS 506, 4070 (arXiv:2011.15018), validated on DES Y3.
+
+    Per Master Document Section 8 & Section 12:
+      - Not active by default in v1 (BCEmu is the sole v1 backend).
+      - Activated exclusively via `create_baryonic_emulator(backend="BACCOemu", allow_v2_plan_b=True)`.
+    """
+
+    def __init__(self, params: BaryonParameters | None = None):
+        self.params = params or BaryonParameters(mode="BCEmu7")
+        self.citation_arxiv = "2011.15018"
+
+    def suppression_factor(
+        self,
+        k: Union[float, np.ndarray],
+        z: float = 0.0,
+        f_baryon: float = 0.156,
+    ) -> Union[float, np.ndarray]:
+        """
+        Computes S_bacco(k, z) = P_hydro(k, z) / P_dmo(k, z) using the Arico et al. (2021)
+        gas-expulsion + central galaxy condensation parameterization, preserving S(k -> 0) = 1.
+        """
+        k_arr = np.asarray(k, dtype=np.float64)
+        p = self.params
+
+        m_c_shift = 13.8 - p.log10_Mcrit
+        beta_gas = 0.6 * (p.mu_baryon / 0.4)
+        theta_out = np.maximum(p.theta_ej, 0.5)
+
+        k_gas = 3.2 * (4.0 / theta_out)
+        z_evol = (1.0 + z) ** (-0.25)
+        dip_amp = np.clip(1.45 * f_baryon * p.A_AGN * np.exp(0.30 * m_c_shift) * z_evol, 0.0, 0.60)
+
+        log_k = (np.log10(np.maximum(k_arr, 1e-4)) - np.log10(k_gas)) / (1.0 + 0.3 * beta_gas)
+        gas_dip = dip_amp * np.exp(-0.5 * (log_k ** 2))
+
+        k_cen = 14.0
+        cen_boost = 0.12 * p.A_SN * (p.eta_b / 0.2) / (1.0 + (k_cen / np.maximum(k_arr, 1e-4)) ** 2)
+
+        mass_conservation_taper = 1.0 - np.exp(-((k_arr / 0.025) ** 2))
+        s_bacco = 1.0 + mass_conservation_taper * (-gas_dip + cen_boost)
+        return float(s_bacco) if np.isscalar(k) else s_bacco
+
+
+def create_baryonic_emulator(
+    backend: str = "BCEmu",
+    params: BaryonParameters | None = None,
+    allow_v2_plan_b: bool = False,
+) -> BaryonicEmulatorProtocol:
+    """
+    Factory enforcing Section 8 & Section 12 of docs/MASTER_DOCUMENT.md:
+      1. Never mix BCEmu and BACCOemu simultaneously.
+      2. BCEmu is the single active v1 emulator.
+      3. BACCOemu is available as a reversible Plan B only when `allow_v2_plan_b=True`.
+    """
+    normalized = backend.strip()
+    if "+" in normalized or "," in normalized or (
+        "bcemu" in normalized.lower() and "bacco" in normalized.lower()
+    ):
+        raise ValueError(
+            "Master Document Section 8 forbids integrating BCEmu and BACCOemu simultaneously "
+            "in the same pipeline run. Select exactly one backend."
+        )
+
+    if normalized == "BCEmu":
+        return BCEmuModel(params)
+
+    if normalized == "BACCOemu":
+        if not allow_v2_plan_b:
+            raise ValueError(
+                "BACCOemu is reserved for v2 Plan B per Master Document Section 8 & 12. "
+                "Pass allow_v2_plan_b=True to explicitly switch from BCEmu to BACCOemu."
+            )
+        return BACCOEmuPlanBModel(params)
+
+    raise ValueError(f"Unknown baryonic emulator backend '{backend}'. Valid: ['BCEmu', 'BACCOemu']")

@@ -3,10 +3,14 @@ Unit tests for BCEmu baryonic feedback (v1 primary), baryonification, and Result
 """
 
 import numpy as np
+import pytest
 
 from cosmoverse.baryons.baryonification import BaryonificationModel
 from cosmoverse.baryons.feedback import (
+    BACCOEmuPlanBModel,
+    BaryonicEmulatorProtocol,
     BCEmuModel,
+    create_baryonic_emulator,
 )
 from cosmoverse.baryons.frontier import BiasVarianceFrontier
 from cosmoverse.core.parameters import BaryonParameters
@@ -49,3 +53,24 @@ def test_baryonification_grid_displacement():
     grid = np.random.normal(0, 1, size=(16, 16, 16))
     filtered_grid = model.displace_density_field(grid, box_size=50.0)
     assert filtered_grid.shape == (16, 16, 16)
+
+
+def test_baryonic_emulator_protocol_and_reversible_bacco_plan_b():
+    # Default v1 creates BCEmuModel
+    emu_v1 = create_baryonic_emulator("BCEmu")
+    assert isinstance(emu_v1, BCEmuModel)
+    assert isinstance(emu_v1, BaryonicEmulatorProtocol)
+
+    # Mixing BCEmu and BACCOemu simultaneously is strictly forbidden
+    with pytest.raises(ValueError, match="forbids integrating BCEmu and BACCOemu"):
+        create_baryonic_emulator("BCEmu+BACCOemu")
+
+    # BACCOemu blocked in default v1 unless allow_v2_plan_b=True
+    with pytest.raises(ValueError, match="reserved for v2 Plan B"):
+        create_baryonic_emulator("BACCOemu", allow_v2_plan_b=False)
+
+    # Reversible Plan B switch works when explicitly enabled
+    bacco = create_baryonic_emulator("BACCOemu", allow_v2_plan_b=True)
+    assert isinstance(bacco, BACCOEmuPlanBModel)
+    assert np.isclose(bacco.suppression_factor(1e-4, z=0.0), 1.0, atol=0.01)
+    assert bacco.suppression_factor(4.0, z=0.0) < 1.0

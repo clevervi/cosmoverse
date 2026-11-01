@@ -25,13 +25,14 @@ from cosmoverse.validation import (
     CrossSimulationTransferEvaluator,
     DatasetPartitionProtocol,
     ScaleDependentMisspecification,
+    ScientificBenchmarkReporter,
     SimulationBasedCalibration,
     TARPCalibration,
     camels_gen2_catalog_metadata,
 )
 
 
-def run_mvp_protocol() -> None:
+def run_mvp_protocol() -> dict:
     print("=" * 78)
     print("COSMOVERSE -- PAPER 1 MVP PROTOCOL (STAGES 1-4 & SCIENTIFIC VALIDATION)")
     print("=" * 78)
@@ -192,7 +193,21 @@ def run_mvp_protocol() -> None:
         f"DeltaCov68={res4['degradation']['delta_coverage_68']*100:+.1f}%, "
         f"Bounded={res4['is_transfer_bounded']}"
     )
+    reporter = ScientificBenchmarkReporter(
+        result1_emulator=res1,
+        result2_frontier=res2,
+        result3_calibration={
+            "tarp": tarp_res,
+            "fixed_parameter_check": fixed_res,
+            "misspecification": misspec_res,
+        },
+        result4_transfer=res4,
+        partition_verification=leakage_check,
+    )
+    gates = reporter.evaluate_all_acceptance_gates()
+    print(f"\n[Summary] All 4 Blocking Acceptance Gates Passed: {gates['all_gates_passed']}")
     print("=" * 78)
+    return reporter.to_dict()
 
 
 if __name__ == "__main__":
