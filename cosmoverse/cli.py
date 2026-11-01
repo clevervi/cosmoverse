@@ -38,6 +38,7 @@ from cosmoverse.observations.hod_and_mocks import (
 from cosmoverse.observations.intrinsic_alignments import IntrinsicAlignmentModel
 from cosmoverse.observations.light_cone import (
     LightConeBuilder,
+    LightConeSurveyPipeline,
     RelativisticLightConePipeline,
 )
 from cosmoverse.observations.three_x_two_pt import Joint3x2ptObservationalPipeline
@@ -582,6 +583,36 @@ def cmd_light_cone_build(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_light_cone_survey() -> None:
+    """Applies a survey mask and galaxy bias to a PM light-cone catalog and measures w(theta)."""
+    _, catalog = _build_pm_light_cone_catalog()
+    pipeline = LightConeSurveyPipeline()
+    result = pipeline.evaluate(catalog, box_size=50.0)
+
+    table = Table(title="Level 2: Light-Cone Galaxy Catalog, Survey Mask & Angular Clustering")
+    table.add_column("Diagnostic / Metric", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row("Matter Objects after Mask", f"{result['n_matter']}")
+    table.add_row(
+        "Galaxy Sample (b1 input)",
+        f"{result['n_galaxies']} galaxies (b1={result['b1_input']:.2f})",
+    )
+    table.add_row(
+        "Effective Bias b_eff (w_gm / w_mm)",
+        f"{result['b1_effective']:.3f} (ratio={result['bias_ratio']:.3f})",
+    )
+    table.add_row("Survey Mask Area", f"{result['mask_area_deg2']:.1f} deg^2")
+    table.add_row(
+        "w(theta) Shape Correlation (gm vs mm)",
+        f"r = {result['pearson_r_gm_mm']:.3f}",
+    )
+    table.add_row(
+        "Light-Cone Survey Gate",
+        "PASS" if result["passes_light_cone_survey_gate"] else "FAIL",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -608,6 +639,11 @@ def cmd_doctor() -> None:
             "passes_light_cone_catalog_gate"
         ]
     )
+    light_cone_survey_ok = bool(
+        LightConeSurveyPipeline().evaluate(light_cone_catalog, box_size=50.0)[
+            "passes_light_cone_survey_gate"
+        ]
+    )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     bisp_ia_ok = bool(
         ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
@@ -629,6 +665,7 @@ def cmd_doctor() -> None:
         ("Level 2: CMB Lensing (kappa_CMB x g / kappa_gal) + tSZ/kSZ BCEmu Gas Gate", cmb_sz_ok),
         ("Level 2: Relativistic Light-Cone Magnification Bias + Wide-Angle RSD Gate", light_cone_ok),
         ("Level 2: Light-Cone Snapshot Stacking & Wide-Angle RSD Catalog Gate", light_cone_build_ok),
+        ("Level 2: Light-Cone Galaxy Bias, Survey Mask & w(theta) Clustering Gate", light_cone_survey_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -765,6 +802,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     lc_build_parser = subparsers.add_parser("light-cone-build", help="Build and export a past-light-cone catalog from PM snapshots")
     lc_build_parser.add_argument("--out-dir", type=str, default="dist/light_cone", help="Output directory for the NPZ light-cone catalog")
 
+    # Light-cone survey mask + galaxy bias + angular clustering
+    subparsers.add_parser("light-cone-survey", help="Apply survey mask + galaxy bias and measure w(theta) from a PM light-cone catalog")
+
     # CMB Lensing cross-spectra + tSZ/kSZ BCEmu gas calibration
     subparsers.add_parser("cmb-sz", help="Evaluate Level 2 CMB lensing cross-spectra and tSZ/kSZ gas calibration")
 
@@ -780,7 +820,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 12-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 13-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -822,6 +862,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_light_cone()
     elif args.command == "light-cone-build":
         cmd_light_cone_build(args)
+    elif args.command == "light-cone-survey":
+        cmd_light_cone_survey()
     elif args.command == "cmb-sz":
         cmd_cmb_sz()
     elif args.command == "hod-mocks":

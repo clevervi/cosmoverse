@@ -10,7 +10,7 @@ from cosmoverse.cli import main
 
 
 def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
-    assert __version__ == "1.8.0"
+    assert __version__ == "1.9.0"
     main(["info"])
     main(["frontier"])
     main(["camels"])
@@ -23,6 +23,7 @@ def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
     main(["joint-3x2pt"])
     main(["light-cone"])
     main(["light-cone-build", "--out-dir", str(tmp_path / "cone")])
+    main(["light-cone-survey"])
     main(["cmb-sz"])
     main(["neutrinos-hmf"])
     main(["hod-mocks", "--out-dir", str(tmp_path / "mocks"), "--n-galaxies", "20"])
@@ -45,5 +46,5 @@ def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
     root = pathlib.Path(__file__).resolve().parents[1]
     assert (root / "docs" / "index.html").exists()
     zenodo = json.loads((root / ".zenodo.json").read_text(encoding="utf-8"))
-    assert zenodo["version"] == "1.8.0"
+    assert zenodo["version"] == "1.9.0"
     assert zenodo["license"] == "MIT"
