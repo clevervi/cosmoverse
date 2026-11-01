@@ -3,6 +3,13 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.0.0] - 2026-11-01
+
+### Added
+- `SimulationBudgetAnalyzer` (`cosmoverse.validation.budget`), figura vectorial `docs/figures/fig7_simulation_budget_scaling.svg` y tabla `paper/tables/table_simulation_budget.tex` cuantificando la ley de escala del presupuesto de simulación $N_{\mathrm{sims}} \in \{4, 8, 16, 32, 64, 128\}$ de la hipótesis central ($N_{\min}=8$ para MAPE $<1\%$ en `TUNeS` y $N_{\min}=16$ para posteriores Stage-IV calibradas, ahorro de $62.5\times$) (#51, PR #53).
+- `ArxivSubmissionPackager` (`cosmoverse.validation.arxiv_packager`) y subcomandos CLI `cosmoverse budget` y `cosmoverse arxiv-bundle`: validador de integridad de citas BibTeX/tablas LaTeX y empaquetador automático de archivos `.tar.gz` listos para sumisión a **arXiv (`astro-ph.CO`)** para Paper 1 y Paper 2 (#52, PR #53).
+- Activación de **GitHub Pages** en vivo (`https://clevervi.github.io/cosmoverse/`) con galería integrada de las figuras vectoriales y el explorador 3D interactivo (`55 passed`).
+
 ## [0.7.0] - 2026-11-01
 
 ### Added

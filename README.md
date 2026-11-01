@@ -141,6 +141,15 @@ uv run cosmoverse multi-suite
 
 # Display or launch the interactive HTML5/3D Cosmic Web & 4-Result Explorer
 uv run cosmoverse dashboard
+
+# Run post-v1 Mangrove Halo Merger-Tree GNN benchmark (Section 6.1)
+uv run cosmoverse mangrove
+
+# Evaluate Simulation Budget Scaling Law (N_sims = 4..128) for Central Hypothesis
+uv run cosmoverse budget
+
+# Audit LaTeX manuscripts and build arXiv (astro-ph.CO) .tar.gz submission bundles
+uv run cosmoverse arxiv-bundle
 ```
 
 ---

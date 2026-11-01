@@ -60,8 +60,9 @@ Table~\ref{tab:results_summary} summarizes the quantitative evaluation of all fo
 \end{itemize}
 
 \input{tables/table_suite_transfer.tex}
+\input{tables/table_simulation_budget.tex}
 
-\section{Results III \& IV: Posterior Calibration and Cross-Simulation Transfer}
+\section{Results III \& IV: Posterior Calibration, Simulation Budget, and Cross-Simulation Transfer}
 Posterior calibration is enforced as a non-negotiable acceptance gate using both univariate rank statistics (\texttt{SBC} \cite{Talts2018SBC}) and multivariate random-point coverage (\texttt{TARP} \cite{Lemos2023TARP}), supplemented by fixed-parameter bias checks at Planck 2018 fiducial coordinates $(\Omega_m = 0.315, \sigma_8 = 0.811)$ and scale-dependent Mahalanobis out-of-distribution misspecification detection.
 
 Table~\ref{tab:suite_transfer} reports our central scientific contribution (\textbf{Result 4}): transferring an inference pipeline trained on $\mathrm{CAMELS\text{-}DMO} + \mathrm{BCEmu3}$ to strictly disjoint hydrodynamical test sets from \texttt{CAMELS-IllustrisTNG}, \texttt{CAMELS-SIMBA}, and \texttt{CAMELS-Astrid}. Because \texttt{SIMBA} incorporates collimated bipolar kinetic AGN jets that evacuate baryons to larger comoving radii ($k_{\mathrm{dip}} \sim 2.2\,h\,\mathrm{Mpc}^{-1}$), unmarginalized transfer incurs a $1.31\,\sigma_{\mathrm{Stage\text{-}IV}}$ bias; marginalizing over \texttt{BCEmu3} parameters restores compatibility across all three suites ($|\Delta S_8| \le 0.27\,\sigma_{\mathrm{Stage\text{-}IV}}$) while bounding 68\% empirical coverage degradation to $\le 5\%$.

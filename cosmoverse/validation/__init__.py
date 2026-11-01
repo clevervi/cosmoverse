@@ -9,11 +9,13 @@ Scientific validation (Non-Negotiable — Master Document Section 6.6 & 7):
   - CAMELS Gen-2 & LHS Benchmarks
 """
 
+from cosmoverse.validation.arxiv_packager import ArxivSubmissionPackager
 from cosmoverse.validation.benchmarks import (
     camels_gen2_catalog_metadata,
     camels_latin_hypercube_benchmark,
     generate_latin_hypercube_samples,
 )
+from cosmoverse.validation.budget import SimulationBudgetAnalyzer
 from cosmoverse.validation.coverage import EmpiricalCoverage
 from cosmoverse.validation.misspecification import ScaleDependentMisspecification
 from cosmoverse.validation.plotting import Paper1FigureGenerator
@@ -34,6 +36,8 @@ __all__ = [
     "CrossSimulationTransferEvaluator",
     "ScientificBenchmarkReporter",
     "Paper1FigureGenerator",
+    "SimulationBudgetAnalyzer",
+    "ArxivSubmissionPackager",
     "generate_latin_hypercube_samples",
     "camels_latin_hypercube_benchmark",
     "camels_gen2_catalog_metadata",
