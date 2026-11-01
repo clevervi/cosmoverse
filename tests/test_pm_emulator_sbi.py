@@ -57,6 +57,28 @@ def test_pm_emulator_sbi_fit_and_infer() -> None:
     assert set(intervals) == {"omega_m", "sigma8", "b1", "A_AGN"}
 
 
+def test_pm_emulator_flow_calibration_gate() -> None:
+    pipeline = PMEmulatorSBIPipeline(
+        n_training_simulations=1600,
+        density_estimator="flow",
+        flow_n_layers=6,
+        flow_epochs=800,
+        flow_scale_bound=6.0,
+        flow_hidden_dim=16,
+        seed=42,
+    )
+    pipeline.fit()
+    result = pipeline.run_calibration(
+        n_sbc_trials=100,
+        n_tarp_trials=100,
+        n_posterior_samples=150,
+    )
+
+    assert result["passes_sbc_gate"] is True
+    assert result["passes_tarp_gate"] is True
+    assert result["passes_joint_sbi_gate"] is True
+
+
 def test_pm_emulator_sbi_calibration_gate() -> None:
     pipeline = PMEmulatorSBIPipeline(n_training_simulations=400, seed=42)
     pipeline.fit()

@@ -3,6 +3,22 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.1.0] - 2026-11-01
+
+### Added
+- Redes de acoplamiento MLP en `AffineCouplingLayer` (`hidden_dim`) con backprop manual completo, y permutaciones aleatorias por capa para mejorar el mixing de dimensiones en flujos con MLP (#95, PR #96).
+- Opción `flow_hidden_dim` en `SBIEngine`, `MultiProbeSBIPipeline` y `PMEmulatorSBIPipeline`.
+- Subcomando `cosmoverse pm-flow-sbi`, decimoctava compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_flow_training.py` y `tests/test_pm_emulator_sbi.py` (`96 passed`).
+
+### Validation
+- Emulador PM (LOO 0.82%) + flujo MLP: 1600 simulaciones de entrenamiento, 6 capas, `hidden=16`, 800 épocas, `scale_bound=6.0`, 100 trials SBC y 100 TARP.
+- SBC 68%: \(\Omega_m=0.60\), \(\sigma_8=0.67\), \(b_1=0.65\), \(A_{\mathrm{AGN}}=0.63\); SBC 95%: 0.91-0.92; KS \(p>0.04\).
+- TARP 68%=0.67, 95%=0.94, KS \(p=0.165\); compuerta conjunta **PASS**.
+
+### Notes
+- El flujo lineal de v3.0 conserva la permutación de reversión histórica; las permutaciones aleatorias se usan solo con MLP.
+- El coste de entrenamiento del flujo MLP es mayor (~30 s) pero sigue siendo CPU-only y sin dependencias nuevas.
+
 ## [3.0.0] - 2026-11-01
 
 ### Added
