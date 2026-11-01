@@ -1,0 +1,46 @@
+\documentclass[twocolumn,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage[margin=1.8cm]{geometry}
+
+\title{\textbf{COSMOVERSE Paper II: Differentiable Field-Level Initial Condition Reconstruction with Preconditioned MCLMC and Optional Merger-Tree Graph Emulation}}
+\author{Adrian Dario V.\ (\texttt{clevervi})\\
+\small \texttt{adriandariov@gmail.com} $\cdot$ \url{https://github.com/clevervi/cosmoverse}}
+\date{November 2026 — Version 0.7.0 (Stage 5 Extension)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Building upon the calibrated summary-statistic Simulation-Based Inference (SBI) protocol established in Companion Paper~I, we present the Stage~5 extension of \textbf{COSMOVERSE}: joint field-level reconstruction of three-dimensional initial density fluctuations $\delta_{\mathrm{ini}}(\mathbf{x})$ and cosmological growth amplitude $\alpha$ using differentiable Lagrangian Perturbation Theory (\texttt{JaxPM}-style forward modeling) coupled to Fourier-preconditioned Microcanonical Langevin Monte Carlo (\texttt{MCLMC}). Because multi-scale cosmic web posteriors exhibit severe Hessian ill-conditioning across wavenumbers $k$, we implement an explicit Fourier-space preconditioner $M(k) \propto [1 + P_{\mathrm{lin}}(k)/\sigma_{\mathrm{obs}}^2]^{-1/2}$ and benchmark it against both unpreconditioned \texttt{MCLMC} and a reversible preconditioned Hamiltonian Monte Carlo (\texttt{HMC}) Plan~B baseline. Across $D = 217$ latent dimensions, preconditioned \texttt{MCLMC} recovers large-scale initial conditions with Fourier cross-correlation $r(k) = 0.973$ for $k < 0.3\,h\,\mathrm{Mpc}^{-1}$ while reducing the energy error variance per dimension (\texttt{EEVPD}) by $2.8\times$ relative to unpreconditioned trajectories. Finally, now that the primary v1 \texttt{TUNeS} skeleton is validated, we evaluate the optional post-v1 merger-tree Graph Neural Network (\texttt{Mangrove}, \texttt{arXiv:2405.12271}), demonstrating a $>2.3\times$ reduction in root-mean-square error across six baryonic galaxy properties compared to halo-only estimators.
+\end{abstract}
+
+\section{Introduction and Stage 5 Scope}
+Summary statistics such as the redshift-space power spectrum multipoles $P_\ell(k)$ lose phase information encoded in the filamentary cosmic web. Differentiable field-level inference directly samples the joint posterior:
+\begin{equation}
+  p\bigl(\delta_{\mathrm{ini}}(\mathbf{x}), \alpha \mid \delta_{\mathrm{obs}}(\mathbf{x})\bigr) \propto \mathcal{L}\bigl(\delta_{\mathrm{obs}}(\mathbf{x}) \mid \mathcal{F}_{\mathrm{PM}}[\delta_{\mathrm{ini}}, \alpha]\bigr)\,p(\delta_{\mathrm{ini}})\,p(\alpha),
+\end{equation}
+where $\mathcal{F}_{\mathrm{PM}}(\delta_{\mathrm{ini}}, \alpha) = \alpha\delta_{\mathrm{ini}} + c_{\mathrm{nl}}\alpha^2\bigl(\delta_{\mathrm{ini}}^2 - \langle\delta_{\mathrm{ini}}^2\rangle\rangle\bigr)$ models gravitational mode coupling with exact analytical VJP gradients $\nabla_{\delta_{\mathrm{ini}}} \log p$.
+
+In accordance with Section~7 of the \textbf{COSMOVERSE} Master Document, Stage~5 is isolated as a dedicated extension (Paper~II) so that any pathology in high-dimensional sampler geometry is cleanly separated from the Stages~1--4 SBI pipeline.
+
+\section{Fourier-Space Preconditioning for MCLMC vs.\ HMC}
+Standard microcanonical trajectories on isokinetic spheres suffer rapid energy drift when the target covariance spans orders of magnitude between fundamental modes $k_0 = 2\pi/L$ and Nyquist modes $k_{\mathrm{Ny}} = \pi N/L$. We transform sampling to a whitened latent space $\mathbf{z}$ via diagonal Fourier preconditioning, ensuring near-isotropic curvature prior to leapfrog integration. When energy drift exceeds the stability threshold ($\mathrm{EEVPD} > 5\times 10^{-3}$), the engine provides an automatic, reversible fallback to Metropolis-adjusted preconditioned \texttt{HMC} (Plan~B).
+
+\input{tables/table_paper2_field_level.tex}
+
+\section{Empirical Results: IC Reconstruction and Merger-Tree GNN}
+Table~\ref{tab:paper2_field_level} reports the quantitative benchmarks executed by \texttt{FieldLevelInferenceEngine} and \texttt{MangroveMergerTreeGNN}:
+\begin{enumerate}
+  \item \textbf{3D Initial Condition Fidelity:} MAP optimization followed by preconditioned \texttt{MCLMC} achieves a mean large-scale Fourier cross-correlation $r(k) = 0.9728$ (well above the $r(k) \ge 0.85$ Stage~5 gate).
+  \item \textbf{Sampler Energy Stability:} Preconditioning reduces \texttt{EEVPD} by $2.8\times$ compared to unpreconditioned \texttt{MCLMC}, while the Plan~B \texttt{HMC} sampler maintains a $90.0\%$ Metropolis acceptance rate with marginal amplitude bias $|\Delta\alpha| = 0.0085$.
+  \item \textbf{Post-v1 Merger-Tree Graph Emulation (\texttt{Mangrove}):} Guarded by \texttt{allow\_post\_v1\_extension=True} to preserve v1 single-architecture exclusivity, message passing over progenitor halo trees predicts $\log_{10} M_\star$, $\log_{10} M_{\mathrm{cold}}$, $Z$, $\mathrm{SFR}_{\mathrm{inst}}$, $\mathrm{SFR}_{100\mathrm{Myr}}$, and $\log_{10} M_{\mathrm{BH}}$ with $>2.3\times$ lower RMS error than $z=0$ halo-only baselines.
+\end{enumerate}
+
+\bibliographystyle{unsrt}
+\bibliography{references}
+
+\end{document}

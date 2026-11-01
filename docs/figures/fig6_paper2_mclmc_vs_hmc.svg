@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" width="760" height="460">
+  <rect width="100%" height="100%" fill="#0f172a" rx="10" />
+  <rect x="85.0" y="65.0" width="630.0" height="325.0" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+  <text x="400.0" y="30" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle">Paper 2 (Etapa 5) — Estabilidad Energética EEVPD: MCLMC vs HMC</text>
+  <text x="400.0" y="50" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Impacto del precondicionamiento en espacio de Fourier sobre el error de energía por dimensión</text>
+  <text x="400.0" y="442" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle">Relative Energy Error Variance Per Dimension (Lower = Better)</text>
+  <text x="24" y="227.5" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" transform="rotate(-90, 24, 227.5)">Field-Level Sampler Architecture</text>
+  <text x="101.0" y="99.0" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="13" font-weight="600">Preconditioned MCLMC</text>
+  <rect x="101.0" y="107.0" width="163.3" height="46.0" fill="#10b981" rx="6" />
+  <text x="274.3" y="135.0" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="12">EEVPD = 3.6e-4 (1.0x optimal)</text>
+  <text x="101.0" y="191.0" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="13" font-weight="600">Preconditioned HMC (Plan B)</text>
+  <rect x="101.0" y="199.0" width="263.1" height="46.0" fill="#38bdf8" rx="6" />
+  <text x="374.1" y="227.0" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="12">Acc = 90.0% (Plan B reversible)</text>
+  <text x="101.0" y="283.0" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="13" font-weight="600">Unpreconditioned MCLMC</text>
+  <rect x="101.0" y="291.0" width="453.6" height="46.0" fill="#ef4444" rx="6" />
+  <text x="564.6" y="319.0" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="12">EEVPD = 1.0e-3 (2.8x worse)</text>
+</svg>

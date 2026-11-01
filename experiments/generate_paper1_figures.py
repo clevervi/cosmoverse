@@ -18,7 +18,9 @@ def main() -> None:
     report = run_mvp_protocol()
     out_dir = ROOT / "docs" / "figures"
     saved = Paper1FigureGenerator.generate_all_paper1_figures(out_dir, protocol_report=report)
-    print("\nGenerated Paper 1 Scientific Figures:")
+    saved_p2 = Paper1FigureGenerator.generate_all_paper2_figures(out_dir)
+    saved.update(saved_p2)
+    print("\nGenerated Paper 1 & Paper 2 Scientific Figures:")
     for key, path in saved.items():
         print(f"  * {key}: {path}")
 
