@@ -150,6 +150,13 @@ uv run cosmoverse budget
 
 # Audit LaTeX manuscripts and build arXiv (astro-ph.CO) .tar.gz submission bundles
 uv run cosmoverse arxiv-bundle
+
+# Evaluate Joint Stage-IV 3x2pt (Euclid/LSST) + Spectroscopic RSD (DESI) degeneracy breaking
+uv run cosmoverse joint-3x2pt
+
+# Train and save SHA-256 verified checkpoint (.npz) + populate CAMELS spectrum cache
+uv run cosmoverse train --out-dir dist/checkpoints
+uv run cosmoverse fetch-camels --cache-dir dist/camels_cache
 ```
 
 ---

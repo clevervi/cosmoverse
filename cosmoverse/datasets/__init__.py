@@ -16,6 +16,7 @@ from cosmoverse.datasets.loaders import (
     build_camels_gen2_lh_dataloaders,
     build_leakage_guarded_dataloaders,
 )
+from cosmoverse.datasets.remote import CAMELSArchiveFetcher, CheckpointManager
 
 __all__ = [
     "CAMELSGen2Record",
@@ -25,4 +26,6 @@ __all__ = [
     "build_leakage_guarded_dataloaders",
     "build_camels_gen2_lh_dataloaders",
     "CAMELSHydroSpectraConnector",
+    "CheckpointManager",
+    "CAMELSArchiveFetcher",
 ]

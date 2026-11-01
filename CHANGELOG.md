@@ -3,6 +3,13 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.1.0] - 2026-11-01
+
+### Added
+- `Joint3x2ptObservationalPipeline` (`cosmoverse.observations.three_x_two_pt`) y subcomando `cosmoverse joint-3x2pt`: pipeline conjunto $3\times 2\text{pt}$ (cizalla cósmica $C_\ell^{\kappa\kappa}$, lente galaxia-galaxia $C_\ell^{g\kappa}$, agrupamiento $C_\ell^{gg}$) acoplado a multipolos espectroscópicos RSD ($P_0, P_2, P_4$) para romper la degeneración $(b_1, m, A_{\mathrm{AGN}})$, reduciendo la inflación de varianza en $S_8$ de $1.55\times$ a $1.18\times$ (#55, PR #57).
+- `CheckpointManager` y `CAMELSArchiveFetcher` (`cosmoverse.datasets.remote`) junto con los subcomandos `cosmoverse train` y `cosmoverse fetch-camels` para persistencia verificada con SHA-256 de modelos entrenados (`.npz`) y caché local de espectros multi-suite de CAMELS (#56, PR #57).
+- Artículo de software revisable por pares para **JOSS (*Journal of Open Source Software*)** en `paper/paper.md` auditado automáticamente por `ArxivSubmissionPackager` (`58 passed`).
+
 ## [1.0.0] - 2026-11-01
 
 ### Added

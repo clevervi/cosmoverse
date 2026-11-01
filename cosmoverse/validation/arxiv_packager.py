@@ -80,6 +80,16 @@ class ArxivSubmissionPackager:
                     missing_in.append(rel_in)
             missing_inputs[key] = missing_in
 
+        # Also validate JOSS paper (`paper/paper.md`) if present
+        joss_path = self.paper_dir / "paper.md"
+        joss_missing: list[str] = []
+        if joss_path.exists():
+            joss_text = joss_path.read_text(encoding="utf-8")
+            joss_cites = set(re.findall(r"@([A-Za-z0-9_]+)", joss_text))
+            cited_by_paper["joss"] = sorted(joss_cites)
+            joss_missing = sorted(joss_cites - defined_bib_keys)
+            missing_citations["joss"] = joss_missing
+
         is_valid = (
             len(leaked_blocked) == 0
             and all(len(v) == 0 for v in missing_citations.values())
