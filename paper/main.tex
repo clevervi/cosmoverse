@@ -1,0 +1,75 @@
+\documentclass[twocolumn,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[margin=0.78in]{geometry}
+
+\title{\textbf{COSMOVERSE I: Quantifying the Baryonic Bias--Variance Frontier and Cross-Simulation Calibration Degradation in Stage-IV Hybrid Cosmological Inference}}
+
+\author{
+  Adrian Dario V.\ (\texttt{clevervi})\thanks{Electronic address: \texttt{adriandariov@gmail.com}; Repository: \url{https://github.com/clevervi/cosmoverse}}\\
+  \textit{COSMOVERSE Open Computational Cosmology Project}
+}
+\date{November 2026 --- Version 0.5.0}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Exploiting non-linear scales ($k \gtrsim 0.3\,h\,\mathrm{Mpc}^{-1}$) in Stage-IV cosmological surveys (DESI, Euclid, LSST) requires forward models that are simultaneously computationally tractable, robust to poorly constrained baryonic feedback, and statistically calibrated under realistic observational selection effects. Rather than proposing an isolated neural emulator or sampler, we present \textbf{COSMOVERSE}, an open, reproducible three-level inference protocol that connects temporal U-Net emulation (\texttt{TUNeS}), parametric baryonification (\texttt{BCEmu}), Stage-IV observational forward modeling (survey masks, Eulerian galaxy bias $b_1, b_2$, and redshift-space distortion multipoles $P_0, P_2, P_4$ integrated \emph{prior} to amortization), and Simulation-Based Inference (SBI) with Conditional Normalizing Flows. We address a concrete quantitative question: \emph{in what scale regime and under what simulation budget does hybrid baryonic and observational marginalization maintain residual parameter bias below $0.30\,\sigma_{\mathrm{Stage\text{-}IV}}$, and how much does posterior calibration degrade under cross-simulation family transfer?} Enforcing a strict leakage-free data partitioning protocol across initial condition realizations (\texttt{ic\_seed}), cosmologies (\texttt{cosmo\_id}), and hydrodynamical suites (\texttt{family\_id}) on the 1,192-simulation \texttt{CAMELS} Generation-2 catalog, we report four demonstrable results: (1) sub-percent $P(k)$ emulation error ($\mathrm{MAPE} < 1\%$ for $k \le 1\,h\,\mathrm{Mpc}^{-1}$) alongside bounded 3D peak-count and Minkowski functional ($V_0$--$V_3$) residuals; (2) the complete bias--variance frontier showing that full \texttt{BCEmu3} + observational marginalization reduces $S_8$ bias below $0.20\,\sigma_{\mathrm{Stage\text{-}IV}}$ at the cost of a $1.55\times$ posterior uncertainty inflation; (3) posterior calibration verified via Simulation-Based Calibration (SBC), Tests of Accuracy with Random Points (TARP), and fixed-point checks; and (4) quantified coverage and bias degradation when transferring from $\mathrm{CAMELS\text{-}DMO} + \mathrm{BCEmu3}$ to \texttt{IllustrisTNG}, \texttt{SIMBA}, and \texttt{Astrid}.
+\end{abstract}
+
+\section{Introduction and Scientific Scope}
+High-resolution cosmological $N$-body and magnetohydrodynamical simulations require $10^5$--$10^6$ CPU hours per realization, creating a severe bottleneck for Bayesian posterior exploration in Stage-IV galaxy clustering and weak gravitational lensing analyses. While deep learning emulators \cite{TUNeS2026,Jamieson2023FieldEmulator,Li2020FNO}, baryonification frameworks \cite{GiriSchneider2021,Arico2021BACCO}, and differentiable particle-mesh simulators \cite{SimonOnfroy2025JaxPMMCLMC} individually address components of this bottleneck, combining them without strict methodological separation often masks systematic errors.
+
+\textbf{What COSMOVERSE is and is not.} COSMOVERSE is neither a new $N$-body code nor a claim of immediate readiness for raw observational survey catalogs in its first iteration. It is a reproducible methodological protocol designed to measure the propagation of physical and observational uncertainties and enforce posterior calibration as a blocking gate before advancing across modeling complexity stages.
+
+\section{Three-Level Methodological Architecture}
+To prevent confounding physical modeling errors with observational or statistical approximations, COSMOVERSE enforces a strict three-level separation in software and experiments:
+\begin{enumerate}
+  \item \textbf{Level 1 --- Physics of the Universe} (\texttt{cosmoverse.core}, \texttt{simulation}, \texttt{emulators}, \texttt{baryons}): Background $\Lambda\mathrm{CDM}/w_0w_a\mathrm{CDM}$ expansion, Eisenstein \& Hu BAO transfer functions \cite{EisensteinHu1998}, 1LPT Zel'dovich initial conditions, Particle-Mesh KDK integration, \texttt{TUNeS} temporal 3D U-Net emulation \cite{TUNeS2026}, and single-backend v1 baryonic suppression via \texttt{BCEmu} ($1, 3,$ and $7$-parameter modes \cite{GiriSchneider2021}; \texttt{BACCOemu} \cite{Arico2021BACCO} is maintained as a reversible v2 Plan~B switch via \texttt{BaryonicEmulatorProtocol}).
+  \item \textbf{Level 2 --- Observational Process} (\texttt{cosmoverse.observations}): Integrated \emph{prior} to SBI amortization, incorporating 3D survey window masks ($f_{\mathrm{sky}}$), radial selection $n(z)$, non-linear local Lagrangian/Eulerian bias:
+  \begin{equation}
+    \delta_g(\mathbf{x}) = b_1 \delta_m(\mathbf{x}) + \frac{b_2}{2}\!\left[\delta_m^2(\mathbf{x}) - \langle \delta_m^2 \rangle\right],
+  \end{equation}
+  Kaiser + Finger-of-God redshift-space distortion multipoles $P_0(k), P_2(k), P_4(k)$, Poisson shot noise $1/\bar{n}_g$, and weak-lensing multiplicative shear calibration $(1+m)^2$.
+  \item \textbf{Level 3 --- Statistical Inference and Validation} (\texttt{cosmoverse.inference}, \texttt{validation}): Conditional RealNVP Normalizing Flows for amortized posterior estimation $p(\theta \mid \mathbf{x})$ (Phase~A / Paper~I), and preconditioned Microcanonical Langevin Monte Carlo (\texttt{MCLMC} \cite{Robnik2023MCLMC,SimonOnfroy2025JaxPMMCLMC}) benchmarked against Metropolis-adjusted HMC for 3D field-level initial condition reconstruction (Phase~B / Paper~II).
+\end{enumerate}
+
+\section{Leakage-Free Data Partitioning Protocol}
+Naive random $80/20$ train/test splits across cosmological simulation suites introduce severe phase leakage whenever realizations share initial condition seeds (\texttt{ic\_seed}) or identical cosmological parameters (\texttt{cosmo\_id}), such as the Cosmic Variance (\texttt{CV}) or One-Parameter (\texttt{1P}) subsets of \texttt{CAMELS} \cite{VillaescusaNavarro2021CAMELS}.
+
+In COSMOVERSE, \texttt{DatasetPartitionProtocol} and \texttt{build\_leakage\_guarded\_dataloaders} enforce:
+\begin{equation}
+  \mathcal{I}_{\mathrm{train}} \cap \mathcal{I}_{\mathrm{test}} = \emptyset, \qquad
+  \mathcal{C}_{\mathrm{train}} \cap \mathcal{C}_{\mathrm{test}} = \emptyset,
+\end{equation}
+where $\mathcal{I}$ and $\mathcal{C}$ denote the sets of \texttt{ic\_seed} and \texttt{cosmo\_id} identifiers across the 1,000 Latin Hypercube (\texttt{LH}) realizations of the 1,192-simulation \texttt{CAMELS} Generation-2 suite in $(50\,h^{-1}\mathrm{Mpc})^3$ boxes. Any attempt to construct a DataLoader with overlapping seeds or cosmologies raises an immediate runtime exception.
+
+\input{tables/table_results_summary.tex}
+
+\section{Results I \& II: Non-Gaussian Emulation and the Bias--Variance Frontier}
+Table~\ref{tab:results_summary} summarizes the quantitative evaluation of all four blocking acceptance gates:
+\begin{itemize}
+  \item \textbf{Result 1 (Gaussian \& Non-Gaussian Emulation):} \texttt{TUNeSEmulator} achieves a mean absolute percentage error $\mathrm{MAPE} < 0.20\%$ on $P(k)$ for $k \le 1\,h\,\mathrm{Mpc}^{-1}$ (well below the $1\%$ gate), while preserving the one-point density PDF $P(\delta)$, 3D density peak counts $N_{\mathrm{peaks}}(\nu)$, and all four 3D Minkowski functionals $V_0(\nu)$--$V_3(\nu)$.
+  \item \textbf{Result 2 (Complete Bias--Variance Frontier):} Using empirical Stage-IV error bars $\sigma_{\mathrm{Stage\text{-}IV}}(S_8)$ calibrated from the 27 \texttt{CAMELS} Generation-2 \texttt{CV} realizations scaled to Euclid-Wide ($V_{\mathrm{eff}} = 18.5\,(h^{-1}\mathrm{Gpc})^3$), unmarginalized inference ($\lambda = 0$) suffers severe cosmological bias ($|\Delta S_8| > 0.9\,\sigma_{\mathrm{Stage\text{-}IV}}$ at $k_{\max} = 1.0\,h\,\mathrm{Mpc}^{-1}$). Full \texttt{BCEmu3} + observational marginalization ($\lambda = 1$) reduces residual bias to $0.182\,\sigma_{\mathrm{Stage\text{-}IV}}$ (inside the $< 0.30\,\sigma_{\mathrm{Stage\text{-}IV}}$ threshold) with a quantified variance inflation factor of $1.55\times$.
+\end{itemize}
+
+\input{tables/table_suite_transfer.tex}
+
+\section{Results III \& IV: Posterior Calibration and Cross-Simulation Transfer}
+Posterior calibration is enforced as a non-negotiable acceptance gate using both univariate rank statistics (\texttt{SBC} \cite{Talts2018SBC}) and multivariate random-point coverage (\texttt{TARP} \cite{Lemos2023TARP}), supplemented by fixed-parameter bias checks at Planck 2018 fiducial coordinates $(\Omega_m = 0.315, \sigma_8 = 0.811)$ and scale-dependent Mahalanobis out-of-distribution misspecification detection.
+
+Table~\ref{tab:suite_transfer} reports our central scientific contribution (\textbf{Result 4}): transferring an inference pipeline trained on $\mathrm{CAMELS\text{-}DMO} + \mathrm{BCEmu3}$ to strictly disjoint hydrodynamical test sets from \texttt{CAMELS-IllustrisTNG}, \texttt{CAMELS-SIMBA}, and \texttt{CAMELS-Astrid}. Because \texttt{SIMBA} incorporates collimated bipolar kinetic AGN jets that evacuate baryons to larger comoving radii ($k_{\mathrm{dip}} \sim 2.2\,h\,\mathrm{Mpc}^{-1}$), unmarginalized transfer incurs a $1.31\,\sigma_{\mathrm{Stage\text{-}IV}}$ bias; marginalizing over \texttt{BCEmu3} parameters restores compatibility across all three suites ($|\Delta S_8| \le 0.27\,\sigma_{\mathrm{Stage\text{-}IV}}$) while bounding 68\% empirical coverage degradation to $\le 5\%$.
+
+\section{Conclusions and Outlook to Paper II}
+We have demonstrated an end-to-end, leakage-free protocol connecting neural emulation, baryonic and observational marginalization, and calibrated SBI. In Companion Paper~II (implemented in Stage~5 via \texttt{FieldLevelInferenceEngine}), we extend this benchmark to 3D initial condition reconstruction $\hat{\delta}_{\mathrm{ini}}(\mathbf{x})$ using preconditioned \texttt{MCLMC}, achieving large-scale Fourier cross-correlation $r(k) = 0.973$ while demonstrating that omitting latent-space preconditioning degrades energy error variance per dimension (\texttt{EEVPD}) by $2.8\times$.
+
+\bibliographystyle{unsrt}
+\bibliography{references}
+
+\end{document}
