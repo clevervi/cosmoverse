@@ -4,8 +4,13 @@ Unit tests for neural emulators (TUNeS v1 primary, FNO Plan B) and Resultado 1 s
 """
 
 import numpy as np
+import pytest
 
-from cosmoverse.emulators.fno import FNO3dEmulator
+from cosmoverse.emulators.fno import (
+    CitationVerificationError,
+    FNO3dEmulator,
+    verify_emulator_citation,
+)
 from cosmoverse.emulators.statistics import (
     compute_minkowski_functionals_3d,
     compute_one_point_pdf,
@@ -57,9 +62,23 @@ def test_non_gaussian_statistics_3d():
 
 def test_fno_3d_emulator_plan_b():
     fno = FNO3dEmulator(in_channels=1, out_channels=1, width=8, modes=4)
+    assert fno.citation_metadata["arxiv_id"] == "2010.08895"
     dummy_input = np.random.normal(0, 1, size=(16, 16, 16))
     pred = fno.predict(dummy_input)
     assert pred.shape == (16, 16, 16)
+
+
+def test_bibliography_verification_blocks_unverified_cosmorgnet():
+    tunes_meta = verify_emulator_citation("TUNeS")
+    assert tunes_meta["arxiv_id"] == "2603.10924"
+    jamieson_meta = verify_emulator_citation("Jamieson2023")
+    assert jamieson_meta["doi"] == "10.1103/PhysRevD.107.103533"
+
+    with pytest.raises(CitationVerificationError, match="blocked"):
+        verify_emulator_citation("CosmoRGNet")
+
+    with pytest.raises(CitationVerificationError, match="blocked"):
+        FNO3dEmulator(citation_key="CosmoRGNet")
 
 
 def test_cosmo_unet_alias():

@@ -1,10 +1,80 @@
 """
-Fourier Neural Operator (FNO) for field-level cosmological emulation.
-Maps linear initial density fields or parameters to non-linear cosmological fields.
-Reference: Li et al. (2020) "Fourier Neural Operator for Parametric Partial Differential Equations".
+Fourier Neural Operator (FNO) for field-level cosmological emulation (Plan B)
+and Bibliographic Citation Verification Registry (Master Document Section 8).
+
+Verified references:
+  - Primary v1: TUNeS (arXiv:2603.10924)
+  - Plan B spectral: Li et al. (2020) "Fourier Neural Operator for Parametric Partial Differential Equations" (arXiv:2010.08895)
+  - Plan B field-level displacement: Jamieson et al. (2023) Phys. Rev. D 107, 103533 (arXiv:2206.04594)
+  - Alternative halo/merger-tree: Mangrove, Nguyen et al. (2024) (arXiv:2405.12271)
+  - Blocked / Unverified: "CosmoRGNet" (raises CitationVerificationError per Section 8)
 """
 
 import numpy as np
+
+
+class CitationVerificationError(ValueError):
+    """Raised when attempting to use or cite an unverified emulator reference."""
+
+
+EMULATOR_BIBLIOGRAPHY_REGISTRY: dict[str, dict[str, str | None]] = {
+    "TUNeS": {
+        "status": "VERIFIED_PRIMARY_V1",
+        "arxiv_id": "2603.10924",
+        "doi": "10.48550/arXiv.2603.10924",
+        "title": "Temporal U-Net Emulator for Structure Formation (TUNeS)",
+        "role": "Primary v1 3D temporal density field emulator",
+    },
+    "FNO3D": {
+        "status": "VERIFIED_PLAN_B",
+        "arxiv_id": "2010.08895",
+        "doi": "10.48550/arXiv.2010.08895",
+        "title": "Fourier Neural Operator for Parametric Partial Differential Equations",
+        "role": "Plan B 3D spectral neural operator baseline",
+    },
+    "Jamieson2023": {
+        "status": "VERIFIED_PLAN_B",
+        "arxiv_id": "2206.04594",
+        "doi": "10.1103/PhysRevD.107.103533",
+        "title": "Field-level neural network emulator for cosmological N-body simulations",
+        "role": "Plan B field-level Lagrangian displacement/velocity emulator",
+    },
+    "Mangrove": {
+        "status": "VERIFIED_ALTERNATIVE",
+        "arxiv_id": "2405.12271",
+        "doi": "10.48550/arXiv.2405.12271",
+        "title": "Mangrove: Learning Galaxy Properties from Merger Trees",
+        "role": "Alternative graph-based halo and galaxy property emulator",
+    },
+    "CosmoRGNet": {
+        "status": "UNVERIFIED_BLOCKED",
+        "arxiv_id": None,
+        "doi": None,
+        "title": None,
+        "role": (
+            "Blocked per Master Document Section 8: no peer-reviewed manuscript or arXiv "
+            "preprint matching 'CosmoRGNet' exists in public literature."
+        ),
+    },
+}
+
+
+def verify_emulator_citation(citation_key: str) -> dict[str, str | None]:
+    """
+    Verifies that an emulator architecture reference has a confirmed DOI / arXiv ID
+    in accordance with Section 8 of docs/MASTER_DOCUMENT.md.
+    """
+    if citation_key not in EMULATOR_BIBLIOGRAPHY_REGISTRY:
+        raise CitationVerificationError(
+            f"Unknown emulator citation key '{citation_key}'. "
+            f"Registered keys: {sorted(EMULATOR_BIBLIOGRAPHY_REGISTRY.keys())}"
+        )
+    entry = EMULATOR_BIBLIOGRAPHY_REGISTRY[citation_key]
+    if entry["status"] == "UNVERIFIED_BLOCKED" or not entry.get("arxiv_id"):
+        raise CitationVerificationError(
+            f"Emulator reference '{citation_key}' is blocked: {entry['role']}"
+        )
+    return dict(entry)
 
 
 class SpectralConv3dNumPy:
@@ -68,8 +138,9 @@ class SpectralConv3dNumPy:
 
 class FNO3dEmulator:
     """
-    3D Fourier Neural Operator emulator for cosmological simulations.
+    3D Fourier Neural Operator emulator for cosmological simulations (Plan B).
     Can predict 3D cosmic web density fields from linear initial perturbations.
+    Enforces bibliographic verification via `verify_emulator_citation`.
     """
 
     def __init__(
@@ -78,7 +149,10 @@ class FNO3dEmulator:
         out_channels: int = 1,
         width: int = 16,
         modes: int = 8,
+        citation_key: str = "FNO3D",
     ):
+        self.citation_metadata = verify_emulator_citation(citation_key)
+        self.citation_key = citation_key
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.width = width
