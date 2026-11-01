@@ -157,6 +157,12 @@ uv run cosmoverse joint-3x2pt
 # Train and save SHA-256 verified checkpoint (.npz) + populate CAMELS spectrum cache
 uv run cosmoverse train --out-dir dist/checkpoints
 uv run cosmoverse fetch-camels --cache-dir dist/camels_cache
+
+# Evaluate Massive Neutrinos (sum m_nu) & Result 1 Tinker (2008) Halo Mass Function dn/dlnM
+uv run cosmoverse neutrinos-hmf
+
+# Run Master 10-Gate End-to-End Scientific System Doctor
+uv run cosmoverse doctor
 ```
 
 ---
