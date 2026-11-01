@@ -25,6 +25,49 @@ from cosmoverse.validation.sbc import SimulationBasedCalibration
 from cosmoverse.validation.tarp import TARPCalibration
 
 
+def compute_light_cone_w_theta(
+    omega_m: float,
+    sigma8: float,
+    b1: float,
+    a_agn: float,
+    z_eff: float,
+    theta_deg: np.ndarray,
+    ell: np.ndarray,
+) -> np.ndarray:
+    """
+    Noiseless light-cone angular correlation function from the Limber + BCEmu
+    surrogate:
+      C_ell = b1^2 S_b(k; A_AGN) P_m(k) / chi^2,
+      w(theta) = int ell d ell / (2 pi) C_ell J0(ell theta).
+    """
+    cosmology = Cosmology(
+        CosmologicalParameters(omega_m=float(omega_m), sigma8=float(sigma8))
+    )
+    chi = max(float(cosmology.comoving_distance(z_eff)), 100.0)
+    k = (np.asarray(ell, dtype=np.float64) + 0.5) / chi
+
+    pk_m = np.asarray(
+        cosmology.linear_matter_power_spectrum(k, z=z_eff),
+        dtype=np.float64,
+    ) * (1.0 + 0.45 * ((k / 0.25) ** 0.8))
+    suppression = BCEmuModel(
+        BaryonParameters(mode="BCEmu3", A_AGN=float(a_agn))
+    ).suppression_factor(k, z=z_eff)
+    c_ell = (float(b1) ** 2) * pk_m * suppression / (chi**2)
+
+    theta_rad = np.deg2rad(np.asarray(theta_deg, dtype=np.float64))
+    return np.array(
+        [
+            integrate.simpson(
+                np.asarray(ell) * c_ell * special.j0(np.asarray(ell) * angle)
+                / (2.0 * np.pi),
+                x=ell,
+            )
+            for angle in theta_rad
+        ]
+    )
+
+
 class LightConeSBIPipeline:
     """
     Fast light-cone forward model + SBI + SBC/TARP calibration for
@@ -98,30 +141,14 @@ class LightConeSBIPipeline:
             raise ValueError("theta must have shape (3,) = (omega_m, sigma8, A_AGN)")
 
         omega_m, sigma8, a_agn = (float(value) for value in theta_arr)
-        cosmology = Cosmology(
-            CosmologicalParameters(omega_m=omega_m, sigma8=sigma8)
-        )
-        chi = max(float(cosmology.comoving_distance(self.z_eff)), 100.0)
-        k = (self.ell + 0.5) / chi
-
-        pk_m = np.asarray(
-            cosmology.linear_matter_power_spectrum(k, z=self.z_eff),
-            dtype=np.float64,
-        ) * (1.0 + 0.45 * ((k / 0.25) ** 0.8))
-        suppression = BCEmuModel(
-            BaryonParameters(mode="BCEmu3", A_AGN=a_agn)
-        ).suppression_factor(k, z=self.z_eff)
-        c_ell = (self.b1_fixed**2) * pk_m * suppression / (chi**2)
-
-        theta_rad = np.deg2rad(self.theta_deg)
-        w_theta = np.array(
-            [
-                integrate.simpson(
-                    self.ell * c_ell * special.j0(self.ell * angle) / (2.0 * np.pi),
-                    x=self.ell,
-                )
-                for angle in theta_rad
-            ]
+        w_theta = compute_light_cone_w_theta(
+            omega_m,
+            sigma8,
+            self.b1_fixed,
+            a_agn,
+            self.z_eff,
+            self.theta_deg,
+            self.ell,
         )
         if add_noise:
             sigma = self.noise_fraction * np.maximum(

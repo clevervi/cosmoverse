@@ -3,6 +3,22 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [2.1.0] - 2026-11-01
+
+### Added
+- `MultiProbeSBIPipeline` (`cosmoverse.inference.multiprobe_sbi`) para el Nivel 3: SBI de cuatro parámetros $(\Omega_m, \sigma_8, b_1, A_{\mathrm{AGN}})$ sobre el vector conjunto $[w(\theta), P_0, P_2, P_4]$ (12 + 24 bines). El cuádrupolo y el hexadecárupolo rompen la degeneración $\sigma_8$–$b_1$, permitiendo liberar $b_1$ (#86, PR #87).
+- `compute_light_cone_w_theta` y `compute_rsd_multipoles` como forward models compartidos; `LightConeSBIPipeline` ahora reutiliza el primero.
+- Subcomando `cosmoverse multiprobe-sbi`, decimoquinta compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_multiprobe_sbi.py` (`89 passed`).
+
+### Validation
+- 400 simulaciones de entrenamiento, 50 trials SBC y 50 trials TARP.
+- SBC 68%: $\Omega_m=0.72$, $\sigma_8=0.66$, $b_1=0.70$, $A_{\mathrm{AGN}}=0.62$; SBC 95%: 0.88-0.96; KS $p>0.08$.
+- TARP 68%=0.70, 95%=0.88, KS $p=0.741$; compuerta conjunta **PASS**.
+
+### Notes
+- El forward model sigue siendo un surrogate Limber + Kaiser/FoG + BCEmu, no una simulación PM completa por muestra.
+- La liberación de $b_1$ requiere el cuádrupolo RSD; solo con $w(\theta)$ el modo 4D no pasa SBC.
+
 ## [2.0.0] - 2026-11-01
 
 ### Added
