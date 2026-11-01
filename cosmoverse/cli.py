@@ -36,7 +36,10 @@ from cosmoverse.observations.hod_and_mocks import (
     StageIVMockCatalogExporter,
 )
 from cosmoverse.observations.intrinsic_alignments import IntrinsicAlignmentModel
-from cosmoverse.observations.light_cone import RelativisticLightConePipeline
+from cosmoverse.observations.light_cone import (
+    LightConeBuilder,
+    RelativisticLightConePipeline,
+)
 from cosmoverse.observations.three_x_two_pt import Joint3x2ptObservationalPipeline
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
 from cosmoverse.validation.arxiv_packager import ArxivSubmissionPackager
@@ -522,6 +525,63 @@ def cmd_light_cone() -> None:
     console.print(table)
 
 
+def _build_pm_light_cone_catalog() -> tuple[LightConeBuilder, dict]:
+    """Runs a tiny PM simulation and returns its past-light-cone catalog."""
+    sim_params = SimulationParameters(
+        box_size=50.0,
+        n_mesh=16,
+        n_steps=2,
+        z_initial=5.0,
+        z_final=0.0,
+        seed=42,
+    )
+    simulator = ParticleMeshSimulator(sim_params=sim_params)
+    builder = LightConeBuilder(
+        box_size=sim_params.box_size, n_mesh=sim_params.n_mesh
+    )
+    catalog = builder.build_from_simulation(
+        simulator,
+        snapshot_redshifts=[0.0, 0.1, 0.2],
+        z_max=0.2,
+        n_radial_bins=4,
+    )
+    return builder, catalog
+
+
+def cmd_light_cone_build(args: argparse.Namespace) -> None:
+    """Builds and exports a past-light-cone catalog from PM snapshots."""
+    builder, catalog = _build_pm_light_cone_catalog()
+    metrics = builder.evaluate_catalog(catalog)
+    manifest = builder.export_catalog(catalog, out_dir=args.out_dir)
+
+    table = Table(title="Level 2: Past-Light-Cone Catalog from PM Snapshots & Wide-Angle RSD")
+    table.add_column("Diagnostic / Artifact", style="cyan")
+    table.add_column("Measured Value / Path", justify="right", style="green")
+    table.add_row("PM Snapshot Redshifts", "0.00, 0.10, 0.20")
+    table.add_row("Catalog Objects", f"{metrics['n_objects']}")
+    table.add_row(
+        "Populated Radial Shells",
+        f"{metrics['n_populated_shells']}/{metrics['n_shells']}",
+    )
+    table.add_row(
+        "Observed Redshift Range",
+        f"{metrics['redshift_min']:.3f} - {metrics['redshift_max']:.3f}",
+    )
+    table.add_row(
+        "Mean Wide-Angle RSD Displacement",
+        f"{metrics['mean_rsd_displacement_mpc_h']:.2f} Mpc/h",
+    )
+    table.add_row(
+        "Catalog NPZ (SHA-256)",
+        f"{pathlib.Path(str(manifest['path'])).name} ({str(manifest['sha256'])[:12]}...)",
+    )
+    table.add_row(
+        "Light-Cone Catalog Gate",
+        "PASS" if metrics["passes_light_cone_catalog_gate"] else "FAIL",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -540,6 +600,12 @@ def cmd_doctor() -> None:
     light_cone_ok = bool(
         RelativisticLightConePipeline().evaluate_relativistic_light_cone_impact()[
             "passes_relativistic_light_cone_gate"
+        ]
+    )
+    light_cone_builder, light_cone_catalog = _build_pm_light_cone_catalog()
+    light_cone_build_ok = bool(
+        light_cone_builder.evaluate_catalog(light_cone_catalog)[
+            "passes_light_cone_catalog_gate"
         ]
     )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
@@ -562,6 +628,7 @@ def cmd_doctor() -> None:
         ("Level 2: RSD (P0,P2,P4) + Joint 3x2pt Degeneracy Breaking", joint_ok),
         ("Level 2: CMB Lensing (kappa_CMB x g / kappa_gal) + tSZ/kSZ BCEmu Gas Gate", cmb_sz_ok),
         ("Level 2: Relativistic Light-Cone Magnification Bias + Wide-Angle RSD Gate", light_cone_ok),
+        ("Level 2: Light-Cone Snapshot Stacking & Wide-Angle RSD Catalog Gate", light_cone_build_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -694,6 +761,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     # Relativistic light-cone geometry + magnification bias + wide-angle RSD
     subparsers.add_parser("light-cone", help="Evaluate Level 2 relativistic light-cone magnification bias and wide-angle RSD")
 
+    # Past-light-cone catalog from PM snapshots
+    lc_build_parser = subparsers.add_parser("light-cone-build", help="Build and export a past-light-cone catalog from PM snapshots")
+    lc_build_parser.add_argument("--out-dir", type=str, default="dist/light_cone", help="Output directory for the NPZ light-cone catalog")
+
     # CMB Lensing cross-spectra + tSZ/kSZ BCEmu gas calibration
     subparsers.add_parser("cmb-sz", help="Evaluate Level 2 CMB lensing cross-spectra and tSZ/kSZ gas calibration")
 
@@ -709,7 +780,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 11-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 12-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -749,6 +820,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_neutrinos_hmf()
     elif args.command == "light-cone":
         cmd_light_cone()
+    elif args.command == "light-cone-build":
+        cmd_light_cone_build(args)
     elif args.command == "cmb-sz":
         cmd_cmb_sz()
     elif args.command == "hod-mocks":

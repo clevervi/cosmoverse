@@ -2,7 +2,7 @@
 High-level Particle-Mesh (PM) N-body simulation orchestrator and power spectrum estimators.
 """
 
-from typing import Optional, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -72,6 +72,89 @@ class ParticleMeshSimulator:
             pos, self.sim_params.box_size, self.sim_params.n_mesh
         )
         return self.final_density
+
+    def run_with_snapshots(
+        self,
+        snapshot_redshifts: Sequence[float],
+        seed: Optional[int] = None,
+        include_density: bool = False,
+        verbose: bool = False,
+    ) -> Dict[float, dict]:
+        """
+        Runs the PM simulation and records particle positions/velocities at the
+        requested snapshot redshifts. The timeline is the union of the initial
+        scale factor, the requested snapshots, and the final scale factor.
+        """
+        if self.positions is None:
+            self.initialize(seed=seed)
+
+        a_ini = 1.0 / (1.0 + self.sim_params.z_initial)
+        a_end = 1.0 / (1.0 + self.sim_params.z_final)
+        a_targets = sorted(
+            {
+                1.0 / (1.0 + float(z))
+                for z in snapshot_redshifts
+                if self.sim_params.z_final <= float(z) <= self.sim_params.z_initial
+            }
+        )
+        if not a_targets:
+            raise ValueError("No snapshot redshifts lie within [z_final, z_initial]")
+
+        a_steps = np.unique(np.concatenate(([a_ini], a_targets, [a_end])))
+        pos = self.positions.copy()
+        vel = self.velocities.copy()
+        snapshots: Dict[float, dict] = {}
+
+        for step in range(len(a_steps) - 1):
+            a_cur = float(a_steps[step])
+            a_next = float(a_steps[step + 1])
+
+            if np.any(np.isclose(a_cur, a_targets)):
+                z_cur = 1.0 / a_cur - 1.0
+                snapshots[float(z_cur)] = self._make_snapshot(
+                    pos, vel, z_cur, include_density=include_density
+                )
+
+            pos, vel = step_leapfrog_kdk(
+                pos, vel, a_cur, a_next, self.cosmology, self.sim_params
+            )
+            if verbose:
+                print(
+                    f"[PM snapshot step {step + 1}/{len(a_steps) - 1}] "
+                    f"a={a_cur:.4f} -> {a_next:.4f}"
+                )
+
+        if np.any(np.isclose(a_steps[-1], a_targets)):
+            z_final = 1.0 / float(a_steps[-1]) - 1.0
+            snapshots[float(z_final)] = self._make_snapshot(
+                pos, vel, z_final, include_density=include_density
+            )
+
+        self.positions = pos
+        self.velocities = vel
+        self.final_density = cic_deposit(
+            pos, self.sim_params.box_size, self.sim_params.n_mesh
+        )
+        return snapshots
+
+    def _make_snapshot(
+        self,
+        positions: np.ndarray,
+        velocities: np.ndarray,
+        redshift: float,
+        include_density: bool,
+    ) -> dict:
+        """Builds one immutable snapshot payload for light-cone construction."""
+        snapshot = {
+            "z": float(redshift),
+            "positions_mpc_h": positions.copy(),
+            "velocities_km_s": velocities.copy(),
+        }
+        if include_density:
+            snapshot["density"] = cic_deposit(
+                positions, self.sim_params.box_size, self.sim_params.n_mesh
+            )
+        return snapshot
 
     def compute_power_spectrum(
         self,

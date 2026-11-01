@@ -18,6 +18,7 @@ from cosmoverse.observations.intrinsic_alignments import (
     IntrinsicAlignmentParameters,
 )
 from cosmoverse.observations.light_cone import (
+    LightConeBuilder,
     LightConeGeometry,
     RelativisticLightConePipeline,
 )
@@ -46,4 +47,5 @@ __all__ = [
     "IntrinsicAlignmentModel",
     "LightConeGeometry",
     "RelativisticLightConePipeline",
+    "LightConeBuilder",
 ]

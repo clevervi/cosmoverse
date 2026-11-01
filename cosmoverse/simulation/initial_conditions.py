@@ -116,7 +116,7 @@ def setup_initial_particles(
 
     # Generate linear density field at z=0
     delta_real, _ = generate_gaussian_random_field(cosmology, sim_params, seed=seed)
-    delta_k = np.fft.rfftn(delta_real) / (n ** 3)
+    delta_k = np.fft.rfftn(delta_real)
 
     # 1LPT displacement at z=0
     psi_x, psi_y, psi_z = compute_zeldovich_displacement(delta_k, box)
