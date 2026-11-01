@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use COSMOVERSE in your research, please cite it as below."
+authors:
+  - family-names: "V."
+    given-names: "Adrian Dario"
+    alias: "clevervi"
+    email: "adriandariov@gmail.com"
+title: "COSMOVERSE: Cosmological Modeling and Inference Engine"
+version: 0.1.0
+date-released: 2026-11-01
+url: "https://github.com/clevervi/cosmoverse"
+repository-code: "https://github.com/clevervi/cosmoverse"
+keywords:
+  - cosmology
+  - differentiable-simulation
+  - neural-emulation
+  - bayesian-inference
+  - simulation-based-inference
+license: MIT

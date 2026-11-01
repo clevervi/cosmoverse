@@ -1,0 +1,60 @@
+name: Feature request
+description: Proponer una funcionalidad o módulo alineado con el Documento Maestro
+title: "[feat] "
+labels: ["type:feat", "status:needs-info"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de proponer, revisá `docs/MASTER_DOCUMENT.md` y las issues abiertas para evitar duplicados.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema o pregunta científica
+      description: ¿Qué etapa del roadmap (Etapas 1–6) o resultado demostrable (Resultados 1–4) aborda?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta técnica y formulación física/estadística
+      description: ¿Cómo se integra respetando la separación de 3 niveles?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Etapa del Roadmap
+      options:
+        - "Etapa 1: Foundation (TUNeS, ICs, Estadísticas No Gaussianas)"
+        - "Etapa 2: Physical Uncertainty (BCEmu, Frontera Sesgo-Varianza)"
+        - "Etapa 3: Observational Realism (Máscaras, Selección, Bias, RSD)"
+        - "Etapa 4: Bayesian Inference (SBI, Normalizing Flows, SBC/TARP)"
+        - "Etapa 5: Field-Level Reconstruction (JaxPM + Preconditioned MCLMC)"
+        - "Etapa 6: Scientific Validation & Cross-Simulation Transfer"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación medibles
+      placeholder: |
+        - [ ] MAPE en P(k) < 1% para k < 1 h/Mpc
+        - [ ] Cobertura SBC/TARP 68% y 95% dentro de tolerancia nominal
+        - [ ] Tests en `tests/` en verde
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: Está alineado con `docs/MASTER_DOCUMENT.md`.
+          required: true
+        - label: No mezcla niveles metodológicos (Física vs Observación vs Inferencia).
+          required: true
