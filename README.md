@@ -131,6 +131,6 @@ uv run cosmoverse benchmark --n 10
 
 ## 7. Authorship & License
 
-- **Author & Maintainer**: `clevervi` (Adrian Dario V. — `adriandariov@gmail.com`)
+- **Author & Maintainer**: `clevervi`
 - **Organization**: `cosmoverse-project`
 - **License**: Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
