@@ -36,6 +36,18 @@ def test_initial_particles():
     assert np.all(pos <= 50.0)
 
 
+def test_initial_peculiar_velocity_normalization():
+    cosmo = Cosmology(CosmologicalParameters.planck2018())
+    sim_params = SimulationParameters(
+        box_size=50.0, n_mesh=16, z_initial=5.0, seed=42
+    )
+    _, vel = setup_initial_particles(cosmo, sim_params)
+
+    rms_velocity = float(np.sqrt(np.mean(np.sum(vel**2, axis=1))))
+    assert np.all(np.isfinite(vel))
+    assert 10.0 < rms_velocity < 1000.0
+
+
 def test_cic_deposition():
     # 100 particles in a 20 Mpc/h box
     rng = np.random.default_rng(42)
@@ -59,3 +71,21 @@ def test_particle_mesh_simulation_run():
     assert len(k_bins) == 6
     assert len(pk) == 6
     assert np.all(pk >= 0.0)
+
+
+def test_particle_mesh_simulation_snapshots():
+    cosmo = Cosmology(CosmologicalParameters.planck2018())
+    sim_params = SimulationParameters(
+        box_size=50.0, n_mesh=16, n_steps=2, z_initial=5.0, seed=42
+    )
+    sim = ParticleMeshSimulator(cosmology=cosmo, sim_params=sim_params)
+
+    snapshots = sim.run_with_snapshots([0.0, 0.1, 0.2], include_density=True)
+    assert np.allclose(sorted(snapshots), [0.0, 0.1, 0.2], atol=1e-8)
+
+    for payload in snapshots.values():
+        assert payload["positions_mpc_h"].shape == (16**3, 3)
+        assert payload["velocities_km_s"].shape == (16**3, 3)
+        assert payload["density"].shape == (16, 16, 16)
+        assert np.all(np.isfinite(payload["positions_mpc_h"]))
+        assert np.all(np.isfinite(payload["velocities_km_s"]))

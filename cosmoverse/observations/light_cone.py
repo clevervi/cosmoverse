@@ -12,13 +12,18 @@ are absent from the plane-parallel RSD approximation:
 
 from __future__ import annotations
 
-from typing import Any
+import hashlib
+import pathlib
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from scipy import integrate
 
 from cosmoverse.core.cosmology import C_KM_S, Cosmology
 from cosmoverse.core.parameters import CosmologicalParameters
+
+if TYPE_CHECKING:
+    from cosmoverse.simulation.nbody import ParticleMeshSimulator
 
 # 1 Mpc / (km s^-1) expressed in Gyr (used for lookback-time integrals).
 T_HUBBLE_GYR: float = 977.79222168
@@ -298,4 +303,261 @@ class RelativisticLightConePipeline:
             "passes_relativistic_light_cone_gate": bool(
                 bias_uncorrected > 0.30 and bias_corrected < 0.30
             ),
+        }
+
+
+class LightConeBuilder:
+    """
+    Builds a past-light-cone catalog from PM snapshots by tiling the periodic
+    box along the observer's radial direction and applying wide-angle RSD.
+
+    Note: periodic tiling can repeat the same structure across radial shells.
+    This is the standard tiled-light-cone approximation and is unavoidable when
+    the requested comoving depth exceeds the simulation box size.
+    """
+
+    def __init__(
+        self,
+        cosmo_params: CosmologicalParameters | None = None,
+        box_size: float = 100.0,
+        n_mesh: int = 32,
+        observer_position: np.ndarray | None = None,
+    ) -> None:
+        if box_size <= 0.0:
+            raise ValueError("box_size must be positive")
+        if n_mesh < 1:
+            raise ValueError("n_mesh must be >= 1")
+
+        self.geometry = LightConeGeometry(cosmo_params=cosmo_params)
+        self.box_size = float(box_size)
+        self.n_mesh = int(n_mesh)
+        if observer_position is None:
+            self.observer_position = np.array(
+                [0.5 * self.box_size, 0.5 * self.box_size, 0.0], dtype=np.float64
+            )
+        else:
+            observer = np.asarray(observer_position, dtype=np.float64)
+            if observer.shape != (3,):
+                raise ValueError("observer_position must have shape (3,)")
+            self.observer_position = observer
+
+    def build_from_snapshots(
+        self,
+        snapshots: dict[float, dict],
+        z_max: float,
+        n_radial_bins: int = 8,
+        apply_wide_angle_rsd: bool = True,
+    ) -> dict[str, Any]:
+        """
+        Selects particles from each snapshot into radial comoving shells between
+        the observer and z_max, applying the wide-angle RSD mapping of
+        `RelativisticLightConePipeline`.
+        """
+        if not snapshots:
+            raise ValueError("snapshots must not be empty")
+        if z_max <= 0.0:
+            raise ValueError("z_max must be positive")
+        if int(n_radial_bins) < 1:
+            raise ValueError("n_radial_bins must be >= 1")
+
+        n_bins = int(n_radial_bins)
+        chi_max = float(self.geometry.cosmo.comoving_distance(z_max))
+        if chi_max <= 0.0:
+            raise ValueError("z_max maps to a non-positive comoving distance")
+        chi_edges = np.linspace(0.0, chi_max, n_bins + 1)
+
+        snapshot_keys = np.array(
+            sorted(float(z) for z in snapshots.keys()), dtype=np.float64
+        )
+        snapshot_chi = np.array(
+            [float(self.geometry.cosmo.comoving_distance(z)) for z in snapshot_keys],
+            dtype=np.float64,
+        )
+
+        parts: list[dict[str, np.ndarray]] = []
+        for shell_index in range(n_bins):
+            chi_lo = float(chi_edges[shell_index])
+            chi_hi = float(chi_edges[shell_index + 1])
+            chi_mid = 0.5 * (chi_lo + chi_hi)
+            closest = int(np.argmin(np.abs(snapshot_chi - chi_mid)))
+            z_snapshot = float(snapshot_keys[closest])
+
+            positions = np.asarray(
+                snapshots[z_snapshot]["positions_mpc_h"], dtype=np.float64
+            )
+            velocities = np.asarray(
+                snapshots[z_snapshot]["velocities_km_s"], dtype=np.float64
+            )
+
+            # Periodic tiling along the observer's radial (z) direction.
+            n_shift = np.rint(
+                (chi_mid - positions[:, 2]) / self.box_size
+            ).astype(np.int64)
+            positions_image = positions.copy()
+            positions_image[:, 2] += n_shift * self.box_size
+
+            relative = positions_image - self.observer_position
+            radius = np.linalg.norm(relative, axis=1)
+            mask = (radius >= chi_lo) & (radius < chi_hi)
+            if not np.any(mask):
+                continue
+
+            rel_sel = relative[mask]
+            pos_sel = positions_image[mask]
+            vel_sel = velocities[mask]
+            radius_sel = radius[mask]
+            n_hat = rel_sel / np.maximum(radius_sel[:, np.newaxis], 1e-12)
+            v_parallel = np.sum(vel_sel * n_hat, axis=1)
+
+            if apply_wide_angle_rsd:
+                scale_a = 1.0 / (1.0 + z_snapshot)
+                h_scaled = (
+                    float(self.geometry.cosmo.H(z_snapshot))
+                    / self.geometry.cosmo_params.h
+                )
+                displacement = v_parallel / (scale_a * h_scaled + 1e-12)
+                redshift_space_positions = (
+                    pos_sel + displacement[:, np.newaxis] * n_hat
+                )
+                chi_redshift_space = np.linalg.norm(
+                    redshift_space_positions - self.observer_position, axis=1
+                )
+            else:
+                chi_redshift_space = radius_sel.copy()
+
+            parts.append(
+                {
+                    "ra_deg": np.degrees(
+                        np.arctan2(rel_sel[:, 1], rel_sel[:, 0])
+                    ),
+                    "dec_deg": np.degrees(
+                        np.arcsin(
+                            np.clip(rel_sel[:, 2] / radius_sel, -1.0, 1.0)
+                        )
+                    ),
+                    "z_snapshot": np.full(radius_sel.shape, z_snapshot),
+                    "z_obs": np.maximum(
+                        z_snapshot
+                        + (v_parallel / C_KM_S) * (1.0 + z_snapshot),
+                        0.0,
+                    ),
+                    "chi_real_mpc_h": radius_sel,
+                    "chi_redshift_space_mpc_h": chi_redshift_space,
+                    "v_parallel_km_s": v_parallel,
+                    "particle_index": np.nonzero(mask)[0],
+                    "shell_index": np.full(
+                        radius_sel.shape, shell_index, dtype=np.int64
+                    ),
+                }
+            )
+
+        if not parts:
+            raise ValueError("No particles fall inside the requested light cone")
+
+        catalog: dict[str, Any] = {
+            key: np.concatenate([part[key] for part in parts])
+            for key in parts[0]
+        }
+        catalog.update(
+            {
+                "chi_edges_mpc_h": chi_edges,
+                "n_shells": n_bins,
+                "z_max": float(z_max),
+                "box_size_mpc_h": self.box_size,
+                "observer_position_mpc_h": self.observer_position.copy(),
+                "snapshot_redshifts": snapshot_keys,
+                "apply_wide_angle_rsd": bool(apply_wide_angle_rsd),
+            }
+        )
+        return catalog
+
+    def build_from_simulation(
+        self,
+        simulator: "ParticleMeshSimulator",
+        snapshot_redshifts: list[float],
+        z_max: float,
+        n_radial_bins: int = 8,
+        apply_wide_angle_rsd: bool = True,
+        seed: int | None = None,
+        include_density: bool = False,
+        reinitialize: bool = True,
+    ) -> dict[str, Any]:
+        """
+        Runs a `ParticleMeshSimulator` with intermediate snapshots and builds
+        the corresponding past-light-cone catalog. By default the simulator is
+        reinitialized so repeated calls do not evolve an already-advanced state.
+        """
+        if not np.isclose(self.box_size, simulator.sim_params.box_size):
+            raise ValueError("builder box_size must match the simulator box_size")
+
+        if reinitialize:
+            simulator.initialize(seed=seed)
+
+        snapshots = simulator.run_with_snapshots(
+            snapshot_redshifts,
+            seed=seed,
+            include_density=include_density,
+        )
+        return self.build_from_snapshots(
+            snapshots,
+            z_max=z_max,
+            n_radial_bins=n_radial_bins,
+            apply_wide_angle_rsd=apply_wide_angle_rsd,
+        )
+
+    def evaluate_catalog(
+        self, catalog: dict[str, Any]
+    ) -> dict[str, float | bool | int]:
+        """Summarizes catalog occupancy, radial coverage, and RSD displacement."""
+        shell_index = np.asarray(catalog["shell_index"], dtype=np.int64)
+        n_shells = int(catalog["n_shells"])
+        counts = np.bincount(shell_index, minlength=n_shells)
+        chi_real = np.asarray(catalog["chi_real_mpc_h"], dtype=np.float64)
+        chi_rs = np.asarray(
+            catalog["chi_redshift_space_mpc_h"], dtype=np.float64
+        )
+        z_obs = np.asarray(catalog["z_obs"], dtype=np.float64)
+
+        n_objects = int(len(shell_index))
+        n_populated = int(np.sum(counts > 0))
+        return {
+            "n_objects": n_objects,
+            "n_shells": n_shells,
+            "n_populated_shells": n_populated,
+            "mean_rsd_displacement_mpc_h": float(
+                np.mean(np.abs(chi_rs - chi_real))
+            ),
+            "redshift_min": float(np.min(z_obs)) if n_objects else 0.0,
+            "redshift_max": float(np.max(z_obs)) if n_objects else 0.0,
+            "passes_light_cone_catalog_gate": bool(
+                n_objects > 0
+                and n_populated == n_shells
+                and np.all(np.isfinite(chi_real))
+                and np.all(np.isfinite(chi_rs))
+                and np.all(chi_real >= 0.0)
+                and np.all(chi_rs >= 0.0)
+            ),
+        }
+
+    def export_catalog(
+        self,
+        catalog: dict[str, Any],
+        out_dir: str | pathlib.Path = "dist/light_cone",
+        filename: str = "light_cone_catalog.npz",
+    ) -> dict[str, str | int]:
+        """Saves the numeric catalog arrays to a compressed NPZ with SHA-256."""
+        output_dir = pathlib.Path(out_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / filename
+
+        arrays = {
+            key: np.asarray(value)
+            for key, value in catalog.items()
+            if isinstance(value, np.ndarray)
+        }
+        np.savez_compressed(output_path, **arrays)
+        return {
+            "path": str(output_path),
+            "sha256": hashlib.sha256(output_path.read_bytes()).hexdigest(),
+            "n_objects": int(len(arrays["ra_deg"])),
         }

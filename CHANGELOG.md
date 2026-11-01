@@ -3,6 +3,16 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.8.0] - 2026-11-01
+
+### Added
+- `ParticleMeshSimulator.run_with_snapshots` (`cosmoverse.simulation.nbody`) para registrar posiciones, velocidades y densidad en redshifts intermedios sin duplicar el integrador KDK.
+- `LightConeBuilder` (`cosmoverse.observations.light_cone`) para construir un catálogo de cono de luz pasado a partir de snapshots PM: tiling periódico a lo largo de la dirección radial, selección en shells comóviles, RSD wide-angle, métricas de ocupación y exportación NPZ con SHA-256 (#77, PR #78).
+- Subcomando `cosmoverse light-cone-build`, duodécima compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_light_cone_builder.py` (`79 passed`).
+
+### Fixed
+- Normalización de las velocidades peculiares iniciales en `setup_initial_particles`: se eliminó una división espuria por `n_mesh^3` que reducía las velocidades a ~0.03 km/s; el PM produce ahora ~10^2 km/s y el RSD del cono de luz es no nulo.
+
 ## [1.7.0] - 2026-11-01
 
 ### Added
