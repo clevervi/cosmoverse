@@ -3,6 +3,13 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.6.0] - 2026-11-01
+
+### Added
+- Explorador científico interactivo en HTML5 y Canvas 3D (`docs/index.html`, Sección 10 de difusión) con controles en tiempo real para $(\Omega_m, \sigma_8, A_{\mathrm{AGN}}, b_1, k_{\max}, \text{Suite})$ y visualización en vivo de la red cósmica 3D, $S_b(k)$, la frontera sesgo–varianza y la calibración TARP entre suites.
+- Subcomandos del CLI `cosmoverse dashboard [--open]` y `cosmoverse multi-suite` en `cosmoverse/cli.py`.
+- Metadatos `.zenodo.json` para archivado reproducible con DOI y actualización completa del cuaderno interactivo `notebooks/01_quickstart_cosmoverse.ipynb` cubriendo los 3 niveles, los 4 Resultados Demostrables y la Etapa 5.
+
 ## [0.5.0] - 2026-11-01
 
 ### Added
