@@ -3,6 +3,12 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.6.0] - 2026-11-01
+
+### Added
+- `CMBLensingAndSZPipeline` (`cosmoverse.observations.cmb_and_sz`) para el Nivel 2: kernel de lentes gravitacionales del CMB $\kappa_{\mathrm{CMB}}$, espectros $C_\ell^{\kappa_{\mathrm{CMB}}\kappa_{\mathrm{CMB}}}$, $C_\ell^{\kappa_{\mathrm{CMB}} g}$, $C_\ell^{\kappa_{\mathrm{CMB}}\kappa_{\mathrm{gal}}}$, tSZ $D_\ell^{yy}$, $C_\ell^{gy}$ y perfil de profundidad óptica kSZ $\tau_{\mathrm{kSZ}}(M, z)$ acoplados a `BCEmu`, reduciendo la inflación de error en $S_8$ de $1.18\times$ a $1.06\times$ (#71, PR #72).
+- Subcomando `cosmoverse cmb-sz`, décima compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_cmb_and_sz.py` (`69 passed`).
+
 ## [1.5.0] - 2026-11-01
 
 ### Added

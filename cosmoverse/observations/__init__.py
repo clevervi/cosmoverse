@@ -2,6 +2,7 @@
 Cosmological survey definitions, target selections, RSD, galaxy bias, and noise modeling (Stage 3).
 """
 
+from cosmoverse.observations.cmb_and_sz import CMBLensingAndSZPipeline
 from cosmoverse.observations.forward_model import (
     GalaxyBiasModel,
     ObservationalForwardPipeline,
@@ -33,6 +34,7 @@ __all__ = [
     "RedshiftSpaceDistortionModel",
     "ObservationalForwardPipeline",
     "Joint3x2ptObservationalPipeline",
+    "CMBLensingAndSZPipeline",
     "HODAssemblyBiasParameters",
     "HaloOccupationModel",
     "StageIVMockCatalogExporter",
