@@ -6,7 +6,7 @@ authors:
     alias: "clevervi"
     email: "adriandariov@gmail.com"
 title: "COSMOVERSE: Cosmological Modeling and Inference Engine"
-version: 0.1.0
+version: 0.3.0
 date-released: 2026-11-01
 url: "https://github.com/clevervi/cosmoverse"
 repository-code: "https://github.com/clevervi/cosmoverse"
