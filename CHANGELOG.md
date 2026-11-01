@@ -3,6 +3,22 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [2.2.0] - 2026-11-01
+
+### Added
+- `PMPowerSpectrumEmulator` (`cosmoverse.emulators.pm_pk`) para el Nivel 1: superficie de respuesta cuadrática para $\log P(k;\Omega_m,\sigma_8)$ entrenada sobre una grilla $5\times5$ de simulaciones PM reales (caja $200\,h^{-1}\mathrm{Mpc}$, malla $32^3$, $z=0.1$), con extrapolación híbrida hacia la forma analítica de Eisenstein-Hu fuera del rango medido (#89, PR #90).
+- `PMEmulatorSBIPipeline` (`cosmoverse.inference.pm_emulator_sbi`) para el Nivel 3: SBI multi-sonda de cuatro parámetros usando el emulador PM de $P(k)$ en lugar del surrogate analítico, con SBC/TARP bloqueantes.
+- Subcomando `cosmoverse pm-emulator-sbi`, decimosexta compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_pm_emulator_sbi.py` (`92 passed`).
+
+### Validation
+- Emulador PM: MAPE de entrenamiento 0.60%, LOO 0.82% (compuerta LOO < 2%).
+- SBC 68%: $\Omega_m=0.70$, $\sigma_8=0.64$, $b_1=0.70$, $A_{\mathrm{AGN}}=0.70$; SBC 95%: 0.88-0.96; KS $p>0.06$.
+- TARP 68%=0.60, 95%=0.92, KS $p=0.308$; compuerta conjunta **PASS**.
+
+### Notes
+- La proyección angular $w(\theta)$ sigue siendo Limber + Kaiser/FoG, no un ray-tracing completo del cono de luz.
+- El emulador PM cubre $k\approx0.037-0.423\,h\,\mathrm{Mpc}^{-1}$; fuera de ese rango se usa la forma analítica con corrección de amplitud en los bordes.
+
 ## [2.1.0] - 2026-11-01
 
 ### Added
