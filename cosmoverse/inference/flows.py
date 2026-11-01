@@ -21,23 +21,54 @@ class AffineCouplingLayer:
         context_dim: int,
         seed: int = 42,
         scale_bound: float = 1.0,
+        hidden_dim: int = 0,
     ):
         if scale_bound <= 0.0:
             raise ValueError("scale_bound must be positive")
+        if hidden_dim < 0:
+            raise ValueError("hidden_dim must be non-negative")
         self.dim = dim
         self.split_dim = dim // 2
         self.context_dim = context_dim
         self.scale_bound = float(scale_bound)
+        self.hidden_dim = int(hidden_dim)
         rng = np.random.default_rng(seed)
 
         # Small random weights for scale and translation networks
         input_size = self.split_dim + context_dim
         output_size = dim - self.split_dim
 
-        self.w_s = rng.standard_normal((input_size, output_size)) * 0.05
-        self.b_s = np.zeros(output_size)
-        self.w_t = rng.standard_normal((input_size, output_size)) * 0.05
-        self.b_t = np.zeros(output_size)
+        if self.hidden_dim > 0:
+            self.w1 = rng.standard_normal((input_size, self.hidden_dim)) * 0.05
+            self.b1 = np.zeros(self.hidden_dim)
+            self.w2 = rng.standard_normal((self.hidden_dim, output_size)) * 0.05
+            self.b2 = np.zeros(output_size)
+            self.w3 = rng.standard_normal((self.hidden_dim, output_size)) * 0.05
+            self.b3 = np.zeros(output_size)
+        else:
+            self.w_s = rng.standard_normal((input_size, output_size)) * 0.05
+            self.b_s = np.zeros(output_size)
+            self.w_t = rng.standard_normal((input_size, output_size)) * 0.05
+            self.b_t = np.zeros(output_size)
+
+    def parameter_names(self) -> tuple[str, ...]:
+        """Names of the trainable parameters of this layer."""
+        if self.hidden_dim > 0:
+            return ("w1", "b1", "w2", "b2", "w3", "b3")
+        return ("w_s", "b_s", "w_t", "b_t")
+
+    def _scale_shift(
+        self, inp: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+        """Computes (scale, shift, hidden) from the coupling network input."""
+        if self.hidden_dim > 0:
+            hidden = np.tanh(inp @ self.w1 + self.b1)
+            scale = self.scale_bound * np.tanh(hidden @ self.w2 + self.b2)
+            shift = hidden @ self.w3 + self.b3
+            return scale, shift, hidden
+        scale = self.scale_bound * np.tanh(inp @ self.w_s + self.b_s)
+        shift = inp @ self.w_t + self.b_t
+        return scale, shift, None
 
     def forward(
         self, x: np.ndarray, context: np.ndarray
@@ -50,8 +81,7 @@ class AffineCouplingLayer:
         x2 = x[:, self.split_dim :]
 
         inp = np.concatenate([x1, context], axis=1)
-        scale = self.scale_bound * np.tanh(inp @ self.w_s + self.b_s)
-        shift = inp @ self.w_t + self.b_t
+        scale, shift, _ = self._scale_shift(inp)
 
         y1 = x1
         y2 = x2 * np.exp(scale) + shift
@@ -70,8 +100,7 @@ class AffineCouplingLayer:
         y2 = y[:, self.split_dim :]
 
         inp = np.concatenate([y1, context], axis=1)
-        scale = self.scale_bound * np.tanh(inp @ self.w_s + self.b_s)
-        shift = inp @ self.w_t + self.b_t
+        scale, shift, _ = self._scale_shift(inp)
 
         x1 = y1
         x2 = (y2 - shift) * np.exp(-scale)
@@ -87,14 +116,13 @@ class AffineCouplingLayer:
         y1 = y[:, : self.split_dim]
         y2 = y[:, self.split_dim :]
         inp = np.concatenate([y1, context], axis=1)
-        scale = self.scale_bound * np.tanh(inp @ self.w_s + self.b_s)
-        shift = inp @ self.w_t + self.b_t
+        scale, shift, hidden = self._scale_shift(inp)
 
         x1 = y1
         x2 = (y2 - shift) * np.exp(-scale)
         x = np.concatenate([x1, x2], axis=1)
         log_det = -np.sum(scale, axis=1)
-        cache = (y1, y2, inp, scale, shift, x2)
+        cache = (y1, y2, inp, scale, shift, x2, hidden)
         return x, log_det, cache
 
     def backward_inverse(
@@ -107,7 +135,7 @@ class AffineCouplingLayer:
         Backpropagates through `inverse_with_cache`.
         Returns the gradient w.r.t. the layer input and the parameter gradients.
         """
-        y1, y2, inp, scale, shift, _ = cache
+        y1, y2, inp, scale, shift, _, hidden = cache
         grad_x1 = grad_x[:, : self.split_dim]
         grad_x2 = grad_x[:, self.split_dim :]
         exp_neg = np.exp(-scale)
@@ -120,16 +148,40 @@ class AffineCouplingLayer:
         grad_pre_scale = (
             grad_scale * self.scale_bound * (1.0 - tanh_scale**2)
         )
-        grad_inp = grad_pre_scale @ self.w_s.T + grad_shift @ self.w_t.T
+
+        if self.hidden_dim > 0:
+            assert hidden is not None
+            grad_w2 = hidden.T @ grad_pre_scale
+            grad_b2 = np.sum(grad_pre_scale, axis=0)
+            grad_w3 = hidden.T @ grad_shift
+            grad_b3 = np.sum(grad_shift, axis=0)
+            grad_hidden = (
+                grad_pre_scale @ self.w2.T + grad_shift @ self.w3.T
+            )
+            grad_pre_hidden = grad_hidden * (1.0 - hidden**2)
+            grad_w1 = inp.T @ grad_pre_hidden
+            grad_b1 = np.sum(grad_pre_hidden, axis=0)
+            grad_inp = grad_pre_hidden @ self.w1.T
+            parameter_grads = {
+                "w1": grad_w1,
+                "b1": grad_b1,
+                "w2": grad_w2,
+                "b2": grad_b2,
+                "w3": grad_w3,
+                "b3": grad_b3,
+            }
+        else:
+            grad_inp = grad_pre_scale @ self.w_s.T + grad_shift @ self.w_t.T
+            parameter_grads = {
+                "w_s": inp.T @ grad_pre_scale,
+                "b_s": np.sum(grad_pre_scale, axis=0),
+                "w_t": inp.T @ grad_shift,
+                "b_t": np.sum(grad_shift, axis=0),
+            }
+
         grad_y1 = grad_x1 + grad_inp[:, : self.split_dim]
         grad_y = np.concatenate([grad_y1, grad_y2], axis=1)
-
-        return grad_y, {
-            "w_s": inp.T @ grad_pre_scale,
-            "b_s": np.sum(grad_pre_scale, axis=0),
-            "w_t": inp.T @ grad_shift,
-            "b_t": np.sum(grad_shift, axis=0),
-        }
+        return grad_y, parameter_grads
 
 
 class ConditionalRealNVP:
@@ -144,18 +196,33 @@ class ConditionalRealNVP:
         n_layers: int = 4,
         seed: int = 42,
         scale_bound: float = 1.0,
+        hidden_dim: int = 0,
     ):
         self.param_dim = param_dim
         self.context_dim = context_dim
         self.scale_bound = float(scale_bound)
+        self.hidden_dim = int(hidden_dim)
         self.layers = [
             AffineCouplingLayer(
                 param_dim,
                 context_dim,
                 seed=seed + i,
                 scale_bound=self.scale_bound,
+                hidden_dim=self.hidden_dim,
             )
             for i in range(n_layers)
+        ]
+        if self.hidden_dim > 0:
+            permutation_rng = np.random.default_rng(seed + 100_000)
+            self.permutations = [
+                permutation_rng.permutation(param_dim)
+                for _ in range(n_layers)
+            ]
+        else:
+            reversal = np.arange(param_dim - 1, -1, -1)
+            self.permutations = [reversal.copy() for _ in range(n_layers)]
+        self.inverse_permutations = [
+            np.argsort(permutation) for permutation in self.permutations
         ]
 
     def sample(self, context: np.ndarray, n_samples: int = 1000, seed: Optional[int] = None) -> np.ndarray:
@@ -168,10 +235,12 @@ class ConditionalRealNVP:
         ctx_batch = np.tile(context, (n_samples, 1)) if context.ndim == 1 else context
 
         curr = z
-        for layer in self.layers:
+        for layer, permutation in zip(
+            self.layers, self.permutations, strict=True
+        ):
             curr, _ = layer.forward(curr, ctx_batch)
-            # Permute dimensions between layers
-            curr = curr[:, ::-1]
+            # Random permutation between layers improves dimension mixing.
+            curr = curr[:, permutation]
 
         return curr
 
@@ -200,8 +269,12 @@ class ConditionalRealNVP:
         total_log_det = np.zeros(theta_arr.shape[0], dtype=np.float64)
         caches = []
 
-        for layer in reversed(self.layers):
-            curr = curr[:, ::-1]
+        for layer, inverse_permutation in zip(
+            reversed(self.layers),
+            reversed(self.inverse_permutations),
+            strict=True,
+        ):
+            curr = curr[:, inverse_permutation]
             curr, log_det, cache = layer.inverse_with_cache(curr, ctx)
             total_log_det += log_det
             caches.append(cache)
@@ -236,7 +309,7 @@ class ConditionalRealNVP:
             zip(self.layers, reversed(caches), strict=True)
         ):
             grad, layer_grads = layer.backward_inverse(grad, grad_log_det, cache)
-            grad = grad[:, ::-1]
+            grad = grad[:, self.permutations[index]]
             grads[index] = layer_grads
 
         n_samples = max(theta_arr.shape[0], 1)
@@ -269,7 +342,7 @@ class ConditionalRealNVP:
         beta1, beta2, epsilon = 0.9, 0.999, 1e-8
         moments: dict[tuple[int, str], tuple[np.ndarray, np.ndarray]] = {}
         for layer_index, layer in enumerate(self.layers):
-            for name in ("w_s", "b_s", "w_t", "b_t"):
+            for name in layer.parameter_names():
                 value = getattr(layer, name)
                 moments[(layer_index, name)] = (
                     np.zeros_like(value),
@@ -297,7 +370,7 @@ class ConditionalRealNVP:
                 bias2 = 1.0 - beta2**step
 
                 for layer_index, layer in enumerate(self.layers):
-                    for name in ("w_s", "b_s", "w_t", "b_t"):
+                    for name in layer.parameter_names():
                         grad = grads[layer_index][name]
                         first, second = moments[(layer_index, name)]
                         first = beta1 * first + (1.0 - beta1) * grad
