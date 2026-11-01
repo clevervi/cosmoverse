@@ -24,6 +24,7 @@ from cosmoverse.core.parameters import CosmologicalParameters, SimulationParamet
 from cosmoverse.datasets.camels_gen2 import CAMELSGen2Catalog, StageIVPrecisionCalibrator
 from cosmoverse.datasets.camels_spectra import CAMELSHydroSpectraConnector
 from cosmoverse.datasets.remote import CAMELSArchiveFetcher, CheckpointManager
+from cosmoverse.emulators.bispectrum import ReducedBispectrumModel
 from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
@@ -31,6 +32,7 @@ from cosmoverse.observations.hod_and_mocks import (
     HaloOccupationModel,
     StageIVMockCatalogExporter,
 )
+from cosmoverse.observations.intrinsic_alignments import IntrinsicAlignmentModel
 from cosmoverse.observations.three_x_two_pt import Joint3x2ptObservationalPipeline
 from cosmoverse.simulation.nbody import ParticleMeshSimulator
 from cosmoverse.validation.arxiv_packager import ArxivSubmissionPackager
@@ -370,6 +372,37 @@ def cmd_hod_mocks(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_bispectrum_ia() -> None:
+    """Evaluates Result 1 Reduced Bispectrum Q(theta) and Level 2 NLA/TATT Intrinsic Alignments."""
+    bisp_eval = ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()
+    ia_eval = IntrinsicAlignmentModel().evaluate_ia_marginalization_impact()
+
+    table = Table(title="Result 1 & Level 2: Reduced Bispectrum Q(theta) & NLA/TATT Intrinsic Alignments")
+    table.add_column("Diagnostic / Metric", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row(
+        f"TUNeS Reduced Bispectrum Q(k1={bisp_eval['k1']}, k2={bisp_eval['k2']}) MAPE",
+        f"{bisp_eval['q_mape_pct']:.3f}% (< 1.0% Gate)",
+    )
+    table.add_row(
+        "BCEmu3 Baryonic Bispectrum Suppression",
+        f"-{bisp_eval['mean_baryonic_bispectrum_suppression_pct']:.2f}%",
+    )
+    table.add_row(
+        "Stage-IV Mean GI+II Shear Contamination",
+        f"{ia_eval['mean_ia_contamination_pct']:.2f}%",
+    )
+    table.add_row(
+        "NLA/TATT Unmarginalized vs Marginalized S8 Bias",
+        f"{ia_eval['unmarginalized_s8_bias_sigma']:.2f} -> {ia_eval['marginalized_s8_bias_sigma']:.2f} sigma",
+    )
+    table.add_row(
+        "Combined Bispectrum + IA Gate",
+        "PASS" if (bisp_eval["passes_bispectrum_1pct_gate"] and ia_eval["passes_stage4_ia_gate"]) else "FAIL",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -383,6 +416,10 @@ def cmd_doctor() -> None:
         "passes_joint_degeneracy_breaking_gate"
     ]
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
+    bisp_ia_ok = bool(
+        ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
+        and IntrinsicAlignmentModel().evaluate_ia_marginalization_impact()["passes_stage4_ia_gate"]
+    )
     mangrove_ok = MangroveMergerTreeGNN(
         allow_post_v1_extension=True, seed=42
     ).benchmark_merger_tree_vs_halo_mlp(n_trees=20, seed=42)["passes_2x_improvement_benchmark"]
@@ -393,6 +430,7 @@ def cmd_doctor() -> None:
         ("Level 1: BCEmu3 Baryonic Bias-Variance Frontier (<0.30 sigma_S4)", frontier_ok),
         ("Level 2: RSD (P0,P2,P4) + Joint 3x2pt Degeneracy Breaking", joint_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
+        ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 3: Simulation Budget Scaling Law (N_min=8 TUNeS, N_min=16 Stage-IV)", budget_ok),
         ("Stage 5 & Post-v1: Preconditioned MCLMC + Mangrove Merger-Tree GNN (>=2x)", mangrove_ok),
         ("Publications: Paper 1, Paper 2 & JOSS BibTeX/Cross-Ref Integrity", arxiv_ok),
@@ -524,8 +562,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     hm_parser.add_argument("--out-dir", type=str, default="dist/mocks", help="Output directory for synthetic mock catalogs")
     hm_parser.add_argument("--n-galaxies", type=int, default=200, help="Number of synthetic galaxies to export")
 
+    # Reduced Bispectrum Q(theta) + NLA/TATT Intrinsic Alignments
+    subparsers.add_parser("bispectrum-ia", help="Evaluate Result 1 Reduced Bispectrum Q(theta) and Level 2 NLA/TATT IA")
+
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 7-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 8-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -565,6 +606,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_neutrinos_hmf()
     elif args.command == "hod-mocks":
         cmd_hod_mocks(args)
+    elif args.command == "bispectrum-ia":
+        cmd_bispectrum_ia()
     elif args.command == "doctor":
         cmd_doctor()
     else:

@@ -3,6 +3,13 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-11-01
+
+### Added
+- `ReducedBispectrumModel` (`cosmoverse.emulators.bispectrum`) para el Resultado 1 (estadísticas no gaussianas de orden superior): cálculo del bispectro $B(k_1, k_2, \theta)$ y bispectro reducido $Q(k_1, k_2, \theta)$ con acoplamiento gravitacional $F_2(k_1, k_2, \cos\theta)$, supresión bariónica `BCEmu3` y verificación de precisión emulada de `TUNeS` con MAPE $< 0.5\%$ (#65, PR #66).
+- `IntrinsicAlignmentParameters` e `IntrinsicAlignmentModel` (`cosmoverse.observations.intrinsic_alignments`) para el Nivel 2 (sistemáticos de lentes débiles): alineamientos intrínsecos de galaxias NLA (Bridle & King 2007) + TATT (Blazek et al. 2019), espectros $C_\ell^{GI} + C_\ell^{II}$ y eliminación del sesgo en $S_8$ de $1.42\,\sigma$ a $0.16\,\sigma_{\mathrm{Stage-IV}}$ (#65, PR #66).
+- Subcomando `cosmoverse bispectrum-ia`, octava compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_bispectrum_and_ia.py` (`64 passed`).
+
 ## [1.3.0] - 2026-11-01
 
 ### Added

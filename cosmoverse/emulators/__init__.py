@@ -5,6 +5,7 @@ Neural emulator models:
   - Summary Statistics (Resultado 1): Gaussian P(k) MAPE, 1-point PDF, 3D Peak Counts, 3D Minkowski Functionals
 """
 
+from cosmoverse.emulators.bispectrum import ReducedBispectrumModel
 from cosmoverse.emulators.fno import (
     EMULATOR_BIBLIOGRAPHY_REGISTRY,
     CitationVerificationError,
@@ -34,6 +35,7 @@ __all__ = [
     "FNO3dEmulator",
     "SpectralConv3dNumPy",
     "MangroveMergerTreeGNN",
+    "ReducedBispectrumModel",
     "EMULATOR_BIBLIOGRAPHY_REGISTRY",
     "CitationVerificationError",
     "verify_emulator_citation",
