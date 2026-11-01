@@ -2,6 +2,7 @@
 Bayesian inference, Simulation-Based Inference (SBI), Normalizing Flows, and MCMC.
 """
 
+from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.inference.flows import AffineCouplingLayer, ConditionalRealNVP
 from cosmoverse.inference.mclmc import MicrocanonicalHMC
 from cosmoverse.inference.posterior import PosteriorSummary
@@ -13,4 +14,5 @@ __all__ = [
     "PosteriorSummary",
     "SBIEngine",
     "MicrocanonicalHMC",
+    "FieldLevelInferenceEngine",
 ]
