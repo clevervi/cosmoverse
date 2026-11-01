@@ -3,6 +3,22 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [2.0.0] - 2026-11-01
+
+### Added
+- `LightConeSBIPipeline` (`cosmoverse.inference.light_cone_sbi`) para el Nivel 3: inferencia SBI de extremo a extremo sobre el vector de 12 bines $w(\theta)$ del cono de luz, usando un surrogate rápido Limber + BCEmu y los parámetros $(\Omega_m, \sigma_8, A_{\mathrm{AGN}})$ con $b_1=1.65$ fijo (#83, PR #84).
+- `SBIEngine` ampliado con `feature_mode="quadratic"` (proyección condicional cuadrática) y `covariance_inflation` (corrección de calibración de la covarianza residual), manteniendo el modo lineal por defecto.
+- Subcomando `cosmoverse light-cone-sbi`, decimocuarta compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_light_cone_sbi.py` (`86 passed`).
+
+### Validation
+- 200 simulaciones de entrenamiento, 50 trials SBC y 50 trials TARP.
+- SBC 68%: $\Omega_m=0.72$, $\sigma_8=0.78$, $A_{\mathrm{AGN}}=0.70$; SBC 95%: 0.96-1.00; KS $p>0.25$.
+- TARP 68%=0.62, 95%=0.94, KS $p=0.741$; compuerta conjunta **PASS**.
+
+### Notes
+- El modo de 4 parámetros con $b_1$ libre no pasa SBC por la degeneración $\sigma_8$–$b_1$; se fija $b_1$ al prior galáctico y se infieren 3 parámetros. Un análisis multi-sonda (p. ej. $w(\theta)$ + RSD) queda para v2.1.
+- El forward model de entrenamiento es un surrogate Limber + BCEmu, no una simulación PM completa por muestra.
+
 ## [1.9.0] - 2026-11-01
 
 ### Added
