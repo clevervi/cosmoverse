@@ -1,0 +1,9 @@
+# Cursor AI Rules for COSMOVERSE
+
+- You are working on COSMOVERSE, a scientific framework for computational cosmology.
+- Maintain rigorous scientific notation and physical units (k in h/Mpc, box in Mpc/h, H0 in km/s/Mpc).
+- Never invent cosmological parameters or constants. Use `cosmoverse.core.cosmology.C_KM_S` and `CosmologicalParameters`.
+- Ensure periodic boundary conditions for simulations: `np.mod(coords, box_size)`.
+- Use Pydantic BaseModel for configuration models and validation.
+- All code must pass `uv run pytest`.
+- Keep core modules decoupled from hard GPU dependencies (support NumPy/SciPy CPU execution by default).

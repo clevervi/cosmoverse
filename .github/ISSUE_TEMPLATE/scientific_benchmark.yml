@@ -1,0 +1,31 @@
+name: Scientific benchmark
+description: Proponer o reportar un benchmark de validación o transferencia entre suites
+title: "[benchmark] "
+labels: ["type:research", "area:validation"]
+body:
+  - type: input
+    id: suite
+    attributes:
+      label: Familias de simulación involucradas
+      placeholder: "CAMELS-DMO + BCEmu -> CAMELS-IllustrisTNG (50 Mpc/h, 35 params)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: partition
+    attributes:
+      label: Protocolo de partición (Sección 7 del Documento Maestro)
+      description: Confirmar partición disjunta por `ic_seed`, `cosmo_id` y `family_id` (prohibido split aleatorio 80/20).
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Métricas objetivo
+      placeholder: |
+        - P(k) MAPE a k < 1 h/Mpc
+        - Peak counts y funcionales de Minkowski 3D (V0-V3)
+        - Cobertura SBC / TARP 68% y 95% pre y post-transferencia
+    validations:
+      required: true
