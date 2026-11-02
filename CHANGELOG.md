@@ -3,6 +3,27 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.9.0] - 2026-11-02
+
+### Added
+- `docs/explorador.html`: **explorador cósmico multi-escala en una sola página** con seis niveles conectados: Tierra, Sistema Solar, Vía Láctea, Grupo Local, Laniakea y red cósmica CAMELS-SIMBA (#122, PR #123).
+- Catálogo de objetos con búsqueda (`/`, `Ctrl/Cmd+K`), vuelo al nivel/objeto, fichas de información, clic en labels, doble clic para enfocar, órbita/zoom/pinch y deep link `?level=N`.
+- Rail de escalas, teclas `1–6`, flechas `←/→`, pantalla completa y pausa de rotación.
+- La red cósmica usa el campo real CAMELS-SIMBA EX (`Mgas` + `T`); los niveles cercanos usan datos/posiciones aproximadas y escalas normalizadas.
+- `tests/test_explorador.py`: 5 pruebas estáticas.
+
+### Validation
+- `uv run pytest -q tests/test_explorador.py`: **5 passed**.
+- `uv run pytest -q -m "not slow"`: **124 passed**; total **131 tests** (7 lentos).
+- `ruff check .` + `scripts/check_repo.py`: **PASS**.
+- Screenshots desktop \(1440\times900\) y móvil \(390\times844\): six scales, búsqueda visible y labels sin errores de shader.
+
+### Notes
+- Escalas no lineales: tamaños, distancias y brillos se ajustan para que cada nivel sea visible.
+- Planetas, Grupo Local y Laniakea son modelos educativos aproximados; no se usan para inferencia.
+- Inspiración conceptual y atribución: [Map of the Universe](https://mapoftheuniverse.net/) y [Universe Map](https://universemap.net/3d-map/). No se copiaron assets.
+- Sin cambios en el código científico del paquete.
+
 ## [3.8.0] - 2026-11-02
 
 ### Added
