@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" width="760" height="460">
+  <rect width="100%" height="100%" fill="#0f172a" rx="10" />
+  <rect x="85.0" y="65.0" width="630.0" height="325.0" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+  <text x="400.0" y="30" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle">Resultado 4 — Curva de Presupuesto de Calibración (SIMBA)</text>
+  <text x="400.0" y="50" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Cobertura empírica frente al número de simulaciones de calibración N_cal; umbral de adaptación</text>
+  <text x="400.0" y="442" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle">log10(Target Calibration Simulations N_cal)</text>
+  <text x="24" y="227.5" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" transform="rotate(-90, 24, 227.5)">Empirical Coverage</text>
+  <line x1="85" y1="236.9" x2="715" y2="236.9" stroke="#6ee7b7" stroke-width="1.5" stroke-dasharray="5,4" />
+  <line x1="85" y1="89.6" x2="715" y2="89.6" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,4" />
+  <text x="707.0" y="229.9" fill="#6ee7b7" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">Nominal 68.27%</text>
+  <text x="707.0" y="82.6" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">Nominal 95.45%</text>
+  <polyline fill="none" stroke="#79d6c0" stroke-width="3" points="137.4,341.2 268.7,292.5 400.0,265.4 531.3,243.7 662.6,222.1" />
+  <polyline fill="none" stroke="#fbbf24" stroke-width="3" points="137.4,189.6 268.7,113.7 400.0,86.7 531.3,75.8 662.6,81.2" />
+  <circle cx="137.4" cy="189.6" r="5.5" fill="#ef4444" stroke="#0f172a" stroke-width="1.5" />
+  <circle cx="268.7" cy="113.7" r="5.5" fill="#10b981" stroke="#0f172a" stroke-width="1.5" />
+  <circle cx="400.0" cy="86.7" r="5.5" fill="#10b981" stroke="#0f172a" stroke-width="1.5" />
+  <circle cx="531.3" cy="75.8" r="5.5" fill="#10b981" stroke="#0f172a" stroke-width="1.5" />
+  <circle cx="662.6" cy="81.2" r="5.5" fill="#10b981" stroke="#0f172a" stroke-width="1.5" />
+  <line x1="268.7" y1="65.0" x2="268.7" y2="390.0" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,4" />
+  <text x="276.7" y="83.0" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="12" font-weight="600">N_cal,min = 50</text>
+  <text x="101.0" y="87.0" fill="#79d6c0" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Coverage 68%</text>
+  <text x="101.0" y="107.0" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Coverage 95%</text>
+  <text x="101.0" y="127.0" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="11">Green marker = adaptation gate PASS; red = FAIL</text>
+</svg>

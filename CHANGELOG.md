@@ -3,6 +3,29 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.5.0] - 2026-11-02
+
+### Added
+- `CalibrationBudgetAnalyzer` (`cosmoverse.inference.calibration_budget`): barrido \(N_{\rm cal}\in\{25,50,100,200,400\}\) sobre SIMBA con partición disjunta calibración/test y flujo fuente reentrenado una sola vez. Determina el presupuesto mínimo de simulaciones objetivo que restaura la compuerta de adaptación (#107, PR #108).
+- Subcomando `cosmoverse calibration-budget`, figura vectorial `docs/figures/fig8_calibration_budget.svg` y vigésima segunda compuerta de `cosmoverse doctor`.
+- `GPUFieldLevelEngine` y `GPUFieldLevelBenchmark` (`cosmoverse.inference.gpu_field_level`): port a CuPy del potencial field-level, su gradiente analítico y la cadena MCLMC precondicionada. En malla \(64^3\) (dim \(262{,}145\)): **6.88×** en potencial+gradiente y **14.27×** en la cadena completa, con error relativo de potencial \(2.4\times10^{-16}\) y gradiente máximo \(0\).
+- Subcomando `cosmoverse gpu-field-level` y pruebas CUDA `tests/test_gpu_field_level.py`.
+- Dashboard WebGL 3D autocontenido `docs/webgl_cosmic_web.html` (cosmic web rotante, sliders \(\Omega_m,\sigma_8,b_1,A_{\rm AGN}\), nube de posteriores y telemetría SIMBA), más `tests/test_webgl_dashboard.py`.
+- Vista inmersiva `docs/universo.html` (v3.5.0): solo el universo a pantalla completa, más de 200k partículas, tres capas (materia oscura, gas, galaxias), bloom real por framebuffers, evolución cósmica ilustrativa, cámara cinematográfica con foco en cúmulos, pinch zoom, fullscreen y reinicio. Sin paneles, sin sliders, sin telemetría; 6 pruebas estáticas en `tests/test_universo.py`.
+
+### Validation
+- Curva SIMBA: \(N_{\rm cal}=25\) **FAIL** (cobertura 49% / 77%, mediana \(1.00\sigma\), \(\Delta\)ICE \(-0.079\)); \(N_{\rm cal}=50\) **PASS** (58% / 91%, \(0.72\sigma\), \(-0.122\)); 100/200/400 **PASS**.
+- Presupuesto mínimo para la compuerta: **\(N_{\rm cal,min}=50\)**; 25 simulaciones no alcanzan cobertura 68% ni 95% suficiente.
+- Fuente SBC+TARP: **PASS**; partición leakage-free y calibración/test disjuntos: **PASS**.
+- GPU field-level \(64^3\), 12 muestras, 4 leapfrog: CPU 25.97 ms vs GPU 3.78 ms por potencial+gradiente; cadena CPU 3.50 s vs GPU 0.24 s; EEVPD \(1.056\) en ambos; media marginal de \(\alpha\) \(-0.1303\) en ambos.
+- `uv run pytest -q`: **125 tests** (118 rápidos + 7 lentos); `doctor`: **22/22**.
+
+### Notes
+- No se incluyen tablas CAMELS reales; la curva usa la respuesta calibrada `calibrated_camels_response` salvo que se pase `--data-dir`.
+- La compuerta de presupuesto es más estricta que la de adaptación v3.4: exige cobertura 68% \(\ge 0.55\), cobertura 95% \(\ge 0.85\), mediana de sesgo \(<1.00\sigma\), \(\Delta\)TARP-ICE \(\le 0.15\) y mejora respecto de la fuente.
+- El dashboard WebGL usa WebGL puro, sin CDN ni dependencias externas, y funciona desde `file://` y GitHub Pages.
+- `universo.html` usa WebGL1 con framebuffers para bloom, calidad adaptativa (móvil/desktop), evolución interpolada entre una nube temprana y la red actual, y capas conmutables por teclado `1/2/3`.
+
 ## [3.4.0] - 2026-11-02
 
 ### Added

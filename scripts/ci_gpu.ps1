@@ -22,8 +22,14 @@ if ($LASTEXITCODE -ne 0) {
     throw "GPU PM benchmark failed with exit code $LASTEXITCODE"
 }
 
+Write-Step "GPU field-level benchmark"
+uv run --extra gpu --extra dev cosmoverse gpu-field-level --grid 32 --samples 6 --leapfrog 3
+if ($LASTEXITCODE -ne 0) {
+    throw "GPU field-level benchmark failed with exit code $LASTEXITCODE"
+}
+
 Write-Step "GPU regression tests"
-uv run --extra gpu --extra dev python -m pytest -q tests/test_acceleration.py
+uv run --extra gpu --extra dev python -m pytest -q tests/test_acceleration.py tests/test_gpu_field_level.py
 if ($LASTEXITCODE -ne 0) {
     throw "GPU tests failed with exit code $LASTEXITCODE"
 }
