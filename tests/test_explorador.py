@@ -164,6 +164,7 @@ def test_explorer_has_free_zoom_transitions_and_black_holes():
         "discoverRandom",
         "info-fidelity",
         "objectTypeLabel",
+        "get(\"focus\")",
         "uType > 4.5",
         "Sagitario A*",
         "Cygnus X-1",
@@ -181,6 +182,29 @@ def test_explorer_has_free_zoom_transitions_and_black_holes():
     assert 'id="random-btn"' in html
     assert "dato real" in html
     assert "labelHalf" in html
+
+
+def test_explorer_has_animated_orbits_and_deep_catalog():
+    html = _html()
+    for marker in (
+        "updateSolarMotion",
+        "dynamicPlanets",
+        "dynamicMoons",
+        "dynamicSaturn",
+        "solarTime",
+        "Próxima b",
+        "TRAPPIST-1e",
+        "Púlsar del Cangrejo",
+        "1P/Halley",
+        "Bennu",
+        "Galaxia del Remolino",
+        "Centaurus A",
+        "Gaia BH1",
+        "V404 Cygni",
+    ):
+        assert marker in html
+    assert "orbit: { radius: p.orbit, period: p.period" in html
+    assert "focusRadius: .42" in html
 
 
 def test_explorer_has_no_external_assets_or_dashboards():

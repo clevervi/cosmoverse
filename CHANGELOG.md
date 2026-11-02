@@ -3,6 +3,29 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.13.0] - 2026-11-02
+
+### Added
+- **Sistema Solar animado**: planetas, planetas enanos y lunas orbitan con el tiempo; `P` pausa la rotación y las órbitas. Saturno actualiza su anillo con el planeta (#132).
+- **Catálogo profundo**: exoplanetas (Próxima b, TRAPPIST-1e, Kepler-452b, 51 Pegasi b, HD 189733 b, WASP-12b), cometas y asteroides (Halley, Churyumov-Gerasimenko, Bennu, Apophis, Psyche, Vesta), púlsares/magnetar y galaxias notables (M51, M81, M82, M104, Centaurus A, M49, M86).
+- **Más agujeros negros**: Gaia BH1 y V404 Cygni en la Vía Láctea; cuásares J0313-1806 y ULAS J1120+0641 en el universo observable.
+- **Deep link de objeto**: `?focus=Sgr%20A%2A` abre el nivel correspondiente y enfoca la ficha.
+- Etiquetas ocultas si caen sobre el rail o el encabezado; se prioriza el objeto seleccionado.
+- `tests/test_explorador.py`: cobertura de órbitas animadas, catálogo profundo y deep links (9 pruebas).
+
+### Validation
+- `uv run pytest -q tests/test_explorador.py`: **9 passed**.
+- `uv run pytest -q -m "not slow"`: **128 passed**; total **135 tests** (7 lentos).
+- `ruff check .` + `scripts/check_repo.py` + `scripts/ci.ps1`: **PASS**.
+- `uv run python experiments/run_paper1_mvp_protocol.py`: las cuatro compuertas pasan.
+- Screenshots desktop/móvil del Sistema Solar, Vía Láctea, deep link a Sgr A* y all-sky.
+
+### Notes
+- Los períodos orbitales están comprimidos para que el movimiento sea visible en segundos; no representan tiempo real.
+- Tamaños de lunas, anillos de agujeros negros y posiciones de objetos lejanos son esquemáticos; la ficha lo indica.
+- Sigue siendo una jerarquía de siete marcos normalizados, no un zoom continuo de precisión arbitraria.
+- Sin cambios en el código científico del paquete.
+
 ## [3.12.0] - 2026-11-02
 
 ### Added
