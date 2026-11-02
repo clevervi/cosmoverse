@@ -6,6 +6,7 @@ SBI pipeline with SBC/TARP calibration.
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from cosmoverse.emulators import PMPowerSpectrumEmulator
 from cosmoverse.inference import PMEmulatorSBIPipeline
@@ -57,6 +58,7 @@ def test_pm_emulator_sbi_fit_and_infer() -> None:
     assert set(intervals) == {"omega_m", "sigma8", "b1", "A_AGN"}
 
 
+@pytest.mark.slow
 def test_pm_emulator_flow_calibration_gate() -> None:
     pipeline = PMEmulatorSBIPipeline(
         n_training_simulations=1600,

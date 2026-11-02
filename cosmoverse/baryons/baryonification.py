@@ -45,5 +45,7 @@ class BaryonificationModel:
         delta_k = np.fft.rfftn(delta_grid)
         delta_baryon_k = delta_k * filter_transfer
 
-        delta_baryon = np.fft.irfftn(delta_baryon_k, s=(n, n, n))
+        delta_baryon = np.fft.irfftn(
+        delta_baryon_k, s=(n, n, n), axes=(0, 1, 2)
+    )
         return delta_baryon

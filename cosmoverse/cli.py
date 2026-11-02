@@ -14,6 +14,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from cosmoverse import __author__, __email__, __version__
+from cosmoverse.acceleration import cupy_available, device_summary
 from cosmoverse.baryons.frontier import BiasVarianceFrontier
 from cosmoverse.core.cosmology import Cosmology
 from cosmoverse.core.dark_energy import DynamicDarkEnergyCosmology
@@ -29,6 +30,7 @@ from cosmoverse.emulators.bispectrum import ReducedBispectrumModel
 from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.compression import FisherScoreCompressor
+from cosmoverse.inference.domain_adaptation import DomainAdaptationPipeline
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.inference.light_cone_sbi import LightConeSBIPipeline
 from cosmoverse.inference.multi_family_transfer import MultiFamilyTransferPipeline
@@ -52,6 +54,7 @@ from cosmoverse.validation.arxiv_packager import ArxivSubmissionPackager
 from cosmoverse.validation.benchmarks import camels_latin_hypercube_benchmark
 from cosmoverse.validation.budget import SimulationBudgetAnalyzer
 from cosmoverse.validation.plotting import Paper1FigureGenerator
+from cosmoverse.validation.progress_dashboard import ProgressDashboard
 
 console = Console()
 
@@ -971,6 +974,155 @@ def cmd_multi_family_transfer(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_devices() -> None:
+    """Displays the active array backend and CUDA device details."""
+    info = device_summary()
+    table = Table(title="COSMOVERSE Device Audit")
+    table.add_column("Device Diagnostic", style="cyan")
+    table.add_column("Value", justify="right", style="green")
+    table.add_row("Array Backend", str(info.get("backend")))
+    table.add_row("CuPy Available", str(info.get("cupy_available")))
+    table.add_row("GPU Count", str(info.get("gpu_count", 0)))
+    table.add_row("GPU Name", str(info.get("gpu_name")))
+    if "cuda_runtime_version" in info:
+        table.add_row("CUDA Runtime", str(info["cuda_runtime_version"]))
+    if "total_memory_gb" in info:
+        table.add_row(
+            "GPU Memory",
+            f"{info['free_memory_gb']:.2f} / {info['total_memory_gb']:.2f} GB free",
+        )
+    table.add_row(
+        "PM GPU Benchmark",
+        "uv run cosmoverse gpu-pm --mesh 128 --steps 1",
+    )
+    console.print(table)
+
+
+def cmd_gpu_pm(args: argparse.Namespace) -> None:
+    """Benchmarks the Particle-Mesh integrator on CPU versus GPU."""
+    import numpy as np
+
+    if not cupy_available():
+        console.print("[red]No CUDA device detected. Install the [gpu] extra.[/red]")
+        return
+
+    sim_params = SimulationParameters(
+        box_size=float(args.box),
+        n_mesh=int(args.mesh),
+        n_steps=int(args.steps),
+        seed=42,
+    )
+
+    import time
+
+    cpu_sim = ParticleMeshSimulator(sim_params=sim_params, use_gpu=False)
+    start = time.perf_counter()
+    cpu_density = cpu_sim.run()
+    cpu_seconds = time.perf_counter() - start
+
+    gpu_sim = ParticleMeshSimulator(sim_params=sim_params, use_gpu=True)
+    start = time.perf_counter()
+    gpu_density = gpu_sim.run()
+    gpu_seconds = time.perf_counter() - start
+
+    cpu_np = np.asarray(cpu_density)
+    gpu_np = np.asarray(gpu_density.get())
+    density_max_diff = float(np.max(np.abs(cpu_np - gpu_np)))
+    _, cpu_pk = cpu_sim.compute_power_spectrum(n_bins=8)
+    _, gpu_pk = gpu_sim.compute_power_spectrum(n_bins=8)
+    pk_max_rel_diff = float(
+        np.max(np.abs(cpu_pk - gpu_pk) / np.maximum(cpu_pk, 1e-12))
+    )
+
+    table = Table(title="Particle-Mesh GPU Benchmark")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row("Mesh", f"{args.mesh}^3")
+    table.add_row("Particles", f"{args.mesh}^3")
+    table.add_row("Steps", str(args.steps))
+    table.add_row("CPU Time", f"{cpu_seconds:.3f} s")
+    table.add_row("GPU Time", f"{gpu_seconds:.3f} s")
+    table.add_row("GPU Speedup", f"{cpu_seconds / max(gpu_seconds, 1e-12):.2f}x")
+    table.add_row("Density Max Abs Diff", f"{density_max_diff:.3e}")
+    table.add_row("P(k) Max Rel Diff", f"{pk_max_rel_diff:.3e}")
+    console.print(table)
+
+
+def cmd_domain_adapt(args: argparse.Namespace) -> None:
+    """Runs target-family fine-tuning with an optional live dashboard."""
+    dashboard = None
+    if args.dashboard:
+        dashboard = ProgressDashboard(args.dashboard_out)
+        dashboard.update(
+            "initializing",
+            {
+                "progress": 0.0,
+                "device": device_summary(),
+                "note": "Starting target-family domain adaptation.",
+            },
+        )
+        dashboard.open()
+
+    pipeline = DomainAdaptationPipeline(
+        family=args.family,
+        n_calibration=int(args.calibration),
+        n_test=int(args.test),
+        fine_tune_epochs=int(args.fine_tune_epochs),
+        seed=42,
+        dashboard=dashboard,
+    )
+    result = pipeline.run()
+
+    table = Table(title="Level 3: Target-Family Domain Adaptation with the Trained Flow")
+    table.add_column("Adaptation Diagnostic", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row("Target Family", result["family"])
+    table.add_row("Data Source", ", ".join(result["data_source"]))
+    table.add_row(
+        "Leakage-Free Partition",
+        "PASS" if result["leakage_check"]["is_leakage_free"] else "FAIL",
+    )
+    table.add_row(
+        "Calibration/Test Disjoint",
+        "PASS" if result["calibration_test_disjoint"] else "FAIL",
+    )
+    table.add_row(
+        "Source SBC + TARP Gate",
+        "PASS" if result["source_calibration"]["passes_joint_sbi_gate"] else "FAIL",
+    )
+    before = result["before_adaptation"]
+    after = result["after_adaptation"]
+    table.add_row(
+        "Coverage 68% / 95% (before)",
+        f"{before['coverage_68']*100:.1f}% / {before['coverage_95']*100:.1f}%",
+    )
+    table.add_row(
+        "Coverage 68% / 95% (after)",
+        f"{after['coverage_68']*100:.1f}% / {after['coverage_95']*100:.1f}%",
+    )
+    table.add_row(
+        "Median Bias (before -> after)",
+        f"{before['median_bias_in_sigma']:.2f} -> "
+        f"{after['median_bias_in_sigma']:.2f} sigma",
+    )
+    table.add_row(
+        "Delta TARP-ICE (before -> after)",
+        f"{before['tarp_ice']:.3f} -> {after['tarp_ice']:.3f}",
+    )
+    loss = result["fine_tune_loss_history"]
+    table.add_row(
+        "Fine-Tune Loss (first -> last)",
+        f"{loss[0]:.3f} -> {loss[-1]:.3f}",
+    )
+    table.add_row(
+        "Adaptation Gate",
+        "PASS" if result["passes_adaptation_gate"] else "FAIL",
+    )
+    if args.dashboard:
+        table.add_row("Dashboard", str(args.dashboard_out))
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -1040,6 +1192,15 @@ def cmd_doctor() -> None:
             n_records=600, n_test=100, seed=42
         ).run()["passes_multi_family_gate"]
     )
+    domain_adapt_ok = bool(
+        DomainAdaptationPipeline(
+            family="CAMELS-SIMBA",
+            n_calibration=200,
+            n_test=100,
+            fine_tune_epochs=200,
+            seed=42,
+        ).run()["passes_adaptation_gate"]
+    )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     bisp_ia_ok = bool(
         ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
@@ -1069,6 +1230,7 @@ def cmd_doctor() -> None:
         ("Level 3: PM-Emulator + MLP Flow SBI (1600 sims) with SBC + TARP", pm_flow_sbi_ok),
         ("Level 3: Cross-Simulation Transfer with Trained Flow (Result 4)", flow_transfer_ok),
         ("Level 3: Multi-Family Transfer Audit (TNG, SIMBA, Astrid)", multi_family_ok),
+        ("Level 3: Target-Family Domain Adaptation (SIMBA fine-tuning)", domain_adapt_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -1244,6 +1406,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     transfer_parser.add_argument("--n-records", type=int, default=600, help="Number of source/target partition records")
     transfer_parser.add_argument("--n-test", type=int, default=100, help="Number of test points per family")
 
+    # Device audit and GPU Particle-Mesh benchmark
+    subparsers.add_parser("devices", help="Display the active array backend and CUDA device details")
+    gpu_parser = subparsers.add_parser("gpu-pm", help="Benchmark the Particle-Mesh integrator on CPU versus GPU")
+    gpu_parser.add_argument("--mesh", type=int, default=128, help="Mesh resolution per axis")
+    gpu_parser.add_argument("--steps", type=int, default=1, help="Number of KDK steps")
+    gpu_parser.add_argument("--box", type=float, default=200.0, help="Box size in Mpc/h")
+
+    # Target-family domain adaptation with optional live dashboard
+    da_parser = subparsers.add_parser("domain-adapt", help="Fine-tune the trained flow on a target hydrodynamical family")
+    da_parser.add_argument("--family", type=str, default="CAMELS-SIMBA", choices=["CAMELS-IllustrisTNG", "CAMELS-SIMBA", "CAMELS-Astrid"], help="Target hydrodynamical family")
+    da_parser.add_argument("--calibration", type=int, default=200, help="Number of target calibration simulations")
+    da_parser.add_argument("--test", type=int, default=100, help="Number of target test points")
+    da_parser.add_argument("--fine-tune-epochs", type=int, default=200, help="Number of fine-tuning epochs")
+    da_parser.add_argument("--dashboard", action="store_true", help="Open the live HTML progress dashboard")
+    da_parser.add_argument("--dashboard-out", type=str, default="dist/dashboard/domain_adaptation.html", help="Dashboard output path")
+
     # Multi-family transfer audit (TNG, SIMBA, Astrid)
     multi_parser = subparsers.add_parser("multi-family-transfer", help="Audit transfer to TNG, SIMBA and Astrid")
     multi_parser.add_argument("--data-dir", type=str, default=None, help="Directory with real CAMELS {sim_id}_Pk.txt tables")
@@ -1265,7 +1443,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 20-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 21-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -1323,6 +1501,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_flow_transfer(args)
     elif args.command == "multi-family-transfer":
         cmd_multi_family_transfer(args)
+    elif args.command == "domain-adapt":
+        cmd_domain_adapt(args)
+    elif args.command == "devices":
+        cmd_devices()
+    elif args.command == "gpu-pm":
+        cmd_gpu_pm(args)
     elif args.command == "cmb-sz":
         cmd_cmb_sz()
     elif args.command == "hod-mocks":

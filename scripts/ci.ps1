@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$Full
+)
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -43,8 +45,13 @@ Write-Step "Ruff lint"
 uv run ruff check .
 Assert-LastExitCode "ruff check"
 
-Write-Step "Pytest suite"
-uv run pytest -q
+if ($Full) {
+    Write-Step "Pytest suite (full, includes slow calibration/transfer tests)"
+    uv run pytest -q
+} else {
+    Write-Step "Pytest suite (fast, excludes slow calibration/transfer tests)"
+    uv run pytest -q -m "not slow"
+}
 Assert-LastExitCode "pytest"
 
 Write-Step "Whitespace"

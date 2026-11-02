@@ -88,7 +88,9 @@ class CAMELSFieldSnapshotDataset:
             k_mag = np.sqrt(kx ** 2 + ky ** 2 + kz ** 2)
             s_b = baryon_model.suppression_factor(np.maximum(k_mag, 1e-4), z=0.0)
             delta_k = np.fft.rfftn(delta_nl) * np.sqrt(np.maximum(s_b, 1e-4))
-            delta_target = np.fft.irfftn(delta_k, s=delta_nl.shape)
+            delta_target = np.fft.irfftn(
+        delta_k, s=delta_nl.shape, axes=(0, 1, 2)
+    )
         else:
             delta_target = delta_nl
 

@@ -3,6 +3,19 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.4.0] - 2026-11-02
+
+### Added
+- Backend GPU opcional con CuPy para el integrador Particle-Mesh (`cosmoverse.simulation.gpu_evolution`, `ParticleMeshSimulator(use_gpu=True)`). En malla \(128^3\) y 1 paso: **6.82 s CPU → 1.21 s GPU (5.6×)**, con diferencia máxima de densidad \(1.5\times10^{-13}\) y diferencia relativa en \(P(k)\) \(3.9\times10^{-16}\) (#104, PR #105).
+- Subcomandos `cosmoverse devices` (auditoría de backend/GPU) y `cosmoverse gpu-pm` (benchmark CPU vs GPU), más el extra opcional `[gpu]` en `pyproject.toml`.
+- `SBIEngine.fine_tune_flow` y `DomainAdaptationPipeline` (`cosmoverse.inference.domain_adaptation`): fine-tuning del flujo en una familia hidrodinámica objetivo con calibración disjunta. En SIMBA: cobertura 54% / 57% → **64% / 93%**, mediana de sesgo **2.32 → 0.68 \(\sigma\)**, TARP-ICE **0.206 → 0.023**, compuerta **PASS**.
+- `ProgressDashboard` (`cosmoverse.validation.progress_dashboard`): dashboard HTML autocontenido con refresco automático, barras de cobertura, tabla de sesgo/ICE, curva de loss, posterior \(\Omega_m\)–\(\sigma_8\) y estado del backend GPU.
+- Subcomando `cosmoverse domain-adapt --dashboard` y vigésima primera compuerta en `cosmoverse doctor` (`108 passed`).
+
+### Notes
+- La GPU no acelera el flujo SBI ni la transformada de Hankel por lotes: son matrices pequeñas y BLAS en CPU gana. El beneficio GPU está en el PM 3D de malla grande y en el renderizado WebGL del dashboard.
+- El dashboard es un artefacto HTML autónomo; se actualiza en cada etapa y el navegador lo recarga cada 2 s.
+
 ## [3.3.0] - 2026-11-01
 
 ### Added
