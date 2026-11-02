@@ -14,7 +14,9 @@
 
 > **Master Document:** See [`docs/MASTER_DOCUMENT.md`](docs/MASTER_DOCUMENT.md) for the consolidated scientific specification, risks, Plan B contingencies, and acceptance criteria.
 >
-> **Vista inmersiva:** [`docs/universo.html`](docs/universo.html) — solo el universo, sin paneles ni telemetría.
+> **Explorador cósmico (una sola página):** [`docs/explorador.html`](docs/explorador.html) — Tierra → Sistema Solar → Vía Láctea → Grupo Local → Laniakea → red cósmica, con búsqueda y vuelo a objetos.
+>
+> **Vista volumétrica CAMELS:** [`docs/universo.html`](docs/universo.html) — gas hidrodinámico real con ray-marching.
 
 </div>
 
@@ -113,7 +115,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (126 Unit Tests & Local CI Gate)
+### Run the Test Suite (131 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -228,7 +230,18 @@ uv run cosmoverse calibration-budget --family CAMELS-SIMBA --budgets 25,50,100,2
 uv run cosmoverse doctor
 ```
 
-### Ver el universo (WebGL, pantalla completa)
+### Explorador multi-escala (una sola página)
+
+Abrí [`docs/explorador.html`](docs/explorador.html): **seis escalas conectadas en una sola página**, no seis webs distintas.
+
+- **Tierra → Sistema Solar → Vía Láctea → Grupo Local → Laniakea → Red cósmica.**
+- Rail de escalas, teclas `1`–`6`, flechas `←`/`→` y `Ctrl/Cmd+K` o `/` para buscar.
+- Búsqueda de planetas, estrellas, galaxias, cúmulos y estructuras; al elegir un resultado, la cámara **vuela** al nivel y al objeto.
+- Clic en un objeto/label para ver su ficha; doble clic para enfocar; arrastre, rueda y pinch para orbitar/zoom.
+- La red cósmica usa el campo real **CAMELS-SIMBA EX** (`Mgas` + `T`).
+- Escalas normalizadas y modelo educativo: tamaños, distancias y brillos se ajustan para que todo sea visible.
+
+### Vista volumétrica del gas CAMELS
 
 Abrí [`docs/universo.html`](docs/universo.html) — **solo el universo**, sin paneles, sin sliders y sin telemetría.
 Ahora usa **gas hidrodinámico real de CAMELS-SIMBA EX**: densidad de gas `Mgas` y temperatura `T` del
