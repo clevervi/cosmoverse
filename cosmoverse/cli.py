@@ -31,6 +31,7 @@ from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
 from cosmoverse.inference.compression import FisherScoreCompressor
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.inference.light_cone_sbi import LightConeSBIPipeline
+from cosmoverse.inference.multi_family_transfer import MultiFamilyTransferPipeline
 from cosmoverse.inference.multiprobe_sbi import MultiProbeSBIPipeline
 from cosmoverse.inference.pm_emulator_sbi import PMEmulatorSBIPipeline
 from cosmoverse.inference.transfer_sbi import FlowTransferPipeline
@@ -911,6 +912,65 @@ def cmd_flow_transfer(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_multi_family_transfer(args: argparse.Namespace) -> None:
+    """Runs the multi-family (TNG, SIMBA, Astrid) transfer audit."""
+    pipeline = MultiFamilyTransferPipeline(
+        data_dir=args.data_dir,
+        n_records=int(args.n_records),
+        n_test=int(args.n_test),
+        seed=42,
+    )
+    result = pipeline.run()
+
+    table = Table(title="Level 3: Multi-Family Transfer Audit (TNG, SIMBA, Astrid)")
+    table.add_column("Audit Diagnostic", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row(
+        "Data Source",
+        "disk tables" if args.data_dir else "calibrated CAMELS response",
+    )
+    leakage = result["leakage_check"]
+    table.add_row(
+        "Leakage-Free Partition",
+        f"PASS (shared IC={leakage['shared_ic_seeds']}, "
+        f"shared cosmo={leakage['shared_cosmo_ids']})",
+    )
+    table.add_row(
+        "Source SBC + TARP Gate",
+        "PASS" if result["source_calibration"]["passes_joint_sbi_gate"] else "FAIL",
+    )
+    pre = result["pre_transfer"]
+    table.add_row(
+        "Pre-Transfer Coverage 68% / 95%",
+        f"{pre['coverage_68']*100:.1f}% / {pre['coverage_95']*100:.1f}%",
+    )
+    table.add_row(
+        "Pre-Transfer Median Bias",
+        f"{pre['median_bias_in_sigma']:.2f} sigma",
+    )
+    for family, family_result in result["families"].items():
+        post = family_result["post_transfer"]
+        degradation = family_result["degradation"]
+        sources = ",".join(family_result["data_source"])
+        table.add_row(
+            family.replace("CAMELS-", ""),
+            f"[{sources}] cov68/95={post['coverage_68']*100:.0f}%/"
+            f"{post['coverage_95']*100:.0f}%, "
+            f"med={post['median_bias_in_sigma']:.2f} sigma, "
+            f"dICE={degradation['delta_tarp_ice']:+.3f}, "
+            f"bound={'PASS' if family_result['passes_family_gate'] else 'FAIL'}",
+        )
+    table.add_row(
+        "All-Family Degradation Bound",
+        "PASS" if result["passes_degradation_bound_all"] else "FAIL",
+    )
+    table.add_row(
+        "Multi-Family Audit Gate",
+        "PASS" if result["passes_multi_family_gate"] else "FAIL",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -975,6 +1035,11 @@ def cmd_doctor() -> None:
             mismatch_strength=1.0, n_records=600, n_test=100, seed=42
         ).run()["passes_transfer_gate"]
     )
+    multi_family_ok = bool(
+        MultiFamilyTransferPipeline(
+            n_records=600, n_test=100, seed=42
+        ).run()["passes_multi_family_gate"]
+    )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     bisp_ia_ok = bool(
         ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
@@ -1003,6 +1068,7 @@ def cmd_doctor() -> None:
         ("Level 3: Gradient-Trained Flow SBI (ConditionalRealNVP) with SBC + TARP", flow_sbi_ok),
         ("Level 3: PM-Emulator + MLP Flow SBI (1600 sims) with SBC + TARP", pm_flow_sbi_ok),
         ("Level 3: Cross-Simulation Transfer with Trained Flow (Result 4)", flow_transfer_ok),
+        ("Level 3: Multi-Family Transfer Audit (TNG, SIMBA, Astrid)", multi_family_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -1178,6 +1244,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     transfer_parser.add_argument("--n-records", type=int, default=600, help="Number of source/target partition records")
     transfer_parser.add_argument("--n-test", type=int, default=100, help="Number of test points per family")
 
+    # Multi-family transfer audit (TNG, SIMBA, Astrid)
+    multi_parser = subparsers.add_parser("multi-family-transfer", help="Audit transfer to TNG, SIMBA and Astrid")
+    multi_parser.add_argument("--data-dir", type=str, default=None, help="Directory with real CAMELS {sim_id}_Pk.txt tables")
+    multi_parser.add_argument("--n-records", type=int, default=600, help="Number of source/target partition records")
+    multi_parser.add_argument("--n-test", type=int, default=100, help="Number of test points per family")
+
     # CMB Lensing cross-spectra + tSZ/kSZ BCEmu gas calibration
     subparsers.add_parser("cmb-sz", help="Evaluate Level 2 CMB lensing cross-spectra and tSZ/kSZ gas calibration")
 
@@ -1193,7 +1265,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 19-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 20-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -1249,6 +1321,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_pm_flow_sbi(args)
     elif args.command == "flow-transfer":
         cmd_flow_transfer(args)
+    elif args.command == "multi-family-transfer":
+        cmd_multi_family_transfer(args)
     elif args.command == "cmb-sz":
         cmd_cmb_sz()
     elif args.command == "hod-mocks":
