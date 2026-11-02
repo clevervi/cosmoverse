@@ -188,6 +188,42 @@ class SBIEngine:
         self._residual_cov_chol = np.linalg.cholesky(cov_reg)
         self._is_fitted = True
 
+    def fine_tune_flow(
+        self,
+        theta: np.ndarray,
+        x: np.ndarray,
+        n_epochs: int = 200,
+        batch_size: int = 64,
+        learning_rate: float = 3e-4,
+        seed: Optional[int] = None,
+    ) -> dict:
+        """
+        Continues training the conditional flow on a target-family calibration
+        set, reusing the source standardization. Domain adaptation, not a reset.
+        """
+        if self.density_estimator != "flow":
+            raise ValueError("fine_tune_flow requires density_estimator='flow'")
+        if not self._is_fitted or self.flow is None:
+            raise ValueError("fit the source flow before fine-tuning")
+
+        theta_arr = np.asarray(theta, dtype=np.float64)
+        x_arr = np.asarray(x, dtype=np.float64)
+        if theta_arr.ndim != 2 or x_arr.ndim != 2:
+            raise ValueError("theta and x must be 2D arrays")
+        if theta_arr.shape[1] != self.param_dim:
+            raise ValueError("theta has the wrong parameter dimension")
+
+        theta_norm = (theta_arr - self._theta_mean) / self._theta_std
+        x_norm = (x_arr - self._x_mean) / self._x_std
+        return self.flow.fit(
+            theta_norm,
+            x_norm,
+            n_epochs=int(n_epochs),
+            batch_size=int(batch_size),
+            learning_rate=float(learning_rate),
+            seed=self.seed if seed is None else int(seed),
+        )
+
     def infer(
         self,
         observed_x: np.ndarray,

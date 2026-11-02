@@ -6,6 +6,7 @@ the end-to-end flow-SBI calibration gate.
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from cosmoverse.inference import MultiProbeSBIPipeline
 from cosmoverse.inference.flows import ConditionalRealNVP
@@ -102,6 +103,7 @@ def test_mlp_coupling_gradients() -> None:
             )
 
 
+@pytest.mark.slow
 def test_flow_sbi_calibration_gate() -> None:
     pipeline = MultiProbeSBIPipeline(
         n_training_simulations=400,

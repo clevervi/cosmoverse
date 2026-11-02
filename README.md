@@ -107,12 +107,14 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (99 Unit Tests & Local CI Gate)
+### Run the Test Suite (108 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
-./scripts/ci.ps1   # Windows
-./scripts/ci.sh    # Linux / macOS / Git Bash
+./scripts/ci.ps1          # Windows fast gate (excludes slow calibration tests)
+./scripts/ci.ps1 -Full    # Windows full gate (includes slow tests)
+./scripts/ci_gpu.ps1      # optional CUDA GPU gate
+./scripts/ci.sh           # Linux / macOS / Git Bash
 ```
 
 ### CLI Commands
@@ -202,6 +204,13 @@ uv run cosmoverse flow-transfer --mismatch-strength 1.0 --n-test 100
 
 # Audit transfer to TNG, SIMBA and Astrid (calibrated responses; --data-dir for real tables)
 uv run cosmoverse multi-family-transfer --n-test 100
+
+# Audit the GPU backend and benchmark the Particle-Mesh integrator
+uv run cosmoverse devices
+uv run cosmoverse gpu-pm --mesh 128 --steps 1
+
+# Fine-tune the flow on SIMBA and watch the live HTML dashboard
+uv run cosmoverse domain-adapt --family CAMELS-SIMBA --dashboard
 
 # Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor

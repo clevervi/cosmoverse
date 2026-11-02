@@ -8,12 +8,14 @@ from __future__ import annotations
 import pathlib
 
 import numpy as np
+import pytest
 
 from cosmoverse.inference.multi_family_transfer import (
     MultiFamilyTransferPipeline,
 )
 
 
+@pytest.mark.slow
 def test_multi_family_transfer_audit() -> None:
     pipeline = MultiFamilyTransferPipeline(
         n_records=600,

@@ -12,6 +12,13 @@ from cosmoverse.simulation.evolution import cic_deposit, step_leapfrog_kdk
 from cosmoverse.simulation.initial_conditions import setup_initial_particles
 
 
+def _as_numpy(array):
+    """Converts CuPy arrays to NumPy without importing CuPy on CPU-only runs."""
+    if hasattr(array, "get"):
+        return array.get()
+    return np.asarray(array)
+
+
 class ParticleMeshSimulator:
     """
     Particle-Mesh N-body simulator for cosmic structure formation.
@@ -23,18 +30,31 @@ class ParticleMeshSimulator:
         self,
         cosmology: Optional[Cosmology] = None,
         sim_params: Optional[SimulationParameters] = None,
+        use_gpu: bool = False,
     ):
+        from cosmoverse.acceleration import cupy_available
+
+        if use_gpu and not cupy_available():
+            raise RuntimeError(
+                "use_gpu=True requires CuPy and a CUDA device"
+            )
         self.cosmology = cosmology or Cosmology()
         self.sim_params = sim_params or SimulationParameters()
-        self.positions: Optional[np.ndarray] = None
-        self.velocities: Optional[np.ndarray] = None
-        self.final_density: Optional[np.ndarray] = None
+        self.use_gpu = bool(use_gpu)
+        self.positions = None
+        self.velocities = None
+        self.final_density = None
 
-    def initialize(self, seed: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray]:
+    def initialize(self, seed: Optional[int] = None):
         """Sets up 1LPT initial conditions at z_initial."""
         self.positions, self.velocities = setup_initial_particles(
             self.cosmology, self.sim_params, seed=seed
         )
+        if self.use_gpu:
+            import cupy as cp
+
+            self.positions = cp.asarray(self.positions, dtype=cp.float64)
+            self.velocities = cp.asarray(self.velocities, dtype=cp.float64)
         return self.positions, self.velocities
 
     def run(self, seed: Optional[int] = None, verbose: bool = False) -> np.ndarray:
@@ -53,6 +73,18 @@ class ParticleMeshSimulator:
         # Scale factor timeline
         a_steps = np.linspace(a_ini, a_end, self.sim_params.n_steps + 1)
 
+        if self.use_gpu:
+            from cosmoverse.simulation.gpu_evolution import (
+                cic_deposit_gpu,
+                step_leapfrog_kdk_gpu,
+            )
+
+            step_fn = step_leapfrog_kdk_gpu
+            deposit_fn = cic_deposit_gpu
+        else:
+            step_fn = step_leapfrog_kdk
+            deposit_fn = cic_deposit
+
         pos = self.positions.copy()
         vel = self.velocities.copy()
 
@@ -62,13 +94,13 @@ class ParticleMeshSimulator:
             if verbose:
                 z_cur = 1.0 / a_cur - 1.0
                 print(f"[PM Step {step+1}/{self.sim_params.n_steps}] a={a_cur:.4f} (z={z_cur:.2f}) -> a={a_next:.4f}")
-            pos, vel = step_leapfrog_kdk(
+            pos, vel = step_fn(
                 pos, vel, a_cur, a_next, self.cosmology, self.sim_params
             )
 
         self.positions = pos
         self.velocities = vel
-        self.final_density = cic_deposit(
+        self.final_density = deposit_fn(
             pos, self.sim_params.box_size, self.sim_params.n_mesh
         )
         return self.final_density
@@ -100,6 +132,18 @@ class ParticleMeshSimulator:
         if not a_targets:
             raise ValueError("No snapshot redshifts lie within [z_final, z_initial]")
 
+        if self.use_gpu:
+            from cosmoverse.simulation.gpu_evolution import (
+                cic_deposit_gpu,
+                step_leapfrog_kdk_gpu,
+            )
+
+            step_fn = step_leapfrog_kdk_gpu
+            deposit_fn = cic_deposit_gpu
+        else:
+            step_fn = step_leapfrog_kdk
+            deposit_fn = cic_deposit
+
         a_steps = np.unique(np.concatenate(([a_ini], a_targets, [a_end])))
         pos = self.positions.copy()
         vel = self.velocities.copy()
@@ -115,7 +159,7 @@ class ParticleMeshSimulator:
                     pos, vel, z_cur, include_density=include_density
                 )
 
-            pos, vel = step_leapfrog_kdk(
+            pos, vel = step_fn(
                 pos, vel, a_cur, a_next, self.cosmology, self.sim_params
             )
             if verbose:
@@ -132,7 +176,7 @@ class ParticleMeshSimulator:
 
         self.positions = pos
         self.velocities = vel
-        self.final_density = cic_deposit(
+        self.final_density = deposit_fn(
             pos, self.sim_params.box_size, self.sim_params.n_mesh
         )
         return snapshots
@@ -145,14 +189,16 @@ class ParticleMeshSimulator:
         include_density: bool,
     ) -> dict:
         """Builds one immutable snapshot payload for light-cone construction."""
+        positions_np = _as_numpy(positions)
+        velocities_np = _as_numpy(velocities)
         snapshot = {
             "z": float(redshift),
-            "positions_mpc_h": positions.copy(),
-            "velocities_km_s": velocities.copy(),
+            "positions_mpc_h": np.array(positions_np, copy=True),
+            "velocities_km_s": np.array(velocities_np, copy=True),
         }
         if include_density:
             snapshot["density"] = cic_deposit(
-                positions, self.sim_params.box_size, self.sim_params.n_mesh
+                positions_np, self.sim_params.box_size, self.sim_params.n_mesh
             )
         return snapshot
 
@@ -173,7 +219,7 @@ class ParticleMeshSimulator:
             raise ValueError("No density field available. Run simulation first.")
 
         return estimate_power_spectrum_3d(
-            grid, self.sim_params.box_size, n_bins=n_bins
+            _as_numpy(grid), self.sim_params.box_size, n_bins=n_bins
         )
 
 

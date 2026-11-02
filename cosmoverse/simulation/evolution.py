@@ -141,9 +141,9 @@ def solve_gravitational_acceleration(
     gy_k = -1j * ky_grid * phi_k
     gz_k = -1j * kz_grid * phi_k
 
-    gx = np.fft.irfftn(gx_k, s=(n, n, n))
-    gy = np.fft.irfftn(gy_k, s=(n, n, n))
-    gz = np.fft.irfftn(gz_k, s=(n, n, n))
+    gx = np.fft.irfftn(gx_k, s=(n, n, n), axes=(0, 1, 2))
+    gy = np.fft.irfftn(gy_k, s=(n, n, n), axes=(0, 1, 2))
+    gz = np.fft.irfftn(gz_k, s=(n, n, n), axes=(0, 1, 2))
 
     return np.stack([gx, gy, gz], axis=0)
 

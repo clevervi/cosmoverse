@@ -59,7 +59,9 @@ def generate_gaussian_random_field(
     delta_k[0, 0, 0] = 0.0 + 0.0j
 
     # Inverse Fourier transform to real space (scaled by grid count)
-    delta_real = np.fft.irfftn(delta_k, s=(n, n, n)) * (n ** 3 / volume)
+    delta_real = np.fft.irfftn(
+        delta_k, s=(n, n, n), axes=(0, 1, 2)
+    ) * (n**3 / volume)
 
     return delta_real, k_mag
 
@@ -91,9 +93,9 @@ def compute_zeldovich_displacement(
     psi_z_k = 1j * kz_grid * green * delta_k
 
     # Back to real space
-    psi_x = np.fft.irfftn(psi_x_k, s=(n, n, n))
-    psi_y = np.fft.irfftn(psi_y_k, s=(n, n, n))
-    psi_z = np.fft.irfftn(psi_z_k, s=(n, n, n))
+    psi_x = np.fft.irfftn(psi_x_k, s=(n, n, n), axes=(0, 1, 2))
+    psi_y = np.fft.irfftn(psi_y_k, s=(n, n, n), axes=(0, 1, 2))
+    psi_z = np.fft.irfftn(psi_z_k, s=(n, n, n), axes=(0, 1, 2))
 
     return psi_x, psi_y, psi_z
 
