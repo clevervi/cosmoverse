@@ -111,11 +111,7 @@
   }
   #legend.gone { opacity: 0; }
   #legend span { white-space: nowrap; }
-  #pause {
-    position: fixed;
-    top: max(18px, calc(env(safe-area-inset-top, 0px) + 18px));
-    right: max(18px, calc(env(safe-area-inset-right, 0px) + 18px));
-    z-index: 3;
+  #pause, #tour {
     padding: 6px 10px;
     border: 1px solid rgba(200, 216, 230, 0.22);
     border-radius: 2px;
@@ -128,14 +124,69 @@
     opacity: 0.6;
     transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  #pause:hover, #pause:focus-visible {
+  #controls {
+    position: fixed;
+    top: max(18px, calc(env(safe-area-inset-top, 0px) + 18px));
+    right: max(18px, calc(env(safe-area-inset-right, 0px) + 18px));
+    z-index: 3;
+    display: flex;
+    gap: 8px;
+  }
+  #pause:hover, #pause:focus-visible, #tour:hover, #tour:focus-visible {
     opacity: 1;
     color: var(--ink);
     border-color: rgba(245, 166, 35, 0.7);
   }
-  #pause:focus-visible {
+  #pause:focus-visible, #tour:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.35);
+  }
+  #tour[aria-pressed="true"] {
+    opacity: 0.9;
+    color: var(--amber);
+    border-color: rgba(245, 166, 35, 0.48);
+  }
+  #tour-caption {
+    position: fixed;
+    left: 50%;
+    bottom: max(92px, calc(env(safe-area-inset-bottom, 0px) + 92px));
+    z-index: 3;
+    width: min(88vw, 620px);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  #tour-caption.on { opacity: 1; transform: translate(-50%, 0); }
+  .tour-kicker {
+    display: block;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(245, 166, 35, 0.78);
+  }
+  #tour-title {
+    display: block;
+    font-size: 18px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.8);
+  }
+  #tour-desc {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1.5;
+    letter-spacing: 0.03em;
+    color: rgba(200, 216, 230, 0.68);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .dot {
     display: inline-block;
@@ -167,7 +218,8 @@
     transition: opacity 1.4s ease;
     line-height: 1.5;
     white-space: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   #hint.gone { opacity: 0; }
   #lost {
@@ -189,12 +241,14 @@
   @media (max-width: 700px) {
     h1 { letter-spacing: 0.12em; }
     #legend {
-      left: 50%;
-      transform: translateX(-50%);
-      justify-content: center;
-      bottom: max(48px, env(safe-area-inset-bottom, 48px));
-      width: 94vw;
+      left: max(18px, calc(env(safe-area-inset-left, 0px) + 18px));
+      top: max(132px, calc(env(safe-area-inset-top, 0px) + 132px));
+      bottom: auto;
+      transform: none;
+      justify-content: flex-start;
+      width: auto;
       gap: 6px 12px;
+      font-size: 8px;
     }
     #hint {
       left: 0;
@@ -205,6 +259,20 @@
       letter-spacing: 0.02em;
       bottom: max(18px, env(safe-area-inset-bottom, 18px));
     }
+    #controls {
+      right: max(12px, calc(env(safe-area-inset-right, 0px) + 12px));
+      gap: 6px;
+    }
+    #pause, #tour {
+      padding: 5px 7px;
+      font-size: 8px;
+    }
+    #tour-caption {
+      bottom: max(96px, calc(env(safe-area-inset-bottom, 0px) + 96px));
+      width: 92vw;
+    }
+    #tour-title { font-size: 15px; }
+    #tour-desc { font-size: 9px; }
   }
   @media (prefers-reduced-motion: reduce) {
     #overlay, h1, #legend, #hint { transition: none; }
@@ -221,7 +289,16 @@
   <p>materia oscura · gas · galaxias</p>
 </header>
 
-<button id="pause" type="button" aria-label="Pausar movimiento automático" aria-pressed="false">PAUSA</button>
+<div id="controls">
+  <button id="tour" type="button" aria-label="Activar o desactivar el tour guiado" aria-pressed="false">TOUR</button>
+  <button id="pause" type="button" aria-label="Pausar movimiento automático" aria-pressed="false">PAUSA</button>
+</div>
+
+<div id="tour-caption" role="status" aria-live="polite">
+  <span class="tour-kicker">TOUR GUÍADO</span>
+  <strong id="tour-title">La red cósmica</strong>
+  <span id="tour-desc">Materia oscura, gas y galaxias a gran escala.</span>
+</div>
 
 <div id="legend" aria-hidden="true">
   <span><i class="dot dm"></i>materia oscura</span>
@@ -229,7 +306,7 @@
   <span><i class="dot gal"></i>galaxias</span>
 </div>
 
-<div id="hint">arrastra · rueda o pinch · doble clic enfoca un cúmulo<br>1/2/3 capas · T evolución · F pantalla completa · R reinicio</div>
+<div id="hint">arrastra · rueda o pinch · doble clic enfoca<br>1/2/3 capas · G tour · T evolución<br>F pantalla completa · R reinicio</div>
 <div id="lost" role="alert"></div>
 
 <noscript>
@@ -239,12 +316,13 @@
 </noscript>
 
 <script id="vertex-shader" type="x-shader/x-vertex">
-attribute vec3 aPositionLate;
-attribute vec3 aPositionEarly;
-attribute vec3 aColor;
-attribute float aSize;
-attribute float aAlpha;
-attribute float aKind;
+#version 300 es
+in vec3 aPositionLate;
+in vec3 aPositionEarly;
+in vec3 aColor;
+in float aSize;
+in float aAlpha;
+in float aKind;
 
 uniform mat4 uView;
 uniform mat4 uProj;
@@ -254,9 +332,9 @@ uniform float uShowDM;
 uniform float uShowGas;
 uniform float uShowGal;
 
-varying vec3 vColor;
-varying float vAlpha;
-varying float vKind;
+out vec3 vColor;
+out float vAlpha;
+out float vKind;
 
 void main() {
   vec3 pos = mix(aPositionEarly, aPositionLate, uEvolution);
@@ -283,11 +361,13 @@ void main() {
 </script>
 
 <script id="fragment-shader" type="x-shader/x-fragment">
+#version 300 es
 precision mediump float;
 
-varying vec3 vColor;
-varying float vAlpha;
-varying float vKind;
+in vec3 vColor;
+in float vAlpha;
+in float vKind;
+out vec4 fragColor;
 
 void main() {
   vec2 p = gl_PointCoord - vec2(0.5);
@@ -299,13 +379,14 @@ void main() {
   if (vKind > 1.5) {
     col += core * vec3(0.35, 0.24, 0.12);
   }
-  gl_FragColor = vec4(col, vAlpha * halo);
+  fragColor = vec4(col, vAlpha * halo);
 }
 </script>
 
 <script id="quad-vertex-shader" type="x-shader/x-vertex">
-attribute vec2 aQuad;
-varying vec2 vUv;
+#version 300 es
+in vec2 aQuad;
+out vec2 vUv;
 
 void main() {
   vUv = aQuad * 0.5 + 0.5;
@@ -314,55 +395,124 @@ void main() {
 </script>
 
 <script id="bright-fragment-shader" type="x-shader/x-fragment">
+#version 300 es
 precision mediump float;
 
 uniform sampler2D uScene;
 uniform float uThreshold;
-varying vec2 vUv;
+in vec2 vUv;
+out vec4 fragColor;
 
 void main() {
-  vec3 c = texture2D(uScene, vUv).rgb;
+  vec3 c = texture(uScene, vUv).rgb;
   float brightness = max(max(c.r, c.g), c.b);
   float factor = smoothstep(uThreshold, 1.0, brightness);
-  gl_FragColor = vec4(c * factor, 1.0);
+  fragColor = vec4(c * factor, 1.0);
 }
 </script>
 
 <script id="blur-fragment-shader" type="x-shader/x-fragment">
+#version 300 es
 precision mediump float;
 
 uniform sampler2D uTexture;
 uniform vec2 uTexel;
 uniform vec2 uDirection;
-varying vec2 vUv;
+in vec2 vUv;
+out vec4 fragColor;
 
 void main() {
   vec2 step = uTexel * uDirection;
-  vec3 sum = texture2D(uTexture, vUv).rgb * 0.227027;
-  sum += texture2D(uTexture, vUv + step * 1.384615).rgb * 0.316216;
-  sum += texture2D(uTexture, vUv - step * 1.384615).rgb * 0.316216;
-  sum += texture2D(uTexture, vUv + step * 3.230769).rgb * 0.070270;
-  sum += texture2D(uTexture, vUv - step * 3.230769).rgb * 0.070270;
-  gl_FragColor = vec4(sum, 1.0);
+  vec3 sum = texture(uTexture, vUv).rgb * 0.227027;
+  sum += texture(uTexture, vUv + step * 1.384615).rgb * 0.316216;
+  sum += texture(uTexture, vUv - step * 1.384615).rgb * 0.316216;
+  sum += texture(uTexture, vUv + step * 3.230769).rgb * 0.070270;
+  sum += texture(uTexture, vUv - step * 3.230769).rgb * 0.070270;
+  fragColor = vec4(sum, 1.0);
+}
+</script>
+
+<script id="volume-fragment-shader" type="x-shader/x-fragment">
+#version 300 es
+precision highp float;
+precision highp sampler3D;
+
+uniform sampler3D uVolume;
+uniform vec3 uCameraPos;
+uniform vec3 uForward;
+uniform vec3 uRight;
+uniform vec3 uUp;
+uniform float uTanHalfFov;
+uniform float uAspect;
+uniform float uDensity;
+uniform float uShowGas;
+uniform float uEvolution;
+in vec2 vUv;
+out vec4 fragColor;
+
+const int STEPS = __STEPS__;
+
+void main() {
+  vec2 ndc = vUv * 2.0 - 1.0;
+  vec3 dir = normalize(
+    uForward
+    + uRight * (ndc.x * uAspect * uTanHalfFov)
+    + uUp * (ndc.y * uTanHalfFov)
+  );
+  vec3 origin = uCameraPos;
+  vec3 invDir = 1.0 / dir;
+  vec3 t0 = (-1.1 - origin) * invDir;
+  vec3 t1 = ( 1.1 - origin) * invDir;
+  vec3 tmin = min(t0, t1);
+  vec3 tmax = max(t0, t1);
+  float tNear = max(max(tmin.x, tmin.y), tmin.z);
+  float tFar = min(min(tmax.x, tmax.y), tmax.z);
+  tNear = max(tNear, 0.0);
+  if (tFar <= tNear) discard;
+
+  float stepSize = (tFar - tNear) / float(STEPS);
+  vec3 gas = vec3(0.0);
+  float evolution = smoothstep(0.55, 1.0, uEvolution) * uShowGas;
+
+  for (int i = 0; i < STEPS; i++) {
+    float t = tNear + (float(i) + 0.5) * stepSize;
+    vec3 p = origin + dir * t;
+    vec3 uvw = p * 0.5 + 0.5;
+    float d = texture(uVolume, uvw).r;
+    d = smoothstep(0.10, 0.78, d);
+    if (d > 0.002) {
+      vec3 col = mix(
+        vec3(0.006, 0.035, 0.08),
+        vec3(0.10, 0.52, 0.48),
+        clamp(d * 1.30, 0.0, 1.0)
+      );
+      col += vec3(0.55, 0.30, 0.08) * pow(d, 4.0) * 0.35;
+      float alpha = 1.0 - exp(-d * uDensity * stepSize);
+      gas += col * alpha;
+    }
+  }
+  fragColor = vec4(gas * evolution, 1.0);
 }
 </script>
 
 <script id="composite-fragment-shader" type="x-shader/x-fragment">
+#version 300 es
 precision mediump float;
 
 uniform sampler2D uScene;
 uniform sampler2D uBloom;
 uniform float uBloomStrength;
 uniform float uExposure;
-varying vec2 vUv;
+in vec2 vUv;
+out vec4 fragColor;
 
 void main() {
-  vec3 scene = texture2D(uScene, vUv).rgb;
-  vec3 bloom = texture2D(uBloom, vUv).rgb;
+  vec3 scene = texture(uScene, vUv).rgb;
+  vec3 bloom = texture(uBloom, vUv).rgb;
   vec3 c = scene + bloom * uBloomStrength;
   c = vec3(1.0) - exp(-c * uExposure);
   c = pow(c, vec3(1.0 / 2.2));
-  gl_FragColor = vec4(c, 1.0);
+  fragColor = vec4(c, 1.0);
 }
 </script>
 
@@ -386,7 +536,9 @@ void main() {
     dmHaloFactor: 0.30,
     dmFilamentFactor: 0.20,
     bloomScale: 0.30,
-    maxDpr: 1.5
+    maxDpr: 1.5,
+    volumeSize: 40,
+    volumeSteps: 28
   } : {
     nodes: 140,
     background: 9000,
@@ -399,7 +551,9 @@ void main() {
     dmHaloFactor: 0.38,
     dmFilamentFactor: 0.28,
     bloomScale: 0.50,
-    maxDpr: 2.0
+    maxDpr: 2.0,
+    volumeSize: 80,
+    volumeSteps: 52
   };
 
   var canvas = document.getElementById("universo-canvas");
@@ -414,14 +568,14 @@ void main() {
     lost.classList.add("on");
   }
 
-  var gl = canvas.getContext("webgl", {
+  var gl = canvas.getContext("webgl2", {
     alpha: false,
     antialias: true,
     depth: false,
     powerPreference: "high-performance"
   });
   if (!gl) {
-    fail("Tu navegador no pudo iniciar WebGL. Probá con Chrome, Edge o Firefox actualizado.");
+    fail("Tu navegador no pudo iniciar WebGL2. Probá con Chrome, Edge o Firefox actualizado.");
     return;
   }
 
@@ -449,21 +603,26 @@ void main() {
   }
 
   function source(id) {
-    return document.getElementById(id).textContent;
+    return document.getElementById(id).textContent.trim();
   }
 
   var pointProgram;
   var brightProgram;
   var blurProgram;
   var compositeProgram;
+  var volumeProgram;
   try {
     var quadVS = source("quad-vertex-shader");
     pointProgram = link(source("vertex-shader"), source("fragment-shader"));
     brightProgram = link(quadVS, source("bright-fragment-shader"));
     blurProgram = link(quadVS, source("blur-fragment-shader"));
     compositeProgram = link(quadVS, source("composite-fragment-shader"));
+    volumeProgram = link(
+      quadVS,
+      source("volume-fragment-shader").replace("__STEPS__", String(Q.volumeSteps))
+    );
   } catch (err) {
-    fail("No se pudo compilar el renderizador WebGL.");
+    fail("No se pudo compilar el renderizador WebGL2.");
     return;
   }
 
@@ -500,6 +659,19 @@ void main() {
     bloom: gl.getUniformLocation(compositeProgram, "uBloom"),
     strength: gl.getUniformLocation(compositeProgram, "uBloomStrength"),
     exposure: gl.getUniformLocation(compositeProgram, "uExposure")
+  };
+  var volumeLoc = {
+    quad: gl.getAttribLocation(volumeProgram, "aQuad"),
+    volume: gl.getUniformLocation(volumeProgram, "uVolume"),
+    cameraPos: gl.getUniformLocation(volumeProgram, "uCameraPos"),
+    forward: gl.getUniformLocation(volumeProgram, "uForward"),
+    right: gl.getUniformLocation(volumeProgram, "uRight"),
+    up: gl.getUniformLocation(volumeProgram, "uUp"),
+    tanHalfFov: gl.getUniformLocation(volumeProgram, "uTanHalfFov"),
+    aspect: gl.getUniformLocation(volumeProgram, "uAspect"),
+    density: gl.getUniformLocation(volumeProgram, "uDensity"),
+    showGas: gl.getUniformLocation(volumeProgram, "uShowGas"),
+    evolution: gl.getUniformLocation(volumeProgram, "uEvolution")
   };
 
   gl.disable(gl.DEPTH_TEST);
@@ -570,6 +742,37 @@ void main() {
   var alphas = [];
   var kinds = [];
 
+  var VOL = Q.volumeSize;
+  var volumeDensity = new Float32Array(VOL * VOL * VOL);
+
+  function splatGas(x, y, z, amount, radius) {
+    var gx = (x / 2.2 + 0.5) * (VOL - 1);
+    var gy = (y / 2.2 + 0.5) * (VOL - 1);
+    var gz = (z / 2.2 + 0.5) * (VOL - 1);
+    if (gx < 0 || gy < 0 || gz < 0 || gx > VOL - 1 || gy > VOL - 1 || gz > VOL - 1) {
+      return;
+    }
+    var cx = Math.round(gx);
+    var cy = Math.round(gy);
+    var cz = Math.round(gz);
+    var rad = Math.max(1, Math.ceil(radius * 2.0));
+    var sigma2 = radius * radius;
+    for (var dz = -rad; dz <= rad; dz++) {
+      var iz = cz + dz;
+      if (iz < 0 || iz >= VOL) continue;
+      for (var dy = -rad; dy <= rad; dy++) {
+        var iy = cy + dy;
+        if (iy < 0 || iy >= VOL) continue;
+        for (var dx = -rad; dx <= rad; dx++) {
+          var ix = cx + dx;
+          if (ix < 0 || ix >= VOL) continue;
+          var w = Math.exp(-(dx * dx + dy * dy + dz * dz) / (2 * sigma2));
+          volumeDensity[ix + VOL * (iy + VOL * iz)] += amount * w;
+        }
+      }
+    }
+  }
+
   function addParticle(x, y, z, color, size, alpha, kind, scatter) {
     var expansion = 1.24 + rand() * 0.52;
     var ex = clamp(x * expansion + gauss() * scatter, -2.25, 2.25);
@@ -586,6 +789,11 @@ void main() {
     sizes.push(size);
     alphas.push(alpha);
     kinds.push(kind);
+    if (kind === 1) {
+      var gasRadius = size > 8 ? 1.6 : 0.8;
+      var gasAmount = size > 8 ? 0.004 : 0.030 + alpha * 0.03;
+      splatGas(x, y, z, gasAmount, gasRadius);
+    }
   }
 
   var clusterCenters = [];
@@ -618,6 +826,28 @@ void main() {
       mass: 0.30 + rand() * 0.70,
       cluster: i % clusterCenters.length
     });
+  }
+
+  var centerMeanX = 0;
+  var centerMeanY = 0;
+  var centerMeanZ = 0;
+  for (var cn = 0; cn < nodes.length; cn++) {
+    centerMeanX += nodes[cn].x;
+    centerMeanY += nodes[cn].y;
+    centerMeanZ += nodes[cn].z;
+  }
+  centerMeanX /= nodes.length;
+  centerMeanY /= nodes.length;
+  centerMeanZ /= nodes.length;
+  for (var cm = 0; cm < nodes.length; cm++) {
+    nodes[cm].x -= centerMeanX;
+    nodes[cm].y -= centerMeanY;
+    nodes[cm].z -= centerMeanZ;
+  }
+  for (var ccen = 0; ccen < clusterCenters.length; ccen++) {
+    clusterCenters[ccen][0] -= centerMeanX;
+    clusterCenters[ccen][1] -= centerMeanY;
+    clusterCenters[ccen][2] -= centerMeanZ;
   }
 
   function distanceSq(a, b) {
@@ -791,34 +1021,156 @@ void main() {
     );
   }
 
-  // Center the web on the origin so the camera always frames it.
-  var meanX = 0;
-  var meanY = 0;
-  var meanZ = 0;
-  for (var ci = 0; ci < nodes.length; ci++) {
-    meanX += nodes[ci].x;
-    meanY += nodes[ci].y;
-    meanZ += nodes[ci].z;
+  // The web is already centered on the origin before particles are generated.
+  function buildTourStops() {
+    var sorted = nodes.slice().sort(function (a, b) { return b.mass - a.mass; });
+    var picks = [];
+    for (var si = 0; si < sorted.length && picks.length < 4; si++) {
+      var candidate = sorted[si];
+      var ok = true;
+      for (var pi = 0; pi < picks.length; pi++) {
+        if (distanceSq(candidate, picks[pi]) < 0.38 * 0.38) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) picks.push(candidate);
+    }
+
+    var stops = [{
+      target: [0, 0, 0],
+      radius: 4.2,
+      theta: 0.62,
+      phi: 0.16,
+      hold: 6.0,
+      title: "La red cósmica",
+      desc: "Materia oscura, gas y galaxias a gran escala."
+    }];
+
+    if (picks[0]) {
+      stops.push({
+        target: [picks[0].x, picks[0].y, picks[0].z],
+        radius: 2.0,
+        theta: 1.15,
+        phi: 0.10,
+        hold: 5.5,
+        title: "Cúmulo de galaxias",
+        desc: "Miles de galaxias y gas caliente en el nodo."
+      });
+    }
+
+    if (picks[0] && picks[1]) {
+      stops.push({
+        target: [
+          (picks[0].x + picks[1].x) * 0.5,
+          (picks[0].y + picks[1].y) * 0.5,
+          (picks[0].z + picks[1].z) * 0.5
+        ],
+        radius: 2.8,
+        theta: 1.9,
+        phi: 0.12,
+        hold: 5.5,
+        title: "Filamento cósmico",
+        desc: "Puentes de gas y materia oscura entre cúmulos."
+      });
+    }
+
+    if (picks[1]) {
+      stops.push({
+        target: [picks[1].x, picks[1].y, picks[1].z],
+        radius: 2.05,
+        theta: 2.6,
+        phi: 0.14,
+        hold: 5.5,
+        title: "Cúmulo de galaxias",
+        desc: "Gas y materia oscura alimentan nuevas galaxias."
+      });
+    }
+
+    var bestVoid = [0, 0, 0];
+    var bestScore = -1;
+    for (var vc = 0; vc < 260; vc++) {
+      var vx = (rand() * 2 - 1) * 0.92;
+      var vy = (rand() * 2 - 1) * 0.86;
+      var vz = (rand() * 2 - 1) * 0.92;
+      var nearest = 1e9;
+      for (var vn = 0; vn < nodes.length; vn++) {
+        var vdx = vx - nodes[vn].x;
+        var vdy = vy - nodes[vn].y;
+        var vdz = vz - nodes[vn].z;
+        var vd = vdx * vdx + vdy * vdy + vdz * vdz;
+        if (vd < nearest) nearest = vd;
+      }
+      if (nearest > bestScore) {
+        bestScore = nearest;
+        bestVoid = [vx, vy, vz];
+      }
+    }
+    stops.push({
+      target: bestVoid,
+      radius: 3.8,
+      theta: 3.3,
+      phi: 0.12,
+      hold: 5.5,
+      title: "Vacío cósmico",
+      desc: "Regiones casi vacías entre los filamentos."
+    });
+
+    if (picks[2]) {
+      stops.push({
+        target: [picks[2].x, picks[2].y, picks[2].z],
+        radius: 2.0,
+        theta: 4.0,
+        phi: 0.10,
+        hold: 5.5,
+        title: "Cúmulo de galaxias",
+        desc: "Gas, galaxias y materia oscura en un nodo."
+      });
+    }
+
+    tourStops = stops;
   }
-  meanX /= nodes.length;
-  meanY /= nodes.length;
-  meanZ /= nodes.length;
-  for (var pi = 0; pi < latePositions.length; pi += 3) {
-    latePositions[pi] -= meanX;
-    latePositions[pi + 1] -= meanY;
-    latePositions[pi + 2] -= meanZ;
-    earlyPositions[pi] -= meanX;
-    earlyPositions[pi + 1] -= meanY;
-    earlyPositions[pi + 2] -= meanZ;
-  }
-  for (var ni = 0; ni < nodes.length; ni++) {
-    nodes[ni].x -= meanX;
-    nodes[ni].y -= meanY;
-    nodes[ni].z -= meanZ;
-  }
+  buildTourStops();
 
   var pointCount = latePositions.length / 3;
   canvas.dataset.points = String(pointCount);
+
+  var maxDensity = 0;
+  for (var vi = 0; vi < volumeDensity.length; vi++) {
+    if (volumeDensity[vi] > maxDensity) maxDensity = volumeDensity[vi];
+  }
+  if (maxDensity <= 0) maxDensity = 1;
+  var volumeData = new Uint8Array(VOL * VOL * VOL * 4);
+  for (var vj = 0; vj < volumeDensity.length; vj++) {
+    var normalized = Math.pow(volumeDensity[vj] / maxDensity, 0.68);
+    var value = Math.min(255, Math.floor(normalized * 255));
+    volumeData[vj * 4] = value;
+    volumeData[vj * 4 + 1] = value;
+    volumeData[vj * 4 + 2] = value;
+    volumeData[vj * 4 + 3] = 255;
+  }
+
+  var volumeTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_3D, volumeTexture);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage3D(
+    gl.TEXTURE_3D,
+    0,
+    gl.RGBA8,
+    VOL,
+    VOL,
+    VOL,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    volumeData
+  );
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.bindTexture(gl.TEXTURE_3D, null);
 
   var lateData = new Float32Array(latePositions);
   var earlyData = new Float32Array(earlyPositions);
@@ -890,10 +1242,28 @@ void main() {
   var bloomA = null;
   var bloomB = null;
   var bloomEnabled = true;
+  var volumeEnabled = true;
   var dpr = 1;
   var qualityFrames = 0;
   var qualityTime = 0;
-  var qualityAdjusted = false;
+  var qualityStage = 0;
+
+  var blackTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, blackTexture);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA8,
+    1,
+    1,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([0, 0, 0, 255])
+  );
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.bindTexture(gl.TEXTURE_2D, null);
 
   function deleteTarget(target) {
     if (!target) return;
@@ -904,7 +1274,7 @@ void main() {
   function createTarget(width, height) {
     var tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -936,12 +1306,10 @@ void main() {
     sceneTarget = createTarget(width, height);
     var bloomW = Math.max(1, Math.floor(width * Q.bloomScale));
     var bloomH = Math.max(1, Math.floor(height * Q.bloomScale));
-    bloomW = Math.max(1, Math.floor(width * Q.bloomScale));
-    bloomH = Math.max(1, Math.floor(height * Q.bloomScale));
     bloomA = createTarget(bloomW, bloomH);
     bloomB = createTarget(bloomW, bloomH);
     var available = Boolean(sceneTarget && bloomA && bloomB);
-    bloomEnabled = available && (qualityAdjusted ? bloomEnabled : true);
+    bloomEnabled = available && (qualityStage >= 2 ? bloomEnabled : true);
   }
 
   // ---------------------------------------------------------------------------
@@ -974,6 +1342,14 @@ void main() {
   var evolutionPhase = 0;
   var evolution = 1.0;
   var pauseButton = document.getElementById("pause");
+  var tourButton = document.getElementById("tour");
+  var tourCaption = document.getElementById("tour-caption");
+  var tourTitle = document.getElementById("tour-title");
+  var tourDesc = document.getElementById("tour-desc");
+  var tourStops;
+  var tour = { active: false, index: 0, phase: "hold", clock: 0 };
+  var cameraEye = [0, 0, 0];
+  var cameraTarget = [0, 0, 0];
   var paused = false;
   var raf = 0;
   var lastFrame = performance.now();
@@ -1029,6 +1405,7 @@ void main() {
   }
 
   function resetCamera() {
+    stopTour();
     cam.tTheta = 0.62;
     cam.tPhi = 0.16;
     cam.tRadius = cam.baseRadius;
@@ -1041,7 +1418,7 @@ void main() {
 
   function scheduleResume() {
     window.clearTimeout(resumeTimer);
-    if (reducedMotion || paused) return;
+    if (reducedMotion || paused || tour.active) return;
     resumeTimer = window.setTimeout(function () {
       if (!dragging) auto = true;
     }, 5000);
@@ -1055,11 +1432,90 @@ void main() {
       auto = false;
       evolutionAuto = false;
     } else {
-      auto = !reducedMotion;
+      auto = !tour.active && !reducedMotion;
       evolutionAuto = !reducedMotion;
     }
   }
   pauseButton.addEventListener("click", togglePause);
+
+  function setTourButton() {
+    tourButton.setAttribute("aria-pressed", tour.active ? "true" : "false");
+  }
+
+  function showTourCaption(stop) {
+    tourTitle.textContent = stop.title;
+    tourDesc.textContent = stop.desc;
+    tourCaption.classList.add("on");
+  }
+
+  function hideTourCaption() {
+    tourCaption.classList.remove("on");
+  }
+
+  function applyTourStop(stop, instant) {
+    cam.tTarget = stop.target.slice();
+    cam.tRadius = stop.radius;
+    cam.tTheta = stop.theta;
+    cam.tPhi = stop.phi;
+    cam.focusUntil = 0;
+    if (instant) {
+      cam.target = stop.target.slice();
+      cam.radius = stop.radius;
+      cam.theta = stop.theta;
+      cam.phi = stop.phi;
+    }
+    showTourCaption(stop);
+  }
+
+  function startTour() {
+    if (!tourStops.length) return;
+    tour.active = true;
+    tour.index = 0;
+    tour.phase = "hold";
+    tour.clock = 0;
+    auto = false;
+    applyTourStop(tourStops[0], true);
+    setTourButton();
+  }
+
+  function stopTour() {
+    if (!tour.active) return;
+    tour.active = false;
+    hideTourCaption();
+    auto = !paused;
+    setTourButton();
+  }
+
+  function toggleTour() {
+    if (tour.active) {
+      stopTour();
+    } else {
+      startTour();
+    }
+  }
+  tourButton.addEventListener("click", toggleTour);
+
+  function updateTour(dt) {
+    if (!tour.active || paused) return;
+    tour.clock += dt;
+    var stop = tourStops[tour.index];
+    if (tour.phase === "hold") {
+      if (tour.clock >= stop.hold) {
+        tour.index = (tour.index + 1) % tourStops.length;
+        tour.phase = "travel";
+        tour.clock = 0;
+        var next = tourStops[tour.index];
+        cam.tTarget = next.target.slice();
+        cam.tRadius = next.radius;
+        cam.tTheta = next.theta;
+        cam.tPhi = next.phi;
+        showTourCaption(next);
+      }
+    } else if (tour.clock >= 3.8) {
+      tour.phase = "hold";
+      tour.clock = 0;
+    }
+  }
 
   function flashLegend() {
     legend.classList.remove("gone");
@@ -1075,6 +1531,7 @@ void main() {
   }
 
   function focusNode(node) {
+    stopTour();
     cam.tTarget = [node.x, node.y, node.z];
     cam.tRadius = 2.15;
     cam.focusUntil = performance.now() + 12000;
@@ -1132,6 +1589,8 @@ void main() {
     ];
     lookAt(view, eye, cam.target, [0, 1, 0]);
     perspective(proj, (42 * Math.PI) / 180, canvas.width / Math.max(1, canvas.height), 0.1, 100);
+    cameraEye = eye;
+    cameraTarget = [cam.target[0], cam.target[1], cam.target[2]];
   }
 
   // ---------------------------------------------------------------------------
@@ -1156,6 +1615,7 @@ void main() {
   window.addEventListener("pointerdown", wake);
 
   canvas.addEventListener("pointerdown", function (event) {
+    stopTour();
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (canvas.setPointerCapture) {
       try { canvas.setPointerCapture(event.pointerId); } catch (err) { /* ignore */ }
@@ -1223,6 +1683,7 @@ void main() {
 
   canvas.addEventListener("wheel", function (event) {
     event.preventDefault();
+    stopTour();
     cam.tRadius = clamp(cam.tRadius * Math.exp(event.deltaY * 0.0012), 1.5, 9.0);
     auto = false;
     scheduleResume();
@@ -1230,11 +1691,12 @@ void main() {
   }, { passive: false });
 
   canvas.addEventListener("dblclick", function (event) {
+    stopTour();
     pickAndFocus(event.clientX, event.clientY);
   });
 
   window.addEventListener("keydown", function (event) {
-    if (event.target === pauseButton) return;
+    if (event.target === pauseButton || event.target === tourButton) return;
     var key = event.key;
     if (key === "r" || key === "R") {
       resetCamera();
@@ -1253,12 +1715,16 @@ void main() {
         legend.classList.remove("hidden");
         legend.classList.remove("gone");
         if (hintGone) hint.classList.remove("gone");
+        if (tour.active) showTourCaption(tourStops[tour.index]);
       } else {
         overlay.classList.add("hidden");
         legend.classList.add("hidden");
         hint.classList.add("gone");
+        hideTourCaption();
         hintGone = true;
       }
+    } else if (key === "g" || key === "G") {
+      toggleTour();
     } else if (key === "1") {
       layers.dm = !layers.dm;
       flashLegend();
@@ -1376,7 +1842,45 @@ void main() {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
-  function drawComposite() {
+  function drawVolume(target) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb);
+    gl.viewport(0, 0, target.w, target.h);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.useProgram(volumeProgram);
+    bindQuadAttributes(volumeLoc.quad);
+
+    var fx = cameraTarget[0] - cameraEye[0];
+    var fy = cameraTarget[1] - cameraEye[1];
+    var fz = cameraTarget[2] - cameraEye[2];
+    var fl = 1 / Math.sqrt(fx * fx + fy * fy + fz * fz);
+    fx *= fl; fy *= fl; fz *= fl;
+    var rx = fy * 0 - fz * 1;
+    var ry = fz * 0 - fx * 0;
+    var rz = fx * 1 - fy * 0;
+    var rl = 1 / Math.sqrt(rx * rx + ry * ry + rz * rz);
+    rx *= rl; ry *= rl; rz *= rl;
+    var ux = ry * fz - rz * fy;
+    var uy = rz * fx - rx * fz;
+    var uz = rx * fy - ry * fx;
+
+    gl.uniform3f(volumeLoc.cameraPos, cameraEye[0], cameraEye[1], cameraEye[2]);
+    gl.uniform3f(volumeLoc.forward, fx, fy, fz);
+    gl.uniform3f(volumeLoc.right, rx, ry, rz);
+    gl.uniform3f(volumeLoc.up, ux, uy, uz);
+    gl.uniform1f(volumeLoc.tanHalfFov, Math.tan((42 * Math.PI) / 360));
+    gl.uniform1f(volumeLoc.aspect, canvas.width / Math.max(1, canvas.height));
+    gl.uniform1f(volumeLoc.density, 4.5);
+    gl.uniform1f(volumeLoc.showGas, layers.gas ? 1.0 : 0.0);
+    gl.uniform1f(volumeLoc.evolution, evolution);
+
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_3D, volumeTexture);
+    gl.uniform1i(volumeLoc.volume, 2);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function drawComposite(bloomTexture, strength) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 1);
@@ -1388,38 +1892,54 @@ void main() {
     gl.bindTexture(gl.TEXTURE_2D, sceneTarget.tex);
     gl.uniform1i(compositeLoc.scene, 0);
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, bloomA.tex);
+    gl.bindTexture(gl.TEXTURE_2D, bloomTexture);
     gl.uniform1i(compositeLoc.bloom, 1);
-    gl.uniform1f(compositeLoc.strength, 1.05);
+    gl.uniform1f(compositeLoc.strength, strength);
     gl.uniform1f(compositeLoc.exposure, 1.18);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
   function render() {
+    if (!sceneTarget) {
+      drawPoints(null);
+      return;
+    }
+    drawPoints(sceneTarget);
+    if (volumeEnabled && layers.gas) {
+      drawVolume(sceneTarget);
+    }
     if (bloomEnabled) {
-      drawPoints(sceneTarget);
       drawBright();
       blurPass(bloomA, bloomB, 1, 0);
       blurPass(bloomB, bloomA, 0, 1);
-      drawComposite();
+      drawComposite(bloomA.tex, 1.05);
     } else {
-      drawPoints(null);
+      drawComposite(blackTexture, 0.0);
     }
   }
 
   function frame(now) {
     var dt = Math.min(0.05, Math.max(0.001, (now - lastFrame) / 1000));
     lastFrame = now;
-    if (!qualityAdjusted) {
+    if (qualityStage < 2) {
       qualityFrames += 1;
       qualityTime += dt;
       if (qualityFrames >= 90) {
         if (qualityTime / qualityFrames > 0.028) {
-          bloomEnabled = false;
+          if (qualityStage === 0) {
+            volumeEnabled = false;
+          } else {
+            bloomEnabled = false;
+          }
+          qualityStage += 1;
+        } else {
+          qualityStage = 2;
         }
-        qualityAdjusted = true;
+        qualityFrames = 0;
+        qualityTime = 0;
       }
     }
+    updateTour(dt);
     updateCamera(dt, now);
     if (evolutionAuto) {
       evolutionPhase += dt * (Math.PI * 2 / 55.0);
@@ -1431,6 +1951,11 @@ void main() {
 
   resizeTargets();
   lastFrame = performance.now();
+  if (!reducedMotion) {
+    startTour();
+  } else {
+    setTourButton();
+  }
   raf = window.requestAnimationFrame(frame);
 })();
 </script>

@@ -3,6 +3,24 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.6.0] - 2026-11-02
+
+### Added
+- `docs/universo.html`: **ray-marching volumétrico** del gas con WebGL2 (`sampler3D`), textura 3D de densidad \(80^3\) (desktop) / \(40^3\) (móvil) y 52 / 28 pasos de integración. El gas se compone aditivamente con las partículas y alimenta el bloom (#113, PR #114).
+- **Tour guiado automático** con paradas en cúmulos, un filamento y un vacío cósmico, captions accesibles (`role="status"`, `aria-live="polite"`), botón `TOUR` / tecla `G` y pausa compartida con `Espacio`.
+- Cambio del renderer a WebGL2 y calidad adaptativa en dos etapas: primero desactiva el volumen y luego el bloom si el frame time supera el umbral.
+- Tests estáticos ampliados para volumen, tour y controles (6 pruebas).
+
+### Validation
+- `uv run pytest -q tests/test_universo.py`: **6 passed**.
+- `uv run pytest -q -m "not slow"`: **118 passed**.
+- Screenshots headless desktop \(1440\times900\) y móvil \(390\times844\): volumen, capas, tour y captions sin errores de shader.
+
+### Notes
+- El volumen es una **visualización ilustrativa** construida a partir de splats de las partículas de gas; no es una simulación hidrodinámica nueva.
+- Requiere WebGL2; si el navegador no lo soporta se muestra un mensaje claro.
+- La densidad volumétrica se desvanece durante la fase temprana de la evolución cósmica para no desalinearse con las partículas.
+
 ## [3.5.1] - 2026-11-02
 
 ### Added
