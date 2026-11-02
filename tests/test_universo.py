@@ -9,7 +9,7 @@ import pathlib
 import re
 
 PAGE = pathlib.Path(__file__).resolve().parents[1] / "docs" / "universo.html"
-DENSITY = pathlib.Path(__file__).resolve().parents[1] / "docs" / "universo_density.js"
+DENSITY = pathlib.Path(__file__).resolve().parents[1] / "docs" / "universo_camels.js"
 
 
 def _html() -> str:
@@ -59,8 +59,9 @@ def test_universo_has_layers_bloom_and_cinematic_camera():
     assert "uShowDM" in html
     assert "uShowGas" in html
     assert "uShowGal" in html
-    assert "COSMOVerseDensity" in html
+    assert "COSMOVerseCAMELS" in html
     assert "densityField" in html
+    assert "temperatureField" in html
     assert "uThreshold" in html
     assert "uBloomStrength" in html
     assert "dblclick" in html
@@ -86,28 +87,31 @@ def test_universo_has_layers_bloom_and_cinematic_camera():
 
 def test_universo_documents_the_three_scientific_layers():
     html = _html()
-    for label in ("materia oscura", "gas", "galaxias"):
+    for label in ("gas density", "temperatura", "galaxias"):
         assert label in html
-    assert "N-BODY 96³" in html
+    assert "CAMELS-SIMBA" in html
+    assert "EX 96³" in html
     assert "z = 0" in html
     assert "isMobile" in html
     assert "maxDpr" in html
     assert "bloomScale" in html
 
 
-def test_universo_uses_an_embedded_n_body_density_field():
-    assert DENSITY.is_file(), f"missing density field: {DENSITY}"
+def test_universo_uses_the_embedded_camels_gas_field():
+    assert DENSITY.is_file(), f"missing CAMELS field: {DENSITY}"
     raw = DENSITY.read_text(encoding="utf-8")
-    assert raw.startswith("window.COSMOVerseDensity")
+    assert raw.startswith("window.COSMOVerseCAMELS")
     size_match = re.search(r"size:\s*(\d+)", raw)
     data_match = re.search(r'data:\s*"([^"]+)"', raw)
     assert size_match is not None
     assert data_match is not None
+    assert "SIMBA" in raw
+    assert "Mgas" in raw
     size = int(size_match.group(1))
     assert size >= 80
     decoded = base64.b64decode(data_match.group(1))
-    assert len(decoded) == size ** 3
-    assert len(raw) < 3 * 1024 * 1024
+    assert len(decoded) == 2 * size ** 3
+    assert len(raw) < 6 * 1024 * 1024
 
 
 def test_universo_has_no_dashboard_controls_or_telemetry():
@@ -116,7 +120,6 @@ def test_universo_has_no_dashboard_controls_or_telemetry():
     for forbidden in (
         'type="range"',
         "FPS",
-        "SIMBA",
         "coverage",
         "dashboard",
         "omega-m",
