@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#04070d">
+<meta name="description" content="Explorador cósmico multi-escala: Tierra, Sistema Solar, Vía Láctea, Grupo Local, Laniakea y red cósmica CAMELS en una sola página interactiva.">
+<title>EXPLORADOR CÓSMICO — COSMOVERSE</title>
+<style>
+  :root {
+    --bg: #04070d;
+    --ink: #edf4f8;
+    --muted: rgba(184, 202, 217, 0.62);
+    --faint: rgba(184, 202, 217, 0.34);
+    --amber: #f5a623;
+    --mint: #5fe3b3;
+    --blue: #67a9d8;
+    --line: rgba(180, 205, 225, 0.16);
+    --panel: rgba(5, 10, 18, 0.78);
+    --sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    cursor: grab;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.idle, body.idle #space { cursor: none; }
+  #space {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+  }
+  #vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 45%, transparent 0%, rgba(0,0,0,.12) 46%, rgba(0,0,0,.55) 82%, rgba(0,0,0,.88) 100%),
+      linear-gradient(180deg, rgba(4,7,13,.40) 0%, transparent 20%, transparent 76%, rgba(4,7,13,.5) 100%);
+  }
+  #fade {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+    background: #02040a;
+    opacity: 0;
+    transition: opacity .22s ease;
+  }
+  #fade.on { opacity: 1; }
+  #topbar {
+    position: fixed;
+    top: max(16px, env(safe-area-inset-top, 16px));
+    left: max(18px, env(safe-area-inset-left, 18px));
+    right: max(18px, env(safe-area-inset-right, 18px));
+    z-index: 4;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    pointer-events: none;
+  }
+  .brand { pointer-events: auto; }
+  .brand .kicker {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .30em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  .brand h1 {
+    margin: 7px 0 0;
+    font-size: clamp(17px, 2.2vw, 26px);
+    font-weight: 300;
+    letter-spacing: .12em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  #address {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  #address b { color: var(--ink); font-weight: 500; }
+  #actions { display: flex; gap: 8px; pointer-events: auto; flex-wrap: wrap; justify-content: flex-end; }
+  .hud-btn {
+    padding: 7px 10px;
+    border: 1px solid rgba(190,210,225,.22);
+    border-radius: 2px;
+    background: rgba(4,8,14,.55);
+    color: rgba(210,225,236,.72);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color .2s, border-color .2s, opacity .2s;
+  }
+  .hud-btn:hover, .hud-btn:focus-visible {
+    color: var(--ink);
+    border-color: rgba(245,166,35,.7);
+    outline: none;
+  }
+  .hud-btn:focus-visible { box-shadow: 0 0 0 2px rgba(245,166,35,.3); }
+  #rail {
+    position: fixed;
+    left: max(18px, env(safe-area-inset-left, 18px));
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 220px;
+  }
+  .rail-item {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-left: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    text-align: left;
+    cursor: pointer;
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .rail-item .num {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--faint);
+  }
+  .rail-item .name {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .rail-item .scale {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .04em;
+    color: var(--faint);
+  }
+  .rail-item:hover, .rail-item:focus-visible {
+    color: var(--ink);
+    border-left-color: rgba(245,166,35,.6);
+    outline: none;
+  }
+  .rail-item.active {
+    color: var(--ink);
+    border-left-color: var(--amber);
+    background: linear-gradient(90deg, rgba(245,166,35,.10), transparent 80%);
+  }
+  .rail-item.active .num { color: var(--amber); }
+  .rail-item.active .scale { color: var(--muted); }
+  #labels {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .label {
+    position: absolute;
+    transform: translate(-50%, -150%);
+    padding: 4px 7px;
+    border: 1px solid rgba(180,205,225,.22);
+    background: rgba(4,8,14,.58);
+    color: rgba(220,234,244,.78);
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: .82;
+    transition: opacity .2s, border-color .2s, color .2s;
+  }
+  .label:hover, .label.selected {
+    opacity: 1;
+    color: var(--ink);
+    border-color: var(--amber);
+  }
+  .label .dot {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    vertical-align: 1px;
+  }
+  #info {
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right, 18px));
+    bottom: max(24px, env(safe-area-inset-bottom, 24px));
+    z-index: 4;
+    width: min(330px, 86vw);
+    padding: 15px 16px;
+    border: 1px solid rgba(180,205,225,.20);
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+  }
+  #info.on { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  #info .type {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  #info h2 {
+    margin: 6px 0 2px;
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: .04em;
+  }
+  #info .distance {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+  }
+  #info p {
+    margin: 10px 0 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(215,229,239,.74);
+  }
+  #info .info-actions { display: flex; gap: 8px; margin-top: 12px; }
+  #hint {
+    position: fixed;
+    left: 50%;
+    bottom: max(18px, env(safe-area-inset-bottom, 18px));
+    transform: translateX(-50%);
+    z-index: 4;
+    width: min(92vw, 900px);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .05em;
+    color: rgba(190,210,225,.48);
+    pointer-events: none;
+    text-shadow: 0 1px 12px #000;
+    transition: opacity 1.2s;
+  }
+  #hint.gone { opacity: 0; }
+  #source {
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right, 18px));
+    top: 50%;
+    transform: translateY(60px);
+    z-index: 4;
+    writing-mode: vertical-rl;
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .12em;
+    color: rgba(184,202,217,.30);
+    pointer-events: none;
+  }
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2,4,10,.78);
+    backdrop-filter: blur(8px);
+    padding: 22px;
+  }
+  .modal.on { display: flex; }
+  .sheet {
+    width: min(760px, 94vw);
+    max-height: 86vh;
+    overflow: auto;
+    border: 1px solid rgba(180,205,225,.22);
+    background: #070c14;
+    padding: 24px;
+  }
+  .sheet h2 { margin: 0 0 6px; font-weight: 300; letter-spacing: .08em; }
+  .sheet p, .sheet li { font-size: 13px; line-height: 1.6; color: rgba(210,225,236,.72); }
+  .sheet a { color: var(--mint); }
+  .search-row { display: flex; gap: 8px; margin: 14px 0; }
+  #search-input {
+    flex: 1;
+    padding: 11px 12px;
+    border: 1px solid rgba(180,205,225,.24);
+    background: #04080f;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+  }
+  #search-input:focus { border-color: var(--amber); }
+  #search-results { display: grid; gap: 4px; }
+  .result {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,.015);
+    color: var(--muted);
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+  .result:hover, .result:focus-visible { border-color: rgba(245,166,35,.5); color: var(--ink); outline: none; }
+  .result small { color: var(--faint); }
+  .modal-close { float: right; }
+  #loading {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #02040a;
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    transition: opacity .5s;
+  }
+  #loading.gone { opacity: 0; pointer-events: none; }
+  @media (max-width: 760px) {
+    #topbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    #actions {
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+    .brand h1 { font-size: 17px; }
+    #rail {
+      left: 0;
+      right: 0;
+      top: auto;
+      bottom: max(42px, env(safe-area-inset-bottom, 42px));
+      transform: none;
+      width: 100%;
+      flex-direction: row;
+      overflow-x: auto;
+      padding: 0 12px 4px;
+      gap: 0;
+      scrollbar-width: none;
+    }
+    #rail::-webkit-scrollbar { display: none; }
+    .rail-item {
+      flex: 0 0 auto;
+      display: block;
+      padding: 6px 9px;
+      border-left: none;
+      border-bottom: 1px solid var(--line);
+    }
+    .rail-item .num { display: none; }
+    .rail-item .name { font-size: 8px; }
+    .rail-item .scale { display: none; }
+    .rail-item.active { border-bottom-color: var(--amber); background: transparent; }
+    #info {
+      left: 12px;
+      right: 12px;
+      bottom: max(92px, env(safe-area-inset-bottom, 92px));
+      width: auto;
+    }
+    #source { display: none; }
+    #hint { bottom: max(14px, env(safe-area-inset-bottom, 14px)); font-size: 8px; }
+    .label { font-size: 7px; padding: 3px 5px; }
+    #actions .hud-btn { padding: 6px 8px; font-size: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #info, #hint, #fade, .label { transition: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="space" aria-label="Explorador cósmico 3D multi-escala"></canvas>
+<div id="vignette"></div>
+<div id="labels"></div>
+<div id="fade"></div>
+
+<header id="topbar">
+  <div class="brand">
+    <div class="kicker">COSMOVERSE · EXPLORADOR</div>
+    <h1>EL UNIVERSO, ESCALA POR ESCALA</h1>
+    <div id="address"><b>Tierra</b> · 12.742 km</div>
+  </div>
+  <div id="actions">
+    <button class="hud-btn" id="search-btn" type="button" aria-label="Buscar objeto">BUSCAR /</button>
+    <button class="hud-btn" id="about-btn" type="button">ACERCA</button>
+    <button class="hud-btn" id="fullscreen-btn" type="button">PANTALLA</button>
+  </div>
+</header>
+
+<nav id="rail" aria-label="Escalas cósmicas"></nav>
+<div id="source">CAMELS-SIMBA · NASA · escalas normalizadas</div>
+
+<aside id="info" aria-live="polite">
+  <div class="type" id="info-type">Objeto</div>
+  <h2 id="info-name">—</h2>
+  <div class="distance" id="info-distance">—</div>
+  <p id="info-desc"></p>
+  <div class="info-actions">
+    <button class="hud-btn" id="info-focus" type="button">ENFOCAR</button>
+    <button class="hud-btn" id="info-close" type="button">CERRAR</button>
+  </div>
+</aside>
+
+<div id="hint">arrastrá para orbitar · rueda/pinch para zoom · clic en un objeto · doble clic para enfocar · 1–6 escalas · ←/→ viajar · / buscar</div>
+
+<div class="modal" id="search-modal" role="dialog" aria-modal="true" aria-label="Buscar objeto">
+  <div class="sheet">
+    <button class="hud-btn modal-close" id="search-close" type="button">CERRAR</button>
+    <h2>Buscar en el universo</h2>
+    <p>Planetas, estrellas, galaxias, cúmulos y estructuras. Elegí un resultado para volar hasta ahí.</p>
+    <div class="search-row">
+      <input id="search-input" type="search" placeholder="Ej.: Marte, Andrómeda, Virgo, Laniakea…" autocomplete="off" spellcheck="false" aria-label="Buscar objeto" />
+    </div>
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<div class="modal" id="about-modal" role="dialog" aria-modal="true" aria-label="Acerca del explorador">
+  <div class="sheet">
+    <button class="hud-btn modal-close" id="about-close" type="button">CERRAR</button>
+    <h2>Un universo, seis escalas</h2>
+    <p>Este explorador conecta la Tierra, el Sistema Solar, la Vía Láctea, el Grupo Local, Laniakea y la red cósmica en una sola experiencia. Las escalas son <b>modelos normalizados</b>: tamaños, separaciones y brillos se ajustan para que cada nivel sea visible. No es un modelo físico lineal de 14.000 millones de años luz.</p>
+    <p>La inspiración conceptual son los mapas multi-escala de <a href="https://mapoftheuniverse.net/" target="_blank" rel="noopener">Map of the Universe</a> (SDSS) y <a href="https://universemap.net/3d-map/" target="_blank" rel="noopener">Universe Map</a>. Los datos de la red cósmica son <b>CAMELS-SIMBA EX</b> (CMD); los planetas y estructuras cercanas usan datos públicos/approx. de NASA y catálogos astronómicos.</p>
+    <p>Atajos: <b>1–6</b> escalas, <b>/</b> buscar, <b>doble clic</b> enfocar, <b>F</b> pantalla completa, <b>R</b> reiniciar vista, <b>P</b> pausar rotación.</p>
+    <p style="color:rgba(184,202,217,.45);font-size:11px">Atribución de datos: CAMELS Multifield Dataset (Villaescusa-Navarro et al.), NASA Planetary Fact Sheet. Visualización educativa; no usar para inferencia científica.</p>
+  </div>
+</div>
+
+<div id="loading">CARGANDO EL UNIVERSO…</div>
+
+<script src="universo_camels.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var LEVELS = [
+    { name: "Tierra", scale: "12.742 km", address: "Tierra · 12.742 km" },
+    { name: "Sistema Solar", scale: "≈ 60 AU", address: "Sistema Solar · ≈ 60 AU" },
+    { name: "Vía Láctea", scale: "≈ 100.000 ly", address: "Vía Láctea · ≈ 100.000 ly" },
+    { name: "Grupo Local", scale: "≈ 10 Mly", address: "Grupo Local · ≈ 10 Mly" },
+    { name: "Laniakea", scale: "≈ 520 Mly", address: "Laniakea · ≈ 520 Mly" },
+    { name: "Red cósmica", scale: "≈ 14 Gly", address: "Red cósmica · ≈ 14 Gly" }
+  ];
+
+  var canvas = document.getElementById("space");
+  var labelsRoot = document.getElementById("labels");
+  var fade = document.getElementById("fade");
+  var info = document.getElementById("info");
+  var infoType = document.getElementById("info-type");
+  var infoName = document.getElementById("info-name");
+  var infoDistance = document.getElementById("info-distance");
+  var infoDesc = document.getElementById("info-desc");
+  var hint = document.getElementById("hint");
+  var rail = document.getElementById("rail");
+  var address = document.getElementById("address");
+  var loading = document.getElementById("loading");
+  var searchModal = document.getElementById("search-modal");
+  var aboutModal = document.getElementById("about-modal");
+  var searchInput = document.getElementById("search-input");
+  var searchResults = document.getElementById("search-results");
+
+  var gl = canvas.getContext("webgl2", { alpha: false, antialias: true, depth: true, powerPreference: "high-performance" });
+  if (!gl) {
+    loading.textContent = "Este explorador necesita WebGL2. Probá con Chrome, Edge o Firefox actualizado.";
+    return;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Math and GLSL.
+  // ---------------------------------------------------------------------------
+  function mat4Identity() {
+    return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+  }
+  function perspective(out, fovy, aspect, near, far) {
+    var f = 1 / Math.tan(fovy / 2);
+    var nf = 1 / (near - far);
+    out[0]=f/aspect; out[1]=0; out[2]=0; out[3]=0;
+    out[4]=0; out[5]=f; out[6]=0; out[7]=0;
+    out[8]=0; out[9]=0; out[10]=(far+near)*nf; out[11]=-1;
+    out[12]=0; out[13]=0; out[14]=2*far*near*nf; out[15]=0;
+  }
+  function lookAt(out, eye, center, up) {
+    var zx=eye[0]-center[0], zy=eye[1]-center[1], zz=eye[2]-center[2];
+    var zl=1/Math.sqrt(zx*zx+zy*zy+zz*zz); zx*=zl; zy*=zl; zz*=zl;
+    var xx=up[1]*zz-up[2]*zy, xy=up[2]*zx-up[0]*zz, xz=up[0]*zy-up[1]*zx;
+    var xl=1/Math.sqrt(xx*xx+xy*xy+xz*xz); xx*=xl; xy*=xl; xz*=xl;
+    var yx=zy*xz-zz*xy, yy=zz*xx-zx*xz, yz=zx*xy-zy*xx;
+    out[0]=xx; out[1]=yx; out[2]=zx; out[3]=0;
+    out[4]=xy; out[5]=yy; out[6]=zy; out[7]=0;
+    out[8]=xz; out[9]=yz; out[10]=zz; out[11]=0;
+    out[12]=-(xx*eye[0]+xy*eye[1]+xz*eye[2]);
+    out[13]=-(yx*eye[0]+yy*eye[1]+yz*eye[2]);
+    out[14]=-(zx*eye[0]+zy*eye[1]+zz*eye[2]);
+    out[15]=1;
+  }
+  function translateScale(x,y,z,s) {
+    return new Float32Array([s,0,0,0, 0,s,0,0, 0,0,s,0, x,y,z,1]);
+  }
+  function transform(m, v) {
+    return [
+      m[0]*v[0]+m[4]*v[1]+m[8]*v[2]+m[12],
+      m[1]*v[0]+m[5]*v[1]+m[9]*v[2]+m[13],
+      m[2]*v[0]+m[6]*v[1]+m[10]*v[2]+m[14],
+      m[3]*v[0]+m[7]*v[1]+m[11]*v[2]+m[15]
+    ];
+  }
+  function projectPoint(p) {
+    var v = transform(view, p);
+    var c = transform(proj, v);
+    if (c[3] <= 0.001) return null;
+    var nx=c[0]/c[3], ny=c[1]/c[3], nz=c[2]/c[3];
+    if (nz < -1 || nz > 1) return null;
+    return {
+      x: (nx * .5 + .5) * window.innerWidth,
+      y: (1 - (ny * .5 + .5)) * window.innerHeight,
+      z: nz
+    };
+  }
+
+  function shader(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function program(vs, fs) {
+    var p = gl.createProgram();
+    gl.attachShader(p, shader(gl.VERTEX_SHADER, vs.trim()));
+    gl.attachShader(p, shader(gl.FRAGMENT_SHADER, fs.trim()));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    return p;
+  }
+
+  var pointProgram = program(`
+#version 300 es
+in vec3 aPos;
+in vec3 aColor;
+in float aSize;
+in float aAlpha;
+uniform mat4 uView;
+uniform mat4 uProj;
+uniform float uDpr;
+out vec3 vColor;
+out float vAlpha;
+void main() {
+  vec4 vp = uView * vec4(aPos, 1.0);
+  gl_Position = uProj * vp;
+  gl_PointSize = clamp(aSize * uDpr * (2.2 / max(0.1, -vp.z)), 0.7, 80.0);
+  vColor = aColor;
+  vAlpha = aAlpha * (1.0 - smoothstep(120.0, 400.0, -vp.z));
+}
+`, `
+#version 300 es
+precision mediump float;
+in vec3 vColor;
+in float vAlpha;
+out vec4 fragColor;
+void main() {
+  vec2 p = gl_PointCoord - vec2(0.5);
+  float d = length(p);
+  if (d > 0.5) discard;
+  float a = smoothstep(0.5, 0.0, d) * vAlpha;
+  fragColor = vec4(vColor, a);
+}
+`);
+
+  var sphereProgram = program(`
+#version 300 es
+in vec3 aPos;
+in vec3 aNormal;
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProj;
+out vec3 vNormal;
+out vec3 vWorld;
+void main() {
+  vec4 world = uModel * vec4(aPos, 1.0);
+  vWorld = world.xyz;
+  vNormal = aNormal;
+  gl_Position = uProj * uView * world;
+}
+`, `
+#version 300 es
+precision highp float;
+in vec3 vNormal;
+in vec3 vWorld;
+uniform vec3 uColor;
+uniform vec3 uColor2;
+uniform vec3 uCam;
+uniform float uType;
+out vec4 fragColor;
+
+float hash(vec3 p) {
+  p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+float noise(vec3 x) {
+  vec3 i = floor(x);
+  vec3 f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
+        mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+    mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+        mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y),
+    f.z);
+}
+void main() {
+  vec3 n = normalize(vNormal);
+  float light = max(dot(n, normalize(vec3(.6,.7,.4))), 0.15);
+  vec3 col;
+  if (uType < .5) {
+    float f = noise(n * 4.5) * .6 + noise(n * 11.0) * .4;
+    float land = smoothstep(.48, .56, f);
+    col = mix(vec3(.01,.10,.25), vec3(.12,.42,.18), land);
+    col = mix(col, vec3(.55,.50,.38), land * smoothstep(.55,.75,noise(n*18.0)) * .55);
+    col = mix(col, vec3(.82,.92,1.0), smoothstep(.72, .98, abs(n.y)));
+  } else if (uType < 1.5) {
+    float f = noise(n * 8.0);
+    col = mix(vec3(.16,.16,.16), vec3(.48,.46,.42), f);
+  } else if (uType < 2.5) {
+    col = mix(vec3(1.0,.58,.14), vec3(1.0,.94,.66), .45 + .55 * (1.0 - n.y*n.y));
+    light = 1.0;
+  } else if (uType < 3.5) {
+    float bands = sin(n.y * 25.0 + noise(n * 7.0) * 2.0) * .5 + .5;
+    col = mix(uColor, uColor2, bands * .65);
+  } else {
+    col = uColor;
+  }
+  float rim = pow(1.0 - max(dot(n, normalize(uCam - vWorld)), 0.0), 3.0);
+  if (uType < .5) col += vec3(.10,.32,.55) * rim * .8;
+  fragColor = vec4(col * light + rim * .08, 1.0);
+}
+`);
+
+  var lineProgram = program(`
+#version 300 es
+in vec3 aPos;
+in vec3 aColor;
+in float aAlpha;
+uniform mat4 uView;
+uniform mat4 uProj;
+out vec3 vColor;
+out float vAlpha;
+void main() {
+  vColor = aColor;
+  vAlpha = aAlpha;
+  gl_Position = uProj * uView * vec4(aPos, 1.0);
+}
+`, `
+#version 300 es
+precision mediump float;
+in vec3 vColor;
+in float vAlpha;
+out vec4 fragColor;
+void main() { fragColor = vec4(vColor, vAlpha); }
+`);
+
+  var pointLoc = {
+    pos: gl.getAttribLocation(pointProgram, "aPos"),
+    color: gl.getAttribLocation(pointProgram, "aColor"),
+    size: gl.getAttribLocation(pointProgram, "aSize"),
+    alpha: gl.getAttribLocation(pointProgram, "aAlpha"),
+    view: gl.getUniformLocation(pointProgram, "uView"),
+    proj: gl.getUniformLocation(pointProgram, "uProj"),
+    dpr: gl.getUniformLocation(pointProgram, "uDpr")
+  };
+  var sphereLoc = {
+    pos: gl.getAttribLocation(sphereProgram, "aPos"),
+    normal: gl.getAttribLocation(sphereProgram, "aNormal"),
+    model: gl.getUniformLocation(sphereProgram, "uModel"),
+    view: gl.getUniformLocation(sphereProgram, "uView"),
+    proj: gl.getUniformLocation(sphereProgram, "uProj"),
+    color: gl.getUniformLocation(sphereProgram, "uColor"),
+    color2: gl.getUniformLocation(sphereProgram, "uColor2"),
+    cam: gl.getUniformLocation(sphereProgram, "uCam"),
+    type: gl.getUniformLocation(sphereProgram, "uType")
+  };
+  var lineLoc = {
+    pos: gl.getAttribLocation(lineProgram, "aPos"),
+    color: gl.getAttribLocation(lineProgram, "aColor"),
+    alpha: gl.getAttribLocation(lineProgram, "aAlpha"),
+    view: gl.getUniformLocation(lineProgram, "uView"),
+    proj: gl.getUniformLocation(lineProgram, "uProj")
+  };
+
+  // ---------------------------------------------------------------------------
+  // Geometry helpers.
+  // ---------------------------------------------------------------------------
+  function rand(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var rng = rand(20261102);
+  function gauss() {
+    var u = 0, v = 0;
+    while (u === 0) u = rng();
+    while (v === 0) v = rng();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function mix(a, b, t) { return a + (b - a) * t; }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+  function makeSphere(segments, rings) {
+    var positions = [], normals = [], indices = [];
+    for (var y = 0; y <= rings; y++) {
+      var v = y / rings;
+      var phi = v * Math.PI;
+      for (var x = 0; x <= segments; x++) {
+        var u = x / segments;
+        var theta = u * Math.PI * 2;
+        var nx = Math.sin(phi) * Math.cos(theta);
+        var ny = Math.cos(phi);
+        var nz = Math.sin(phi) * Math.sin(theta);
+        positions.push(nx, ny, nz);
+        normals.push(nx, ny, nz);
+      }
+    }
+    for (var r = 0; r < rings; r++) {
+      for (var s = 0; s < segments; s++) {
+        var a = r * (segments + 1) + s;
+        var b = a + segments + 1;
+        indices.push(a, b, a + 1, b, b + 1, a + 1);
+      }
+    }
+    return {
+      positions: new Float32Array(positions),
+      normals: new Float32Array(normals),
+      indices: new Uint16Array(indices)
+    };
+  }
+  var sphere = makeSphere(48, 32);
+  var spherePosBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, spherePosBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, sphere.positions, gl.STATIC_DRAW);
+  var sphereNormBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, sphereNormBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, sphere.normals, gl.STATIC_DRAW);
+  var sphereIndexBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIndexBuf);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sphere.indices, gl.STATIC_DRAW);
+
+  function pointCloud() { return { pos: [], col: [], size: [], alpha: [], count: 0 }; }
+  function addPoint(pc, x, y, z, color, size, alpha) {
+    pc.pos.push(x, y, z);
+    pc.col.push(color[0], color[1], color[2]);
+    pc.size.push(size);
+    pc.alpha.push(alpha);
+    pc.count++;
+  }
+  function uploadPoints(pc) {
+    if (pc.count === 0) return null;
+    var data = {
+      pos: new Float32Array(pc.pos),
+      col: new Float32Array(pc.col),
+      size: new Float32Array(pc.size),
+      alpha: new Float32Array(pc.alpha),
+      count: pc.count
+    };
+    data.posBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.posBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, data.pos, gl.STATIC_DRAW);
+    data.colBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.colBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, data.col, gl.STATIC_DRAW);
+    data.sizeBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.sizeBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, data.size, gl.STATIC_DRAW);
+    data.alphaBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.alphaBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, data.alpha, gl.STATIC_DRAW);
+    return data;
+  }
+  function lineData(vertices, alphaValue) {
+    var pos = new Float32Array(vertices);
+    var col = [];
+    var alpha = [];
+    for (var i = 0; i < vertices.length / 3; i++) {
+      col.push(.24, .55, .58);
+      alpha.push(alphaValue == null ? .32 : alphaValue);
+    }
+    var d = {
+      pos: new Float32Array(pos),
+      col: new Float32Array(col),
+      alpha: new Float32Array(alpha),
+      count: pos.length / 3
+    };
+    d.posBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, d.posBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, d.pos, gl.STATIC_DRAW);
+    d.colBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, d.colBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, d.col, gl.STATIC_DRAW);
+    d.alphaBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, d.alphaBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, d.alpha, gl.STATIC_DRAW);
+    return d;
+  }
+  function circlePoints(center, radius, axis, n, color) {
+    var pc = pointCloud();
+    for (var i = 0; i < n; i++) {
+      var a = i / n * Math.PI * 2;
+      var x = center[0] + Math.cos(a) * radius;
+      var y = center[1];
+      var z = center[2] + Math.sin(a) * radius;
+      if (axis === "xz") addPoint(pc, x, y, z, color, .8, .25);
+      if (axis === "xy") addPoint(pc, x, center[1] + Math.sin(a) * radius, center[2], color, .8, .25);
+    }
+    return uploadPoints(pc);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scene builders.
+  // ---------------------------------------------------------------------------
+  var scenes = [];
+  var catalog = [];
+  var starfield = uploadPoints((function () {
+    var pc = pointCloud();
+    for (var i = 0; i < 8500; i++) {
+      var u = rng() * 2 - 1;
+      var t = rng() * Math.PI * 2;
+      var s = Math.sqrt(1 - u * u);
+      var r = 150 + rng() * 120;
+      var c = [.45 + rng() * .4, .55 + rng() * .35, .65 + rng() * .3];
+      addPoint(pc, Math.cos(t) * s * r, u * r, Math.sin(t) * s * r, c, .6 + rng() * 1.6, .35 + rng() * .4);
+    }
+    return pc;
+  })());
+
+  function addObject(scene, obj) {
+    obj.level = scene.index;
+    scene.objects.push(obj);
+    catalog.push(obj);
+    if (obj.label) scene.labels.push(obj);
+    return obj;
+  }
+
+  function buildEarth() {
+    var s = { index: 0, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 4.1, theta: .55, phi: .18 } };
+    s.spheres.push({ name: "Tierra", type: 0, pos: [0,0,0], radius: 1, focusRadius: 2.3, distance: "12.742 km de diámetro", desc: "Nuestro planeta: océanos, continentes, atmósfera y el único mundo conocido con vida. Es el origen de todas las observaciones.", label: "Tierra" });
+    s.spheres.push({ name: "Luna", type: 1, pos: [2.7, .18, .35], radius: .27, focusRadius: .9, distance: "384.400 km", desc: "El satélite natural de la Tierra. Su superficie gris está marcada por cráteres y mares basálticos.", label: "Luna" });
+    s.spheres.forEach(function (o) { addObject(s, o); });
+    var moonOrbit = pointCloud();
+    for (var m = 0; m < 260; m++) {
+      var a = m / 260 * Math.PI * 2;
+      addPoint(moonOrbit, Math.cos(a) * 2.7, .18, Math.sin(a) * 2.7, [.24,.48,.62], .7, .20);
+    }
+    s.points.push(uploadPoints(moonOrbit));
+    s.points.push(uploadPoints((function () {
+      var pc = pointCloud();
+      addPoint(pc, 0, 0, 0, [.20,.45,.80], 26, .08);
+      return pc;
+    })()));
+    return s;
+  }
+
+  function buildSolar() {
+    var s = { index: 1, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 22, theta: .55, phi: .52 } };
+    var planets = [
+      { name: "Mercurio", r: .16, color: [.55,.50,.45], color2: [.28,.25,.23], orbit: 3.0, dist: "0,39 AU", label: true },
+      { name: "Venus", r: .26, color: [.95,.75,.40], color2: [.55,.35,.14], orbit: 4.1, dist: "0,72 AU", label: true },
+      { name: "Tierra", r: .27, color: [.16,.45,.75], color2: [.15,.55,.25], orbit: 5.2, dist: "1,00 AU", label: true },
+      { name: "Marte", r: .20, color: [.75,.32,.18], color2: [.35,.15,.08], orbit: 6.4, dist: "1,52 AU", label: true },
+      { name: "Júpiter", r: .58, color: [.78,.62,.42], color2: [.45,.28,.14], orbit: 8.2, dist: "5,20 AU", label: true },
+      { name: "Saturno", r: .50, color: [.85,.76,.52], color2: [.50,.40,.22], orbit: 10.1, dist: "9,58 AU", label: true },
+      { name: "Urano", r: .36, color: [.55,.82,.86], color2: [.22,.48,.55], orbit: 12.0, dist: "19,2 AU", label: true },
+      { name: "Neptuno", r: .35, color: [.20,.35,.80], color2: [.08,.16,.45], orbit: 13.8, dist: "30,1 AU", label: true }
+    ];
+    s.spheres.push({ name: "Sol", type: 2, pos: [0,0,0], radius: .95, focusRadius: 2.8, distance: "1 UA de la Tierra", desc: "La estrella que sostiene el Sistema Solar. Su luz tarda unos 8 minutos en llegar a la Tierra.", label: "Sol" });
+    var sunGlow = pointCloud();
+    addPoint(sunGlow, 0, 0, 0, [1.0,.55,.12], 46, .35);
+    addPoint(sunGlow, 0, 0, 0, [1.0,.85,.45], 18, .55);
+    s.points.push(uploadPoints(sunGlow));
+    s.spheres.forEach(function (o) { addObject(s, o); });
+    planets.forEach(function (p, i) {
+      var angle = i * 2.399 + .4;
+      var pos = [Math.cos(angle) * p.orbit, Math.sin(angle) * p.orbit * .18, Math.sin(angle) * p.orbit];
+      var o = { name: p.name, type: 3, pos: pos, radius: p.r, focusRadius: Math.max(.8, p.r * 3.2), distance: p.dist, desc: p.name + ": un mundo del Sistema Solar. Tamaño y distancia de la órbita están comprimidos para que sea visible.", color: p.color, color2: p.color2, label: p.label ? p.name : null };
+      s.spheres.push(o);
+      addObject(s, o);
+      var ring = pointCloud();
+      for (var k = 0; k < 220; k++) {
+        var a = k / 220 * Math.PI * 2;
+        addPoint(ring, Math.cos(a) * p.orbit, Math.sin(a) * p.orbit * .18, Math.sin(a) * p.orbit, [.30,.48,.52], .7, .20);
+      }
+      s.points.push(uploadPoints(ring));
+      if (p.name === "Saturno") {
+        var sr = pointCloud();
+        for (var q = 0; q < 200; q++) {
+          var aa = q / 200 * Math.PI * 2;
+          addPoint(sr, pos[0] + Math.cos(aa) * (p.r * 1.8), pos[1], pos[2] + Math.sin(aa) * (p.r * 1.8), [.92,.82,.55], 1.2, .45);
+        }
+        s.points.push(uploadPoints(sr));
+      }
+    });
+    return s;
+  }
+
+  function makeSpiralGalaxy(cx, cy, cz, radius, count, palette) {
+    var pc = pointCloud();
+    for (var i = 0; i < count; i++) {
+      var arm = Math.floor(rng() * 2) * Math.PI;
+      var r = Math.pow(rng(), .62) * radius;
+      var a = r * 2.8 / radius + arm + gauss() * .18;
+      var x = cx + Math.cos(a) * r + gauss() * radius * .035;
+      var z = cz + Math.sin(a) * r + gauss() * radius * .035;
+      var y = cy + gauss() * radius * .055 * (1 - r / radius);
+      var t = clamp(r / radius, 0, 1);
+      var c = palette(t);
+      addPoint(pc, x, y, z, c, 1.2 + (1 - t) * 3.0 + rng() * 1.6, .32 + (1 - t) * .48);
+    }
+    return uploadPoints(pc);
+  }
+
+  function buildMilkyWay() {
+    var s = { index: 2, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 31, theta: .3, phi: 1.02 } };
+    var galaxy = makeSpiralGalaxy(0, 0, 0, 16, 90000, function (t) {
+      return [mix(.95,.45,t), mix(.72,.62,t), mix(.32,.95,t)];
+    });
+    s.points.push(galaxy);
+    var core = pointCloud();
+    addPoint(core, 0, 0, 0, [1.0,.72,.28], 42, .50);
+    addPoint(core, 0, 0, 0, [1.0,.94,.70], 15, .80);
+    s.points.push(uploadPoints(core));
+    var sun = { name: "Sol", type: "Estrella", pos: [8.2, .12, 1.2], focusRadius: 3.2, distance: "26.000 ly del centro galáctico", desc: "Nuestra estrella, en el brazo de Orión. En esta escala es un punto; su sistema planetario no sería visible.", label: "Sol" };
+    var sgr = { name: "Sagitario A*", type: "Agujero negro", pos: [0,0,0], focusRadius: 3.0, distance: "26.000 ly", desc: "El agujero negro supermasivo del centro de la Vía Láctea, con unos 4 millones de masas solares.", label: "Sgr A*" };
+    addObject(s, sun);
+    addObject(s, sgr);
+    var sunPoints = pointCloud();
+    addPoint(sunPoints, 8.2, .12, 1.2, [.55,.85,1.0], 11, .9);
+    s.points.push(uploadPoints(sunPoints));
+    return s;
+  }
+
+  function buildLocalGroup() {
+    var s = { index: 3, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [1.15,0,0.2], radius: 5.2, theta: .35, phi: .5 } };
+    var galaxies = [
+      { name: "Vía Láctea", pos: [0,0,0], radius: .55, focusRadius: 1.6, distance: "0 ly", desc: "Nuestra galaxia espiral barrada, con más de 100.000 millones de estrellas.", label: true, kind: "spiral" },
+      { name: "Andrómeda (M31)", pos: [2.5,.25,.25], radius: .62, focusRadius: 1.8, distance: "2,5 Mly", desc: "La gran galaxia espiral más cercana; se acerca a la Vía Láctea y se fusionará con ella en miles de millones de años.", label: true, kind: "spiral" },
+      { name: "Triángulo (M33)", pos: [2.05,-.28,.55], radius: .32, focusRadius: 1.2, distance: "2,7 Mly", desc: "Tercera galaxia espiral del Grupo Local, más pequeña que la Vía Láctea y Andrómeda.", label: true, kind: "spiral" },
+      { name: "Gran Nube de Magallanes", pos: [.18,.02,.28], radius: .16, focusRadius: .7, distance: "160.000 ly", desc: "Galaxia satélite irregular de la Vía Láctea, visible desde el hemisferio sur.", label: false, kind: "irregular" },
+      { name: "Pequeña Nube de Magallanes", pos: [.28,-.10,.38], radius: .12, focusRadius: .6, distance: "200.000 ly", desc: "Otra galaxia satélite irregular, compañera de la Gran Nube.", label: false, kind: "irregular" },
+      { name: "Canis Major", pos: [-.22,-.05,.2], radius: .08, focusRadius: .5, distance: "25.000 ly", desc: "Una galaxia enana muy próxima, probablemente parte del disco exterior de la Vía Láctea.", label: false, kind: "dwarf" },
+      { name: "Sculptor", pos: [.4,-.2,.5], radius: .07, focusRadius: .5, distance: "290.000 ly", desc: "Galaxia enana del Grupo Local.", label: false, kind: "dwarf" }
+    ];
+    galaxies.forEach(function (g) {
+      var count = g.kind === "spiral" ? 4200 : (g.kind === "irregular" ? 900 : 450);
+      var palette = g.kind === "spiral"
+        ? function (t) { return [mix(.95,.45,t), mix(.74,.62,t), mix(.34,.95,t)]; }
+        : function (t) { return [mix(.72,.45,t), mix(.62,.55,t), mix(.80,.62,t)]; };
+      s.points.push(makeSpiralGalaxy(g.pos[0], g.pos[1], g.pos[2], g.radius, count, palette));
+      addObject(s, {
+        name: g.name,
+        type: g.kind === "spiral" ? "Galaxia espiral" : "Galaxia satélite",
+        pos: g.pos, focusRadius: g.focusRadius, distance: g.distance,
+        desc: g.desc, label: g.label ? g.name : null
+      });
+    });
+    return s;
+  }
+
+  function buildLaniakea() {
+    var s = { index: 4, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [.35,0,.25], radius: 5.6, theta: .45, phi: .28 } };
+    var nodes = [
+      { name: "Grupo Local", pos: [0,0,0], type: "Grupo de galaxias", dist: "0", desc: "Nuestro grupo de galaxias, dominado por la Vía Láctea y Andrómeda.", label: true, size: 10 },
+      { name: "Virgo", pos: [.55,.18,.18], type: "Cúmulo de galaxias", dist: "54 Mly", desc: "El cúmulo de galaxias más cercano, con más de 1.000 miembros.", label: true, size: 24 },
+      { name: "Fornax", pos: [.35,-.35,.55], type: "Cúmulo de galaxias", dist: "62 Mly", desc: "Un cúmulo compacto en el hemisferio sur.", label: false, size: 18 },
+      { name: "Hydra", pos: [.95,-.22,.48], type: "Cúmulo de galaxias", dist: "160 Mly", desc: "Uno de los cúmulos más masivos del universo local.", label: false, size: 22 },
+      { name: "Centaurus", pos: [.78,.40,.32], type: "Cúmulo de galaxias", dist: "160 Mly", desc: "Cúmulo dominado por la galaxia elíptica NGC 4696.", label: false, size: 20 },
+      { name: "Gran Atractor", pos: [.18,.15,.78], type: "Estructura de flujo", dist: "250 Mly", desc: "Una región de sobredensidad hacia la que se mueven muchas galaxias, no un objeto único.", label: true, size: 30 },
+      { name: "Shapley", pos: [1.10,.65,.85], type: "Supercúmulo", dist: "650 Mly", desc: "Uno de los supercúmulos más masivos del universo local.", label: true, size: 26 },
+      { name: "Vacío Local", pos: [-.55,-.30,.10], type: "Vacío cósmico", dist: "75 Mly", desc: "Una gran región subdensa cercana al Grupo Local.", label: true, size: 10 }
+    ];
+    var pc = pointCloud();
+    nodes.forEach(function (n) {
+      addPoint(pc, n.pos[0], n.pos[1], n.pos[2], [.55,.95,.78], n.size * 1.8, .72);
+      addPoint(pc, n.pos[0], n.pos[1], n.pos[2], [.98,.72,.28], n.size * .55, .9);
+      addPoint(pc, n.pos[0], n.pos[1], n.pos[2], [.55,.95,.78], n.size * 3.2, .10);
+      s.spheres.push({
+        type: 2,
+        pos: n.pos,
+        radius: .018 + n.size * .0014,
+        color: [.58, 1.0, .78],
+        color2: [1.0, .70, .22]
+      });
+      addObject(s, {
+        name: n.name, type: n.type, pos: n.pos, focusRadius: 1.0,
+        distance: n.dist, desc: n.desc, label: n.label ? n.name : null
+      });
+    });
+    s.points.push(uploadPoints(pc));
+    var verts = [];
+    for (var i = 0; i < nodes.length; i++) {
+      for (var j = i + 1; j < nodes.length; j++) {
+        var a = nodes[i].pos, b = nodes[j].pos;
+        var d = Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2);
+        if (d < .85) {
+          var steps = 18;
+          var prev = null;
+          for (var k = 0; k <= steps; k++) {
+            var t = k / steps;
+            var p = [mix(a[0],b[0],t), mix(a[1],b[1],t), mix(a[2],b[2],t) + Math.sin(t * Math.PI) * .08];
+            if (prev) { verts.push(prev[0],prev[1],prev[2], p[0],p[1],p[2]); }
+            prev = p;
+          }
+        }
+      }
+    }
+    s.lines.push(lineData(verts, .55));
+    return s;
+  }
+
+  function buildCosmic() {
+    var s = { index: 5, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 4.2, theta: .62, phi: .18 } };
+    if (!window.COSMOVerseCAMELS || !window.COSMOVerseCAMELS.data) {
+      loading.textContent = "Falta el campo CAMELS (universo_camels.js).";
+      return s;
+    }
+    var VOL = window.COSMOVerseCAMELS.size;
+    var decoded = atob(window.COSMOVerseCAMELS.data);
+    var n = VOL * VOL * VOL;
+    var density = new Uint8Array(n);
+    var temp = new Uint8Array(n);
+    for (var i = 0; i < n; i++) {
+      density[i] = decoded.charCodeAt(i);
+      temp[i] = decoded.charCodeAt(i + n);
+    }
+    var cdf = new Float64Array(n);
+    var total = 0;
+    for (var j = 0; j < n; j++) {
+      total += Math.pow(density[j] / 255, 1.6) + .0005;
+      cdf[j] = total;
+    }
+    function sampleVoxel() {
+      var target = rng() * total;
+      var lo = 0, hi = n - 1;
+      while (lo < hi) {
+        var mid = (lo + hi) >> 1;
+        if (cdf[mid] < target) lo = mid + 1; else hi = mid;
+      }
+      return lo;
+    }
+    function coords(idx) {
+      var iz = Math.floor(idx / (VOL * VOL));
+      var rem = idx - iz * VOL * VOL;
+      var iy = Math.floor(rem / VOL);
+      var ix = rem - iy * VOL;
+      var c = 2.2 / VOL;
+      return [-1.1 + (ix + .5) * c + (rng()-.5)*c, -1.1 + (iy + .5) * c + (rng()-.5)*c, -1.1 + (iz + .5) * c + (rng()-.5)*c];
+    }
+    var pc = pointCloud();
+    for (var k = 0; k < 220000; k++) {
+      var idx = sampleVoxel();
+      var d = density[idx] / 255;
+      var t = temp[idx] / 255;
+      var p = coords(idx);
+      var hot = clamp((t - .25) / .65, 0, 1);
+      var col = [0.10 + .65 * hot + .3 * d, 0.28 + .45 * hot + .45 * d, 0.45 + .22 * hot + .50 * d];
+      var edge = 1.0 - .72 * Math.max(Math.abs(p[0]), Math.abs(p[1]), Math.abs(p[2])) / 1.1;
+      addPoint(pc, p[0], p[1], p[2], col, 1.2 + 3.2 * d + rng() * 1.2, (.32 + .55 * d) * edge);
+    }
+    s.points.push(uploadPoints(pc));
+    var peaks = [];
+    for (var q = 0; q < n; q += 7) {
+      if (density[q] / 255 > .84) peaks.push([density[q], q]);
+    }
+    peaks.sort(function (a,b) { return b[0] - a[0]; });
+    var picked = [];
+    for (var r = 0; r < peaks.length && picked.length < 4; r++) {
+      var pp = coords(peaks[r][1]);
+      var ok = true;
+      for (var z = 0; z < picked.length; z++) {
+        var dx=pp[0]-picked[z][0], dy=pp[1]-picked[z][1], dz=pp[2]-picked[z][2];
+        if (dx*dx+dy*dy+dz*dz < .18) { ok = false; break; }
+      }
+      if (ok) picked.push(pp);
+    }
+    picked.forEach(function (p, i) {
+      addObject(s, {
+        name: "Cúmulo CAMELS " + (i + 1),
+        type: "Nodo de la red cósmica",
+        pos: p, focusRadius: 1.7, distance: "z = 0 · caja 25 Mpc/h",
+        desc: "Un pico de densidad de gas en el campo hidrodinámico CAMELS-SIMBA EX. El color mezcla densidad y temperatura.",
+        label: "Cúmulo " + (i + 1)
+      });
+      var glow = pointCloud();
+      addPoint(glow, p[0], p[1], p[2], [1.0,.72,.30], 46, .30);
+      s.points.push(uploadPoints(glow));
+    });
+    return s;
+  }
+
+  // ---------------------------------------------------------------------------
+  // State, camera and rendering.
+  // ---------------------------------------------------------------------------
+  var current = 0;
+  var selected = null;
+  var paused = false;
+  var auto = true;
+  var view = mat4Identity();
+  var proj = mat4Identity();
+  var camera = { target: [0,0,0], tTarget: [0,0,0], radius: 4, tRadius: 4, theta: .5, tTheta: .5, phi: .2, tPhi: .2 };
+  var dragging = false;
+  var moved = 0;
+  var lastX = 0, lastY = 0;
+  var pointers = new Map();
+  var pinch = 0;
+  var pinchRadius = 0;
+  var pointerDownTime = 0;
+  var lastFrame = performance.now();
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  function buildScene(index) {
+    if (scenes[index]) return scenes[index];
+    var s;
+    if (index === 0) s = buildEarth();
+    else if (index === 1) s = buildSolar();
+    else if (index === 2) s = buildMilkyWay();
+    else if (index === 3) s = buildLocalGroup();
+    else if (index === 4) s = buildLaniakea();
+    else s = buildCosmic();
+    scenes[index] = s;
+    return s;
+  }
+
+  function createLabels(scene) {
+    labelsRoot.innerHTML = "";
+    scene.labelEls = [];
+    scene.labels.forEach(function (obj) {
+      var el = document.createElement("button");
+      el.type = "button";
+      el.className = "label";
+      el.innerHTML = '<span class="dot"></span>' + obj.label;
+      el.addEventListener("click", function () { selectObject(obj); });
+      labelsRoot.appendChild(el);
+      scene.labelEls.push({ el: el, obj: obj });
+    });
+  }
+
+  function resetCamera(scene) {
+    camera.target = scene.camera.target.slice();
+    camera.tTarget = scene.camera.target.slice();
+    camera.radius = scene.camera.radius;
+    camera.tRadius = scene.camera.radius;
+    camera.theta = scene.camera.theta;
+    camera.tTheta = scene.camera.theta;
+    camera.phi = scene.camera.phi;
+    camera.tPhi = scene.camera.phi;
+  }
+
+  function activateLevel(index, focusObj) {
+    if (index < 0 || index >= LEVELS.length) return;
+    fade.classList.add("on");
+    setTimeout(function () {
+      current = index;
+      var scene = buildScene(index);
+      createLabels(scene);
+      resetCamera(scene);
+      selected = null;
+      info.classList.remove("on");
+      address.innerHTML = "<b>" + LEVELS[index].name + "</b> · " + LEVELS[index].scale;
+      Array.prototype.forEach.call(rail.children, function (el, i) {
+        el.classList.toggle("active", i === index);
+      });
+      hideHint();
+      fade.classList.remove("on");
+      if (focusObj) setTimeout(function () { focusObject(focusObj); }, 180);
+    }, 190);
+  }
+
+  function focusObject(obj) {
+    if (!obj || obj.level !== current) return;
+    selected = obj;
+    camera.tTarget = obj.pos.slice();
+    camera.tRadius = obj.focusRadius || 1.8;
+    var dx = camera.target[0] - obj.pos[0];
+    var dz = camera.target[2] - obj.pos[2];
+    if (Math.abs(dx) + Math.abs(dz) > .001) camera.tTheta = Math.atan2(dx, dz);
+    infoType.textContent = obj.type;
+    infoName.textContent = obj.name;
+    infoDistance.textContent = obj.distance;
+    infoDesc.textContent = obj.desc;
+    info.classList.add("on");
+    Array.prototype.forEach.call(document.querySelectorAll(".label"), function (el) { el.classList.remove("selected"); });
+    var scene = scenes[current];
+    if (scene && scene.labelEls) {
+      scene.labelEls.forEach(function (entry) {
+        if (entry.obj === obj) entry.el.classList.add("selected");
+      });
+    }
+  }
+
+  function selectObject(obj) {
+    if (!obj) return;
+    if (obj.level !== current) {
+      activateLevel(obj.level, obj);
+      return;
+    }
+    focusObject(obj);
+  }
+
+  function closeInfo() {
+    info.classList.remove("on");
+    selected = null;
+  }
+
+  function hideHint() {
+    hint.classList.add("gone");
+  }
+
+  function updateCamera(dt) {
+    if (auto && !paused) camera.tTheta += dt * .035;
+    var ease = Math.min(1, dt * 4.5);
+    camera.theta += (camera.tTheta - camera.theta) * ease;
+    camera.phi += (camera.tPhi - camera.phi) * ease;
+    camera.radius += (camera.tRadius - camera.radius) * ease;
+    for (var i = 0; i < 3; i++) camera.target[i] += (camera.tTarget[i] - camera.target[i]) * ease;
+    var cp = Math.cos(camera.phi);
+    var eye = [
+      camera.target[0] + camera.radius * cp * Math.sin(camera.theta),
+      camera.target[1] + camera.radius * Math.sin(camera.phi),
+      camera.target[2] + camera.radius * cp * Math.cos(camera.theta)
+    ];
+    lookAt(view, eye, camera.target, [0, 1, 0]);
+    perspective(proj, 44 * Math.PI / 180, canvas.width / Math.max(1, canvas.height), .05, 800);
+    camera.eye = eye;
+  }
+
+  function drawPoints(data) {
+    if (!data || !data.count) return;
+    gl.useProgram(pointProgram);
+    gl.uniformMatrix4fv(pointLoc.view, false, view);
+    gl.uniformMatrix4fv(pointLoc.proj, false, proj);
+    gl.uniform1f(pointLoc.dpr, DPR);
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.posBuf);
+    gl.enableVertexAttribArray(pointLoc.pos);
+    gl.vertexAttribPointer(pointLoc.pos, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.colBuf);
+    gl.enableVertexAttribArray(pointLoc.color);
+    gl.vertexAttribPointer(pointLoc.color, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.sizeBuf);
+    gl.enableVertexAttribArray(pointLoc.size);
+    gl.vertexAttribPointer(pointLoc.size, 1, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.alphaBuf);
+    gl.enableVertexAttribArray(pointLoc.alpha);
+    gl.vertexAttribPointer(pointLoc.alpha, 1, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.POINTS, 0, data.count);
+  }
+
+  function drawSphere(obj) {
+    gl.useProgram(sphereProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, spherePosBuf);
+    gl.enableVertexAttribArray(sphereLoc.pos);
+    gl.vertexAttribPointer(sphereLoc.pos, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, sphereNormBuf);
+    gl.enableVertexAttribArray(sphereLoc.normal);
+    gl.vertexAttribPointer(sphereLoc.normal, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIndexBuf);
+    gl.uniformMatrix4fv(sphereLoc.model, false, translateScale(obj.pos[0], obj.pos[1], obj.pos[2], obj.radius));
+    gl.uniformMatrix4fv(sphereLoc.view, false, view);
+    gl.uniformMatrix4fv(sphereLoc.proj, false, proj);
+    gl.uniform3fv(sphereLoc.color, obj.color || [.5, .6, .8]);
+    gl.uniform3fv(sphereLoc.color2, obj.color2 || [.2, .3, .5]);
+    gl.uniform3fv(sphereLoc.cam, camera.eye);
+    gl.uniform1f(sphereLoc.type, obj.type === 0 ? 0 : obj.type === 1 ? 1 : obj.type === 2 ? 2 : 3);
+    gl.drawElements(gl.TRIANGLES, sphere.indices.length, gl.UNSIGNED_SHORT, 0);
+  }
+
+  function drawLines(data) {
+    if (!data || !data.count) return;
+    gl.useProgram(lineProgram);
+    gl.uniformMatrix4fv(lineLoc.view, false, view);
+    gl.uniformMatrix4fv(lineLoc.proj, false, proj);
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.posBuf);
+    gl.enableVertexAttribArray(lineLoc.pos);
+    gl.vertexAttribPointer(lineLoc.pos, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.colBuf);
+    gl.enableVertexAttribArray(lineLoc.color);
+    gl.vertexAttribPointer(lineLoc.color, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, data.alphaBuf);
+    gl.enableVertexAttribArray(lineLoc.alpha);
+    gl.vertexAttribPointer(lineLoc.alpha, 1, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.LINES, 0, data.count);
+  }
+
+  function updateLabels() {
+    var scene = scenes[current];
+    if (!scene || !scene.labelEls) return;
+    scene.labelEls.forEach(function (entry) {
+      var p = projectPoint(entry.obj.pos);
+      if (!p || p.x < -80 || p.x > window.innerWidth + 80 || p.y < -40 || p.y > window.innerHeight + 40) {
+        entry.el.style.display = "none";
+      } else {
+        entry.el.style.display = "block";
+        entry.el.style.left = p.x + "px";
+        entry.el.style.top = p.y + "px";
+      }
+    });
+  }
+
+  function render() {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(.004, .008, .016, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    drawPoints(starfield);
+    var scene = scenes[current];
+    if (!scene) return;
+    gl.disable(gl.DEPTH_TEST);
+    scene.points.forEach(drawPoints);
+    gl.disable(gl.BLEND);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    scene.spheres.forEach(drawSphere);
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    scene.lines.forEach(drawLines);
+    updateLabels();
+  }
+
+  function frame(now) {
+    var dt = Math.min(.05, Math.max(.001, (now - lastFrame) / 1000));
+    lastFrame = now;
+    updateCamera(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(window.innerWidth * DPR);
+    canvas.height = Math.floor(window.innerHeight * DPR);
+  }
+
+  // ---------------------------------------------------------------------------
+  // UI.
+  // ---------------------------------------------------------------------------
+  LEVELS.forEach(function (level, index) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "rail-item";
+    b.innerHTML = '<span class="num">' + String(index + 1).padStart(2, "0") + '</span><span><span class="name">' + level.name + '</span><span class="scale">' + level.scale + '</span></span>';
+    b.addEventListener("click", function () { activateLevel(index); });
+    rail.appendChild(b);
+  });
+
+  document.getElementById("search-btn").addEventListener("click", openSearch);
+  document.getElementById("about-btn").addEventListener("click", function () { aboutModal.classList.add("on"); });
+  document.getElementById("about-close").addEventListener("click", function () { aboutModal.classList.remove("on"); });
+  document.getElementById("search-close").addEventListener("click", closeSearch);
+  document.getElementById("fullscreen-btn").addEventListener("click", toggleFullscreen);
+  document.getElementById("info-close").addEventListener("click", closeInfo);
+  document.getElementById("info-focus").addEventListener("click", function () { if (selected) focusObject(selected); });
+  searchInput.addEventListener("input", renderSearch);
+  searchInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      var first = searchResults.querySelector(".result");
+      if (first) first.click();
+    }
+    if (e.key === "Escape") closeSearch();
+  });
+  window.addEventListener("resize", resize);
+  window.addEventListener("keydown", function (e) {
+    if (e.target === searchInput) return;
+    if (e.key >= "1" && e.key <= "6") activateLevel(Number(e.key) - 1);
+    else if (e.key === "ArrowRight" || e.key === "]") activateLevel(Math.min(LEVELS.length - 1, current + 1));
+    else if (e.key === "ArrowLeft" || e.key === "[") activateLevel(Math.max(0, current - 1));
+    else if (e.key === "/" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); openSearch(); }
+    else if (e.key === "f" || e.key === "F") toggleFullscreen();
+    else if (e.key === "r" || e.key === "R") { if (scenes[current]) resetCamera(scenes[current]); }
+    else if (e.key === "p" || e.key === "P" || e.code === "Space") { e.preventDefault(); paused = !paused; }
+    else if (e.key === "Escape") { aboutModal.classList.remove("on"); closeSearch(); closeInfo(); }
+  });
+
+  function openSearch() {
+    searchModal.classList.add("on");
+    searchInput.value = "";
+    renderSearch();
+    setTimeout(function () { searchInput.focus(); }, 30);
+    hideHint();
+  }
+  function closeSearch() { searchModal.classList.remove("on"); }
+  function renderSearch() {
+    var q = searchInput.value.trim().toLowerCase();
+    var items = catalog.filter(function (o) {
+      return !q || (o.name + " " + o.type + " " + LEVELS[o.level].name).toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 24);
+    searchResults.innerHTML = "";
+    items.forEach(function (o) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "result";
+      b.innerHTML = '<span>' + o.name + '</span><small>' + o.type + ' · ' + LEVELS[o.level].name + '</small>';
+      b.addEventListener("click", function () { closeSearch(); selectObject(o); });
+      searchResults.appendChild(b);
+    });
+    if (!items.length) searchResults.innerHTML = '<div class="result">Sin resultados</div>';
+  }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(function () {});
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch(function () {});
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pointer interaction.
+  // ---------------------------------------------------------------------------
+  canvas.addEventListener("pointerdown", function (e) {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (canvas.setPointerCapture) { try { canvas.setPointerCapture(e.pointerId); } catch (err) {} }
+    moved = 0;
+    pointerDownTime = performance.now();
+    if (pointers.size === 1) {
+      dragging = true;
+      lastX = e.clientX; lastY = e.clientY;
+      canvas.style.cursor = "grabbing";
+    } else if (pointers.size === 2) {
+      dragging = false;
+      var pts = Array.from(pointers.values());
+      pinch = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      pinchRadius = camera.tRadius;
+    }
+    hideHint();
+  });
+  canvas.addEventListener("pointermove", function (e) {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size >= 2) {
+      var pts = Array.from(pointers.values());
+      var dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (pinch > 0) camera.tRadius = clamp(pinchRadius * (pinch / dist), .6, 120);
+      return;
+    }
+    if (!dragging) return;
+    var dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    moved += Math.abs(dx) + Math.abs(dy);
+    camera.tTheta -= dx * .006;
+    camera.tPhi = clamp(camera.tPhi - dy * .005, -1.2, 1.2);
+  });
+  function endPointer(e) {
+    pointers.delete(e.pointerId);
+    if (pointers.size === 0) {
+      dragging = false;
+      canvas.style.cursor = "grab";
+      if (moved < 5 && performance.now() - pointerDownTime < 500) {
+        pickAt(e.clientX, e.clientY);
+      }
+    }
+  }
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
+  canvas.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    camera.tRadius = clamp(camera.tRadius * Math.exp(e.deltaY * .0011), .55, 160);
+    hideHint();
+  }, { passive: false });
+  canvas.addEventListener("dblclick", function (e) {
+    var obj = pickObjectAt(e.clientX, e.clientY);
+    if (obj) focusObject(obj);
+  });
+
+  function pickObjectAt(x, y) {
+    var scene = scenes[current];
+    if (!scene) return null;
+    var best = null, bestD = 34 * 34;
+    scene.objects.forEach(function (o) {
+      var p = projectPoint(o.pos);
+      if (!p) return;
+      var d = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (d < bestD) { bestD = d; best = o; }
+    });
+    return best;
+  }
+  function pickAt(x, y) {
+    var obj = pickObjectAt(x, y);
+    if (obj) focusObject(obj);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Boot.
+  // ---------------------------------------------------------------------------
+  resize();
+  for (var boot = 0; boot < LEVELS.length; boot++) buildScene(boot);
+  var startMatch = window.location.search.match(/level=(\d)/);
+  var startLevel = startMatch ? clamp(Number(startMatch[1]), 0, LEVELS.length - 1) : 0;
+  activateLevel(startLevel);
+  requestAnimationFrame(frame);
+  loading.classList.add("gone");
+  loading.style.display = "none";
+  setTimeout(hideHint, 12000);
+  setTimeout(function () { document.body.classList.add("idle"); }, 6000);
+  window.addEventListener("pointermove", function () {
+    document.body.classList.remove("idle");
+  });
+})();
+</script>
+</body>
+</html>
