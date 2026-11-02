@@ -10,7 +10,7 @@ from cosmoverse.cli import main
 
 
 def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
-    assert __version__ == "3.1.0"
+    assert __version__ == "3.2.0"
     main(["info"])
     main(["frontier"])
     main(["camels"])
@@ -51,5 +51,5 @@ def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
     root = pathlib.Path(__file__).resolve().parents[1]
     assert (root / "docs" / "index.html").exists()
     zenodo = json.loads((root / ".zenodo.json").read_text(encoding="utf-8"))
-    assert zenodo["version"] == "3.1.0"
+    assert zenodo["version"] == "3.2.0"
     assert zenodo["license"] == "MIT"

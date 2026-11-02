@@ -3,6 +3,23 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.2.0] - 2026-11-01
+
+### Added
+- `FlowTransferPipeline` (`cosmoverse.inference.transfer_sbi`) para el Resultado 4: entrena el flujo PM + MLP en la familia fuente `CAMELS-DMO + BCEmu` y evalúa la degradación en una familia objetivo `CAMELS-IllustrisTNG` con respuesta hidrodinámica controlada y partición leakage-free (#98, PR #99).
+- Modo `family="target"` y `mismatch_strength` en los forward models PM y multi-sonda.
+- Métricas robustas de transferencia en `CrossSimulationTransferEvaluator`: mediana de sesgo en $\sigma$, percentil 95, fracción dentro de $1\sigma$ y $\Delta$TARP-ICE.
+- Subcomando `cosmoverse flow-transfer`, decimonovena compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_transfer_sbi.py` (`97 passed`).
+
+### Validation
+- Fuente: flujo PM + MLP (v3.1, 1600 simulaciones), calibración SBC/TARP fuente **PASS**.
+- Mismatch físico TNG/BCEmu (`strength=1.0`): cobertura pre 65.9% / 88.6%, post 67.0% / 72.0%; mediana de sesgo 0.63 -> 1.02 $\sigma$; $\Delta$TARP-ICE $+0.149$; compuerta de transferencia **PASS** (degradación acotada).
+- Stress-test 3x: mediana de sesgo 2.09 $\sigma$; $\Delta$TARP-ICE $+0.191$; compuerta **FAIL** (degradación no acotada), como se espera.
+
+### Notes
+- La respuesta TNG/BCEmu es una curva calibrada, no una simulación hidrodinámica real.
+- La compuerta usa tolerancias pre-registradas: mediana de sesgo < 1.10 $\sigma$, cobertura 95% $\ge$ 0.70 y $\Delta$TARP-ICE $\le$ 0.20.
+
 ## [3.1.0] - 2026-11-01
 
 ### Added

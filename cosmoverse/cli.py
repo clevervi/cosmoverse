@@ -33,6 +33,7 @@ from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.inference.light_cone_sbi import LightConeSBIPipeline
 from cosmoverse.inference.multiprobe_sbi import MultiProbeSBIPipeline
 from cosmoverse.inference.pm_emulator_sbi import PMEmulatorSBIPipeline
+from cosmoverse.inference.transfer_sbi import FlowTransferPipeline
 from cosmoverse.observations.cmb_and_sz import CMBLensingAndSZPipeline
 from cosmoverse.observations.hod_and_mocks import (
     HaloOccupationModel,
@@ -852,6 +853,64 @@ def cmd_pm_flow_sbi(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_flow_transfer(args: argparse.Namespace) -> None:
+    """Runs leakage-free cross-simulation transfer with the trained flow."""
+    pipeline = FlowTransferPipeline(
+        mismatch_strength=float(args.mismatch_strength),
+        n_records=int(args.n_records),
+        n_test=int(args.n_test),
+        seed=42,
+    )
+    result = pipeline.run()
+
+    table = Table(title="Level 3: Cross-Simulation Transfer with Trained Flow (Result 4)")
+    table.add_column("Transfer Diagnostic", style="cyan")
+    table.add_column("Measured Value", justify="right", style="green")
+    table.add_row("Source Family", "CAMELS-DMO + BCEmu")
+    table.add_row(
+        "Target Family",
+        f"CAMELS-IllustrisTNG (mismatch strength={result['mismatch_strength']:.1f})",
+    )
+    leakage = result["leakage_check"]
+    table.add_row(
+        "Leakage-Free Partition",
+        f"PASS (shared IC={leakage['shared_ic_seeds']}, "
+        f"shared cosmo={leakage['shared_cosmo_ids']})",
+    )
+    table.add_row(
+        "Source SBC + TARP Gate",
+        "PASS" if result["source_calibration"]["passes_joint_sbi_gate"] else "FAIL",
+    )
+    pre = result["pre_transfer"]
+    post = result["post_transfer"]
+    table.add_row(
+        "Pre-Transfer Coverage 68% / 95%",
+        f"{pre['coverage_68']*100:.1f}% / {pre['coverage_95']*100:.1f}%",
+    )
+    table.add_row(
+        "Post-Transfer Coverage 68% / 95%",
+        f"{post['coverage_68']*100:.1f}% / {post['coverage_95']*100:.1f}%",
+    )
+    table.add_row(
+        "Robust Bias (median, in sigma)",
+        f"pre={pre['median_bias_in_sigma']:.2f}, "
+        f"post={post['median_bias_in_sigma']:.2f}",
+    )
+    table.add_row(
+        "TARP ICE (pre -> post)",
+        f"{pre['tarp_ice']:.3f} -> {post['tarp_ice']:.3f}",
+    )
+    table.add_row(
+        "Degradation Delta TARP-ICE",
+        f"{result['degradation']['delta_tarp_ice']:+.3f}",
+    )
+    table.add_row(
+        "Cross-Simulation Transfer Gate",
+        "PASS" if result["passes_transfer_gate"] else "FAIL",
+    )
+    console.print(table)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -911,6 +970,11 @@ def cmd_doctor() -> None:
             "passes_joint_sbi_gate"
         ]
     )
+    flow_transfer_ok = bool(
+        FlowTransferPipeline(
+            mismatch_strength=1.0, n_records=600, n_test=100, seed=42
+        ).run()["passes_transfer_gate"]
+    )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     bisp_ia_ok = bool(
         ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
@@ -938,6 +1002,7 @@ def cmd_doctor() -> None:
         ("Level 3: PM-Emulator Multi-Probe SBI (LOO < 2%) with SBC + TARP", pm_emulator_ok),
         ("Level 3: Gradient-Trained Flow SBI (ConditionalRealNVP) with SBC + TARP", flow_sbi_ok),
         ("Level 3: PM-Emulator + MLP Flow SBI (1600 sims) with SBC + TARP", pm_flow_sbi_ok),
+        ("Level 3: Cross-Simulation Transfer with Trained Flow (Result 4)", flow_transfer_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -1107,6 +1172,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     pm_flow_parser.add_argument("--n-sbc", type=int, default=100, help="Number of SBC calibration trials")
     pm_flow_parser.add_argument("--n-tarp", type=int, default=100, help="Number of TARP calibration trials")
 
+    # Cross-simulation transfer with the trained flow
+    transfer_parser = subparsers.add_parser("flow-transfer", help="Run leakage-free cross-simulation transfer with the trained flow")
+    transfer_parser.add_argument("--mismatch-strength", type=float, default=1.0, help="Amplification of the TNG/BCEmu response mismatch")
+    transfer_parser.add_argument("--n-records", type=int, default=600, help="Number of source/target partition records")
+    transfer_parser.add_argument("--n-test", type=int, default=100, help="Number of test points per family")
+
     # CMB Lensing cross-spectra + tSZ/kSZ BCEmu gas calibration
     subparsers.add_parser("cmb-sz", help="Evaluate Level 2 CMB lensing cross-spectra and tSZ/kSZ gas calibration")
 
@@ -1122,7 +1193,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 18-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 19-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -1176,6 +1247,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_flow_sbi(args)
     elif args.command == "pm-flow-sbi":
         cmd_pm_flow_sbi(args)
+    elif args.command == "flow-transfer":
+        cmd_flow_transfer(args)
     elif args.command == "cmb-sz":
         cmd_cmb_sz()
     elif args.command == "hod-mocks":
