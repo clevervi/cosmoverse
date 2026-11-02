@@ -3,6 +3,29 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.12.0] - 2026-11-02
+
+### Added
+- **Zoom con transición suave**: captura del fotograma anterior y crossfade al cambiar de marco; conserva orientación de cámara, admite rueda, pinch, `+`/`−` y doble clic (#130).
+- **Catálogo ampliado**: 5 planetas enanos (Ceres, Plutón, Haumea, Makemake, Eris), 11 lunas mayores, cinturones de asteroides y Kuiper, estrellas cercanas, cúmulos globulares, más galaxias del Grupo Local y cúmulos de Laniakea.
+- **Agujeros negros**: Sgr A*, Cygnus X-1, M87*, TON 618 y 3C 273, con anillo de acreción esquemático, ficha y búsqueda.
+- **Fichas de fidelidad**: cada objeto indica `dato real`, `aproximado` o `ilustrativo`; se añadió la misma etiqueta a SDSS, 2MRS, CAMELS y Planck.
+- **Etiquetas sin solapamiento** con prioridad para el objeto seleccionado y recorte dentro de la pantalla.
+- Botón **DESCUBRIR** para saltar a un objeto sorpresa y tipografía de tipo de objeto corregida en búsqueda/fichas.
+- `tests/test_explorador.py`: cobertura del zoom, agujeros negros, planetas enanos, lunas y fidelidad (8 pruebas).
+
+### Validation
+- `uv run pytest -q tests/test_explorador.py`: **8 passed**.
+- `uv run pytest -q -m "not slow"`: **127 passed**; total **134 tests** (7 lentos).
+- `ruff check .` + `scripts/check_repo.py`: **PASS**.
+- Screenshots desktop \(1440\times900\) y móvil \(390\times844\): Sistema Solar, Vía Láctea, Laniakea, all-sky y transición.
+
+### Notes
+- El zoom sigue usando siete marcos normalizados; la transición es suave, pero no es todavía una jerarquía espacial continua de precisión arbitraria.
+- Los anillos de acreción, tamaños de lunas y posiciones de objetos lejanos son esquemáticos; la ficha lo indica.
+- El catálogo es curado, no exhaustivo: no incluye todos los objetos del universo.
+- Sin cambios en el código científico del paquete.
+
 ## [3.11.0] - 2026-11-02
 
 ### Added

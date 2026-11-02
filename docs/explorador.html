@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#04070d">
-<meta name="description" content="Explorador cósmico multi-escala: Tierra, Sistema Solar, Vía Láctea, Grupo Local, Laniakea, red cósmica SDSS/CAMELS y universo observable 2MRS/Planck en una sola página interactiva.">
+<meta name="description" content="Explorador cósmico multi-escala con zoom continuo: Tierra, Sistema Solar, Vía Láctea, Grupo Local, Laniakea, red cósmica SDSS/CAMELS y universo observable 2MRS/Planck, con planetas, lunas, galaxias y agujeros negros.">
 <title>EXPLORADOR CÓSMICO — COSMOVERSE</title>
 <style>
   :root {
@@ -52,11 +52,16 @@
     inset: 0;
     z-index: 20;
     pointer-events: none;
-    background: #02040a;
+    background: transparent;
     opacity: 0;
-    transition: opacity .22s ease;
+    transition: opacity .26s ease;
   }
   #fade.on { opacity: 1; }
+  #fade-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
   #topbar {
     position: fixed;
     top: max(16px, env(safe-area-inset-top, 16px));
@@ -240,6 +245,30 @@
     font-family: var(--mono);
     font-size: 9px;
     color: var(--muted);
+  }
+  #info .fidelity {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 7px;
+    border: 1px solid rgba(184,202,217,.28);
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  #info .fidelity.real {
+    border-color: rgba(95,227,179,.55);
+    color: #5fe3b3;
+  }
+  #info .fidelity.approx {
+    border-color: rgba(245,166,35,.45);
+    color: #f5a623;
+  }
+  #info .fidelity.illustrative {
+    border-color: rgba(255,122,89,.45);
+    color: #ff7a59;
   }
   #info p {
     margin: 10px 0 0;
@@ -428,7 +457,7 @@
 <canvas id="space" aria-label="Explorador cósmico 3D multi-escala"></canvas>
 <div id="vignette"></div>
 <div id="labels"></div>
-<div id="fade"></div>
+<div id="fade"><canvas id="fade-canvas"></canvas></div>
 
 <header id="topbar">
   <div class="brand">
@@ -440,6 +469,7 @@
     <button class="hud-btn" id="search-btn" type="button" aria-label="Buscar objeto">BUSCAR /</button>
     <button class="hud-btn" id="data-btn" type="button" style="display:none">DATOS: CAMELS</button>
     <button class="hud-btn" id="tour-btn" type="button" aria-pressed="false">TOUR</button>
+    <button class="hud-btn" id="random-btn" type="button">DESCUBRIR</button>
     <button class="hud-btn" id="about-btn" type="button">ACERCA</button>
     <button class="hud-btn" id="fullscreen-btn" type="button">PANTALLA</button>
   </div>
@@ -458,6 +488,7 @@
   <div class="type" id="info-type">Objeto</div>
   <h2 id="info-name">—</h2>
   <div class="distance" id="info-distance">—</div>
+  <div class="fidelity" id="info-fidelity">aproximado</div>
   <p id="info-desc"></p>
   <div class="info-actions">
     <button class="hud-btn" id="info-focus" type="button">ENFOCAR</button>
@@ -485,7 +516,8 @@
     <h2>Un universo, siete escalas</h2>
     <p>Este explorador conecta la Tierra, el Sistema Solar, la Vía Láctea, el Grupo Local, Laniakea, la red cósmica y el universo observable en una sola experiencia. Las escalas son <b>modelos normalizados</b>: tamaños, separaciones y brillos se ajustan para que cada nivel sea visible. No es un modelo físico lineal de 14.000 millones de años luz.</p>
     <p>La inspiración conceptual son los mapas multi-escala de <a href="https://mapoftheuniverse.net/" target="_blank" rel="noopener">Map of the Universe</a> (SDSS) y <a href="https://universemap.net/3d-map/" target="_blank" rel="noopener">Universe Map</a>. La red cósmica combina el <b>mapa SDSS DR18</b> de 45.000 galaxias reales con el campo hidrodinámico <b>CAMELS-SIMBA EX</b> (CMD). El universo observable usa <b>2MRS</b> (43.482 galaxias en todo el cielo) y el mapa de <b>Planck</b> como horizonte; los planetas y estructuras cercanas usan datos públicos/approx. de NASA y catálogos astronómicos.</p>
-    <p>Atajos: <b>1–7</b> escalas, <b>/</b> buscar, <b>doble clic</b> enfocar, <b>TOUR</b> recorrido guiado, <b>DATOS</b> alterna SDSS/CAMELS, <b>F</b> pantalla completa, <b>R</b> reiniciar vista, <b>P</b> pausar rotación. La rueda fuera de rango viaja a la escala siguiente.</p>
+    <p>Cada ficha indica su <b>fidelidad</b>: dato real, aproximado o ilustrativo. Los agujeros negros, planetas enanos, lunas y estructuras se muestran con tamaños y anillos esquemáticos; el zoom hace una transición suave entre marcos y la búsqueda puede llevarte a cualquiera de ellos.</p>
+    <p>Atajos: <b>1–7</b> escalas, <b>/</b> buscar, <b>doble clic</b> enfocar, <b>TOUR</b> recorrido guiado, <b>DESCUBRIR</b> objeto sorpresa, <b>+</b>/<b>−</b> zoom, <b>DATOS</b> alterna SDSS/CAMELS, <b>F</b> pantalla completa, <b>R</b> reiniciar vista, <b>P</b> pausar rotación. La rueda fuera de rango viaja a la escala siguiente.</p>
     <p style="color:rgba(184,202,217,.45);font-size:11px">Atribución de datos: SDSS DR18 (Sloan Digital Sky Survey), CAMELS Multifield Dataset (Villaescusa-Navarro et al.), 2MASS Redshift Survey (Huchra et al. 2012), Planck all-sky map (ESA/Planck, vía NASA/IPAC), NASA Planetary Fact Sheet. Visualización educativa; no usar para inferencia científica.</p>
   </div>
 </div>
@@ -513,10 +545,12 @@
   var canvas = document.getElementById("space");
   var labelsRoot = document.getElementById("labels");
   var fade = document.getElementById("fade");
+  var fadeCanvas = document.getElementById("fade-canvas");
   var info = document.getElementById("info");
   var infoType = document.getElementById("info-type");
   var infoName = document.getElementById("info-name");
   var infoDistance = document.getElementById("info-distance");
+  var infoFidelity = document.getElementById("info-fidelity");
   var infoDesc = document.getElementById("info-desc");
   var hint = document.getElementById("hint");
   var rail = document.getElementById("rail");
@@ -533,7 +567,7 @@
   var tourTitleEl = document.getElementById("tour-title");
   var tourTextEl = document.getElementById("tour-text");
 
-  var gl = canvas.getContext("webgl2", { alpha: false, antialias: true, depth: true, powerPreference: "high-performance" });
+  var gl = canvas.getContext("webgl2", { alpha: false, antialias: true, depth: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
   if (!gl) {
     loading.textContent = "Este explorador necesita WebGL2. Probá con Chrome, Edge o Firefox actualizado.";
     return;
@@ -695,7 +729,10 @@ void main() {
   vec3 n = normalize(vNormal);
   float light = max(dot(n, normalize(vec3(.6,.7,.4))), 0.15);
   vec3 col;
-  if (uType > 3.5) {
+  if (uType > 4.5) {
+    col = vec3(.006, .003, .008);
+    light = 1.0;
+  } else if (uType > 3.5) {
     if (uUseTexture > 0.5) {
       vec3 cmb = texture(uTexture, vec2(fract(vUv.x + 0.5), vUv.y)).rgb;
       col = pow(cmb, vec3(0.92)) * vec3(0.30, 0.31, 0.36);
@@ -722,6 +759,11 @@ void main() {
     col = uColor;
   }
   float rim = pow(1.0 - max(dot(n, normalize(uCam - vWorld)), 0.0), 3.0);
+  if (uType > 4.5) {
+    float disk = smoothstep(0.16, 0.0, abs(n.y));
+    col += vec3(1.0, .44, .08) * disk * .95;
+    col += vec3(1.0, .58, .18) * pow(rim, 1.8) * 1.4;
+  }
   if (uType < .5) col += vec3(.10,.32,.55) * rim * .8;
   fragColor = vec4(col * light + rim * .08, 1.0);
 }
@@ -937,6 +979,12 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     return pc;
   })());
 
+  function objectTypeLabel(obj) {
+    if (obj.kind) return obj.kind;
+    if (typeof obj.type !== "number") return obj.type;
+    return obj.type === 0 ? "Planeta" : obj.type === 1 ? "Satélite" : obj.type === 2 ? "Estrella" : obj.type === 3 ? "Planeta" : obj.type === 4 ? "Horizonte" : obj.type === 5 ? "Agujero negro" : "Objeto";
+  }
+
   function addObject(scene, obj) {
     obj.level = scene.index;
     scene.objects.push(obj);
@@ -974,7 +1022,12 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       { name: "Júpiter", r: .58, color: [.78,.62,.42], color2: [.45,.28,.14], orbit: 8.2, dist: "5,20 AU", label: true },
       { name: "Saturno", r: .50, color: [.85,.76,.52], color2: [.50,.40,.22], orbit: 10.1, dist: "9,58 AU", label: true },
       { name: "Urano", r: .36, color: [.55,.82,.86], color2: [.22,.48,.55], orbit: 12.0, dist: "19,2 AU", label: true },
-      { name: "Neptuno", r: .35, color: [.20,.35,.80], color2: [.08,.16,.45], orbit: 13.8, dist: "30,1 AU", label: true }
+      { name: "Neptuno", r: .35, color: [.20,.35,.80], color2: [.08,.16,.45], orbit: 13.8, dist: "30,1 AU", label: true },
+      { name: "Ceres", r: .08, color: [.50,.48,.44], color2: [.24,.23,.21], orbit: 7.15, dist: "2,77 AU", label: true, dwarf: true },
+      { name: "Plutón", r: .10, color: [.72,.62,.52], color2: [.30,.24,.20], orbit: 15.4, dist: "39,5 AU", label: true, dwarf: true },
+      { name: "Haumea", r: .08, color: [.78,.82,.86], color2: [.35,.40,.48], orbit: 16.1, dist: "43,1 AU", label: true, dwarf: true },
+      { name: "Makemake", r: .09, color: [.70,.42,.28], color2: [.30,.16,.10], orbit: 16.6, dist: "45,8 AU", label: true, dwarf: true },
+      { name: "Eris", r: .11, color: [.82,.84,.90], color2: [.38,.40,.48], orbit: 17.4, dist: "67,8 AU", label: true, dwarf: true }
     ];
     s.spheres.push({ name: "Sol", type: 2, pos: [0,0,0], radius: .95, focusRadius: 2.8, distance: "1 UA de la Tierra", desc: "La estrella que sostiene el Sistema Solar. Su luz tarda unos 8 minutos en llegar a la Tierra.", label: "Sol", aliases: ["Sun", "Estrella"] });
     var sunGlow = pointCloud();
@@ -982,10 +1035,13 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     addPoint(sunGlow, 0, 0, 0, [1.0,.85,.45], 18, .55);
     s.points.push(uploadPoints(sunGlow));
     s.spheres.forEach(function (o) { addObject(s, o); });
+    var planetPositions = {};
     planets.forEach(function (p, i) {
       var angle = i * 2.399 + .4;
       var pos = [Math.cos(angle) * p.orbit, Math.sin(angle) * p.orbit * .18, Math.sin(angle) * p.orbit];
-      var o = { name: p.name, type: 3, pos: pos, radius: p.r, focusRadius: Math.max(.8, p.r * 3.2), distance: p.dist, desc: p.name + ": un mundo del Sistema Solar. Tamaño y distancia de la órbita están comprimidos para que sea visible.", color: p.color, color2: p.color2, label: p.label ? p.name : null };
+      planetPositions[p.name] = pos;
+      var kind = p.dwarf ? "Planeta enano" : "Planeta";
+      var o = { name: p.name, type: 3, pos: pos, radius: p.r, focusRadius: Math.max(.8, p.r * 3.2), distance: p.dist, desc: p.name + ": " + (p.dwarf ? "un planeta enano del Sistema Solar." : "un mundo del Sistema Solar.") + " Tamaño y distancia de la órbita están comprimidos para que sea visible.", color: p.color, color2: p.color2, label: p.label ? p.name : null, kind: kind, fidelity: "approx" };
       s.spheres.push(o);
       addObject(s, o);
       var ring = pointCloud();
@@ -1003,6 +1059,58 @@ void main() { fragColor = vec4(vColor, vAlpha); }
         s.points.push(uploadPoints(sr));
       }
     });
+
+    var moons = [
+      { parent: "Tierra", name: "Luna", r: .065, off: [.42,.02,.10], dist: "384.400 km", label: true, aliases: ["Moon"] },
+      { parent: "Marte", name: "Fobos", r: .035, off: [.30,.02,.06], dist: "9.376 km", label: false },
+      { parent: "Marte", name: "Deimos", r: .030, off: [-.34,.03,.08], dist: "23.463 km", label: false },
+      { parent: "Júpiter", name: "Ío", r: .055, off: [.70,.04,.12], dist: "421.700 km", label: true, aliases: ["Io"] },
+      { parent: "Júpiter", name: "Europa", r: .050, off: [.82,-.03,.16], dist: "671.000 km", label: true },
+      { parent: "Júpiter", name: "Ganímedes", r: .075, off: [.94,.05,.20], dist: "1.070.400 km", label: true, aliases: ["Ganymede"] },
+      { parent: "Júpiter", name: "Calisto", r: .070, off: [1.06,-.04,.24], dist: "1.882.700 km", label: true, aliases: ["Callisto"] },
+      { parent: "Saturno", name: "Encélado", r: .045, off: [.58,.03,.14], dist: "238.000 km", label: true, aliases: ["Enceladus"] },
+      { parent: "Saturno", name: "Titán", r: .075, off: [.72,-.03,.18], dist: "1.221.870 km", label: true, aliases: ["Titan"] },
+      { parent: "Neptuno", name: "Tritón", r: .060, off: [.46,.02,.12], dist: "354.800 km", label: true, aliases: ["Triton"] },
+      { parent: "Plutón", name: "Caronte", r: .045, off: [.24,.01,.06], dist: "19.640 km", label: true, aliases: ["Charon"] }
+    ];
+    moons.forEach(function (moon) {
+      var parentPos = planetPositions[moon.parent];
+      if (!parentPos) return;
+      var moonPos = [parentPos[0] + moon.off[0], parentPos[1] + moon.off[1], parentPos[2] + moon.off[2]];
+      var moonObj = {
+        name: moon.name,
+        type: 1,
+        kind: "Satélite",
+        pos: moonPos,
+        radius: moon.r,
+        focusRadius: .42,
+        distance: moon.dist,
+        desc: moon.name + ": una luna de " + moon.parent + ". Su tamaño está exagerado para que sea visible a esta escala.",
+        label: moon.label ? moon.name : null,
+        aliases: moon.aliases || [],
+        fidelity: "approx"
+      };
+      s.spheres.push(moonObj);
+      addObject(s, moonObj);
+    });
+
+    var asteroidBelt = pointCloud();
+    for (var ab = 0; ab < 900; ab++) {
+      var abAngle = rng() * Math.PI * 2;
+      var abRadius = 6.85 + rng() * .65;
+      addPoint(asteroidBelt, Math.cos(abAngle) * abRadius, gauss() * .12, Math.sin(abAngle) * abRadius, [.58,.52,.42], .6 + rng() * .8, .42);
+    }
+    s.points.push(uploadPoints(asteroidBelt));
+    addObject(s, { name: "Cinturón de asteroides", type: "Región", kind: "Región", pos: [7.2,0,0], focusRadius: 3.2, distance: "2,2–3,2 AU", desc: "Millones de rocas entre Marte y Júpiter. No es un planeta ni un objeto único: es una región del Sistema Solar.", label: null, fidelity: "illustrative" });
+
+    var kuiperBelt = pointCloud();
+    for (var kb = 0; kb < 1200; kb++) {
+      var kbAngle = rng() * Math.PI * 2;
+      var kbRadius = 15.0 + rng() * 3.0;
+      addPoint(kuiperBelt, Math.cos(kbAngle) * kbRadius, gauss() * .35, Math.sin(kbAngle) * kbRadius, [.45,.58,.70], .5 + rng() * .7, .32);
+    }
+    s.points.push(uploadPoints(kuiperBelt));
+    addObject(s, { name: "Cinturón de Kuiper", type: "Región", kind: "Región", pos: [17.0,0,0], focusRadius: 4.0, distance: "30–50 AU", desc: "Un cinturón de cuerpos helados más allá de Neptuno; incluye a Plutón y otros planetas enanos.", label: null, fidelity: "illustrative" });
     return s;
   }
 
@@ -1032,10 +1140,20 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     addPoint(core, 0, 0, 0, [1.0,.72,.28], 42, .50);
     addPoint(core, 0, 0, 0, [1.0,.94,.70], 15, .80);
     s.points.push(uploadPoints(core));
-    var sun = { name: "Sol", type: "Estrella", pos: [8.2, .12, 1.2], focusRadius: 3.2, distance: "26.000 ly del centro galáctico", desc: "Nuestra estrella, en el brazo de Orión. En esta escala es un punto; su sistema planetario no sería visible.", label: "Sol", aliases: ["Sun"] };
-    var sgr = { name: "Sagitario A*", type: "Agujero negro", pos: [0,0,0], focusRadius: 3.0, distance: "26.000 ly", desc: "El agujero negro supermasivo del centro de la Vía Láctea, con unos 4 millones de masas solares.", label: "Sgr A*", aliases: ["Sagittarius A*", "Sgr A*"] };
+    var sun = { name: "Sol", type: "Estrella", pos: [8.2, .12, 1.2], focusRadius: 3.2, distance: "26.000 ly del centro galáctico", desc: "Nuestra estrella, en el brazo de Orión. En esta escala es un punto; su sistema planetario no sería visible.", label: "Sol", aliases: ["Sun"], fidelity: "real" };
+    var sgr = { name: "Sagitario A*", type: 5, kind: "Agujero negro", pos: [0,0,0], radius: .36, focusRadius: 1.6, distance: "26.000 ly", desc: "El agujero negro supermasivo del centro de la Vía Láctea, con unos 4 millones de masas solares. El anillo es una representación del disco de acreción.", label: "Sgr A*", aliases: ["Sagittarius A*", "Sgr A*"], fidelity: "approx" };
     addObject(s, sun);
     addObject(s, sgr);
+    s.spheres.push(sgr);
+    var cygnus = { name: "Cygnus X-1", type: 5, kind: "Agujero negro", pos: [7.2, .85, 1.4], radius: .16, focusRadius: 1.0, distance: "7.200 ly", desc: "Un agujero negro estelar que absorbe materia de una estrella compañera; uno de los primeros candidatos confirmados.", label: "Cygnus X-1", aliases: ["Cyg X-1"], fidelity: "approx" };
+    addObject(s, cygnus);
+    s.spheres.push(cygnus);
+    var bhRing = pointCloud();
+    for (var bh = 0; bh < 360; bh++) {
+      var bhAngle = bh / 360 * Math.PI * 2;
+      addPoint(bhRing, Math.cos(bhAngle) * .62, Math.sin(bhAngle) * .05, Math.sin(bhAngle) * .62, [1.0,.44,.10], 1.0, .45);
+    }
+    s.points.push(uploadPoints(bhRing));
     var sunPoints = pointCloud();
     addPoint(sunPoints, 8.2, .12, 1.2, [.55,.85,1.0], 11, .9);
     s.points.push(uploadPoints(sunPoints));
@@ -1051,9 +1169,30 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       s.points.push(uploadPoints(glow));
       addObject(s, {
         name: n.name, type: n.type, pos: n.pos, focusRadius: 2.0,
-        distance: n.dist, desc: n.desc, label: null, aliases: n.aliases
+        distance: n.dist, desc: n.desc, label: null, aliases: n.aliases, fidelity: "approx"
       });
     });
+    var namedStars = [
+      { name: "Próxima Centauri", pos: [7.9, .10, 1.12], dist: "4,24 ly", label: true, desc: "La estrella más cercana al Sol; alberga el planeta rocoso Próxima b." },
+      { name: "Alfa Centauri", pos: [7.96, .08, 1.16], dist: "4,37 ly", label: false, desc: "El sistema estelar más cercano, formado por Alfa Centauri A y B." },
+      { name: "Sirius", pos: [8.55, -.18, 1.62], dist: "8,6 ly", label: true, desc: "La estrella más brillante del cielo nocturno, en la constelación de Can Mayor." },
+      { name: "Betelgeuse", pos: [8.02, .36, 1.78], dist: "~ 550 ly", label: true, desc: "Una supergigante roja en Orión, cerca del final de su vida." },
+      { name: "Vega", pos: [8.72, .42, .92], dist: "25 ly", label: false, desc: "Una estrella joven y brillante de la constelación de Lyra." },
+      { name: "Antares", pos: [7.32, -.30, 1.40], dist: "~ 550 ly", label: false, desc: "Una supergigante roja en el corazón de Scorpius." },
+      { name: "Polaris", pos: [8.12, .70, .20], dist: "~ 430 ly", label: false, desc: "La estrella polar, cerca del eje de rotación de la Tierra." },
+      { name: "Eta Carinae", pos: [7.68, -.10, 1.90], dist: "~ 7.500 ly", label: false, desc: "Un sistema estelar masivo e inestable dentro de la Nebulosa de Carina." }
+    ];
+    namedStars.forEach(function (star) {
+      var glow = pointCloud();
+      addPoint(glow, star.pos[0], star.pos[1], star.pos[2], [.72,.88,1.0], 7, .68);
+      s.points.push(uploadPoints(glow));
+      addObject(s, {
+        name: star.name, type: "Estrella", kind: "Estrella", pos: star.pos, focusRadius: 1.1,
+        distance: star.dist, desc: star.desc, label: star.label ? star.name : null, fidelity: "approx"
+      });
+    });
+    addObject(s, { name: "Omega Centauri", type: "Cúmulo globular", kind: "Cúmulo globular", pos: [7.35,-.55,1.0], focusRadius: 1.2, distance: "15.800 ly", desc: "El cúmulo globular más grande de la Vía Láctea, con millones de estrellas viejas.", label: "Omega Centauri", fidelity: "approx" });
+    addObject(s, { name: "M13", type: "Cúmulo globular", kind: "Cúmulo globular", pos: [8.80,.55,.60], focusRadius: 1.1, distance: "22.200 ly", desc: "El Gran Cúmulo de Hércules, un enjambre de cientos de miles de estrellas.", label: null, aliases: ["Hércules"], fidelity: "approx" });
     return s;
   }
 
@@ -1066,7 +1205,12 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       { name: "Gran Nube de Magallanes", pos: [.18,.02,.28], radius: .16, focusRadius: .7, distance: "160.000 ly", desc: "Galaxia satélite irregular de la Vía Láctea, visible desde el hemisferio sur.", label: false, kind: "irregular", aliases: ["LMC"] },
       { name: "Pequeña Nube de Magallanes", pos: [.28,-.10,.38], radius: .12, focusRadius: .6, distance: "200.000 ly", desc: "Otra galaxia satélite irregular, compañera de la Gran Nube.", label: false, kind: "irregular", aliases: ["SMC"] },
       { name: "Canis Major", pos: [-.22,-.05,.2], radius: .08, focusRadius: .5, distance: "25.000 ly", desc: "Una galaxia enana muy próxima, probablemente parte del disco exterior de la Vía Láctea.", label: false, kind: "dwarf" },
-      { name: "Sculptor", pos: [.4,-.2,.5], radius: .07, focusRadius: .5, distance: "290.000 ly", desc: "Galaxia enana del Grupo Local.", label: false, kind: "dwarf" }
+      { name: "Sculptor", pos: [.4,-.2,.5], radius: .07, focusRadius: .5, distance: "290.000 ly", desc: "Galaxia enana del Grupo Local.", label: false, kind: "dwarf" },
+      { name: "M32", pos: [2.28,.22,.18], radius: .12, focusRadius: .55, distance: "2,49 Mly", desc: "Una galaxia enana elíptica satélite de Andrómeda.", label: false, kind: "dwarf", aliases: ["NGC 221"] },
+      { name: "M110", pos: [2.68,.18,.38], radius: .11, focusRadius: .55, distance: "2,69 Mly", desc: "Otra galaxia enana satélite de Andrómeda.", label: false, kind: "dwarf", aliases: ["NGC 205"] },
+      { name: "NGC 6822", pos: [.10,-.22,.62], radius: .09, focusRadius: .5, distance: "1,6 Mly", desc: "Una galaxia irregular aislada del Grupo Local, también llamada Galaxia de Barnard.", label: false, kind: "irregular", aliases: ["Barnard"] },
+      { name: "IC 10", pos: [.52,.10,.72], radius: .06, focusRadius: .45, distance: "2,2 Mly", desc: "Una pequeña galaxia irregular con formación estelar intensa.", label: false, kind: "irregular" },
+      { name: "Wolf-Lundmark-Melotte", pos: [-.30,.12,.72], radius: .07, focusRadius: .45, distance: "3,0 Mly", desc: "Una galaxia enana aislada en el borde del Grupo Local.", label: false, kind: "dwarf", aliases: ["WLM"] }
     ];
     galaxies.forEach(function (g) {
       var count = g.kind === "spiral" ? 4200 : (g.kind === "irregular" ? 900 : 450);
@@ -1078,7 +1222,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
         name: g.name,
         type: g.kind === "spiral" ? "Galaxia espiral" : "Galaxia satélite",
         pos: g.pos, focusRadius: g.focusRadius, distance: g.distance,
-        desc: g.desc, label: g.label ? g.name : null, aliases: g.aliases || []
+        desc: g.desc, label: g.label ? g.name : null, aliases: g.aliases || [], fidelity: "approx"
       });
     });
     return s;
@@ -1092,6 +1236,9 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       { name: "Fornax", pos: [.35,-.35,.55], type: "Cúmulo de galaxias", dist: "62 Mly", desc: "Un cúmulo compacto en el hemisferio sur.", label: false, size: 18 },
       { name: "Hydra", pos: [.95,-.22,.48], type: "Cúmulo de galaxias", dist: "160 Mly", desc: "Uno de los cúmulos más masivos del universo local.", label: false, size: 22 },
       { name: "Centaurus", pos: [.78,.40,.32], type: "Cúmulo de galaxias", dist: "160 Mly", desc: "Cúmulo dominado por la galaxia elíptica NGC 4696.", label: false, size: 20 },
+      { name: "Perseo", pos: [.98,.34,.90], type: "Cúmulo de galaxias", dist: "240 Mly", desc: "Uno de los cúmulos más masivos y calientes del universo local, en el supercúmulo Perseo-Piscis.", label: true, size: 28, aliases: ["Perseus", "Perseus-Pisces"] },
+      { name: "Coma", pos: [1.15,.16,.58], type: "Cúmulo de galaxias", dist: "320 Mly", desc: "El cúmulo de Coma, un laboratorio clásico para estudiar la materia oscura y el gas intracumular.", label: true, size: 26, aliases: ["Coma Cluster", "Abell 1656"] },
+      { name: "Norma", pos: [.62,-.34,.78], type: "Cúmulo de galaxias", dist: "200 Mly", desc: "Un cúmulo masivo cercano al Gran Atractor.", label: false, size: 22 },
       { name: "Gran Atractor", pos: [.18,.15,.78], type: "Estructura de flujo", dist: "250 Mly", desc: "Una región de sobredensidad hacia la que se mueven muchas galaxias, no un objeto único.", label: true, size: 30 },
       { name: "Shapley", pos: [1.10,.65,.85], type: "Supercúmulo", dist: "650 Mly", desc: "Uno de los supercúmulos más masivos del universo local.", label: true, size: 26 },
       { name: "Vacío Local", pos: [-.55,-.30,.10], type: "Vacío cósmico", dist: "75 Mly", desc: "Una gran región subdensa cercana al Grupo Local.", label: true, size: 10 }
@@ -1110,9 +1257,13 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       });
       addObject(s, {
         name: n.name, type: n.type, pos: n.pos, focusRadius: 1.0,
-        distance: n.dist, desc: n.desc, label: n.label ? n.name : null
+        distance: n.dist, desc: n.desc, label: n.label ? n.name : null,
+        aliases: n.aliases || [], fidelity: "approx"
       });
     });
+    var m87 = { name: "M87*", type: 5, kind: "Agujero negro", pos: [.55,.18,.18], radius: .075, focusRadius: .85, distance: "54 Mly", desc: "El agujero negro supermasivo del centro de la galaxia M87, en Virgo. Fue el primero fotografiado por el Event Horizon Telescope.", label: "M87*", aliases: ["M87", "Virgo A", "Pōwehi"], fidelity: "approx" };
+    addObject(s, m87);
+    s.spheres.push(m87);
     s.points.push(uploadPoints(pc));
     var verts = [];
     for (var i = 0; i < nodes.length; i++) {
@@ -1207,7 +1358,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
         type: "Nodo de la red cósmica",
         pos: p, focusRadius: 1.7, distance: "z = 0 · caja 25 Mpc/h",
         desc: "Un pico de densidad de gas en el campo hidrodinámico CAMELS-SIMBA EX. El color mezcla densidad y temperatura.",
-        label: "Cúmulo " + (i + 1)
+        label: "Cúmulo " + (i + 1), fidelity: "real"
       });
       var glow = pointCloud();
       addPoint(glow, p[0], p[1], p[2], [1.0,.72,.30], 46, .30);
@@ -1286,7 +1437,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       distance: "0.005 < z < 0.15",
       desc: count.toLocaleString("es") + " galaxias reales del Sloan Digital Sky Survey (DR18), con posición 3D derivada del corrimiento al rojo y color g-r.",
       label: "SDSS",
-      level: 5
+      level: 5,
+      fidelity: "real"
     });
     s.labels.push(s.objects[0]);
     s.objects.push({
@@ -1297,7 +1449,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       distance: "0",
       desc: "El observador está en el centro de este mapa de SDSS; cada punto es una galaxia real.",
       label: null,
-      level: 5
+      level: 5,
+      fidelity: "real"
     });
     catalog.push(s.objects[0], s.objects[1]);
     return s;
@@ -1351,7 +1504,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       focusRadius: .8,
       distance: "0",
       desc: "Estamos en el centro de este mapa de todo el cielo; las direcciones son reales.",
-      label: null
+      label: null,
+      fidelity: "real"
     });
     addObject(s, {
       name: "2MRS",
@@ -1360,7 +1514,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       focusRadius: 2.0,
       distance: "hasta ~400 Mpc",
       desc: count.toLocaleString("es") + " galaxias reales del 2MASS Redshift Survey, cubriendo el 91% del cielo. Las distancias radiales están comprimidas para una vista única.",
-      label: "2MRS"
+      label: "2MRS",
+      fidelity: "real"
     });
     addObject(s, {
       name: "CMB",
@@ -1369,8 +1524,19 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       focusRadius: 2.8,
       distance: "13.800 millones de años luz (lookback)",
       desc: "La radiación de fondo de microondas de Planck: la primera luz del universo, a 380.000 años del Big Bang.",
-      label: "CMB"
+      label: "CMB",
+      fidelity: "real"
     });
+    var ton = { name: "TON 618", type: 5, kind: "Agujero negro / cuásar", pos: [-.95, .72, -2.25], radius: .065, focusRadius: .8, distance: "~ 10.400 Mly (lookback)", desc: "Un cuásar ultramasivo y uno de los agujeros negros más pesados conocidos. La posición radial está comprimida en esta vista.", label: "TON 618", aliases: ["TON618"], fidelity: "approx" };
+    var threeC = { name: "3C 273", type: 5, kind: "Agujero negro / cuásar", pos: [1.35, -.52, -2.38], radius: .045, focusRadius: .7, distance: "~ 2.400 Mly", desc: "El primer cuásar identificado, en la constelación de Virgo. Su brillo proviene del disco de acreción de un agujero negro supermasivo.", label: "3C 273", aliases: ["Quasar 3C 273"], fidelity: "approx" };
+    addObject(s, ton);
+    addObject(s, threeC);
+    s.spheres.push(ton, threeC);
+    var quasarGlow = pointCloud();
+    addPoint(quasarGlow, ton.pos[0], ton.pos[1], ton.pos[2], [1.0,.45,.10], 10, .55);
+    addPoint(quasarGlow, threeC.pos[0], threeC.pos[1], threeC.pos[2], [1.0,.62,.20], 7, .55);
+    s.points.push(uploadPoints(quasarGlow));
+    addObject(s, { name: "Gran Muro de Hércules", type: "Estructura de gran escala", kind: "Estructura de gran escala", pos: [.2,.3,-2.7], focusRadius: 1.2, distance: "~ 10.000 Mly", desc: "Una de las mayores estructuras conocidas del universo observable; su extensión supera los 10.000 millones de años luz.", label: "Gran Muro", fidelity: "illustrative" });
     return s;
   }
 
@@ -1455,6 +1621,10 @@ void main() { fragColor = vec4(vColor, vAlpha); }
 
   function activateLevel(index, focusObj) {
     if (index < 0 || index >= LEVELS.length) return;
+    fadeCanvas.width = canvas.width;
+    fadeCanvas.height = canvas.height;
+    var fadeCtx = fadeCanvas.getContext("2d");
+    fadeCtx.drawImage(canvas, 0, 0);
     fade.classList.add("on");
     setTimeout(function () {
       current = index;
@@ -1482,9 +1652,13 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     var dx = camera.target[0] - obj.pos[0];
     var dz = camera.target[2] - obj.pos[2];
     if (Math.abs(dx) + Math.abs(dz) > .001) camera.tTheta = Math.atan2(dx, dz);
-    infoType.textContent = obj.type;
+    var typeName = objectTypeLabel(obj);
+    infoType.textContent = typeName;
     infoName.textContent = obj.name;
     infoDistance.textContent = obj.distance;
+    var fidelity = obj.fidelity || "approx";
+    infoFidelity.className = "fidelity " + (fidelity === "real" ? "real" : fidelity === "illustrative" ? "illustrative" : "approx");
+    infoFidelity.textContent = fidelity === "real" ? "dato real" : fidelity === "illustrative" ? "ilustrativo" : "aproximado";
     infoDesc.textContent = obj.desc;
     info.classList.add("on");
     Array.prototype.forEach.call(document.querySelectorAll(".label"), function (el) { el.classList.remove("selected"); });
@@ -1503,6 +1677,13 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       return;
     }
     focusObject(obj);
+  }
+
+  function discoverRandom() {
+    if (!catalog.length) return;
+    stopTour();
+    var obj = catalog[Math.floor(Math.random() * catalog.length)];
+    selectObject(obj);
   }
 
   function closeInfo() {
@@ -1568,7 +1749,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     gl.uniform3fv(sphereLoc.color, obj.color || [.5, .6, .8]);
     gl.uniform3fv(sphereLoc.color2, obj.color2 || [.2, .3, .5]);
     gl.uniform3fv(sphereLoc.cam, camera.eye);
-    gl.uniform1f(sphereLoc.type, obj.type === 0 ? 0 : obj.type === 1 ? 1 : obj.type === 2 ? 2 : obj.type === 4 ? 4 : 3);
+    gl.uniform1f(sphereLoc.type, obj.type === 0 ? 0 : obj.type === 1 ? 1 : obj.type === 2 ? 2 : obj.type === 4 ? 4 : obj.type === 5 ? 5 : 3);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, cmbTexture);
     gl.uniform1i(sphereLoc.texture, 0);
@@ -1596,15 +1777,32 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   function updateLabels() {
     var scene = scenes[current];
     if (!scene || !scene.labelEls) return;
-    scene.labelEls.forEach(function (entry) {
+    var placed = [];
+    var entries = scene.labelEls.slice().sort(function (a, b) {
+      return (a.obj === selected ? 100 : 0) - (b.obj === selected ? 100 : 0);
+    });
+    entries.forEach(function (entry) {
       var p = projectPoint(entry.obj.pos);
       if (!p || p.x < -80 || p.x > window.innerWidth + 80 || p.y < -40 || p.y > window.innerHeight + 40) {
         entry.el.style.display = "none";
-      } else {
-        entry.el.style.display = "block";
-        entry.el.style.left = p.x + "px";
-        entry.el.style.top = p.y + "px";
+        return;
       }
+      var blocked = false;
+      for (var i = 0; i < placed.length; i++) {
+        if (Math.hypot(placed[i].x - p.x, placed[i].y - p.y) < (window.innerWidth < 600 ? 30 : 44)) {
+          blocked = true;
+          break;
+        }
+      }
+      if (blocked && entry.obj !== selected) {
+        entry.el.style.display = "none";
+        return;
+      }
+      entry.el.style.display = "block";
+      var labelHalf = Math.min(90, Math.max(20, entry.el.offsetWidth / 2));
+      entry.el.style.left = clamp(p.x, labelHalf + 6, window.innerWidth - labelHalf - 6) + "px";
+      entry.el.style.top = Math.max(30, p.y) + "px";
+      placed.push(p);
     });
   }
 
@@ -1674,6 +1872,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     activateLevel(5);
   });
   tourBtn.addEventListener("click", function () { if (tour.active) stopTour(); else startTour(); });
+  document.getElementById("random-btn").addEventListener("click", discoverRandom);
   document.getElementById("about-btn").addEventListener("click", function () { aboutModal.classList.add("on"); });
   document.getElementById("about-close").addEventListener("click", function () { aboutModal.classList.remove("on"); });
   document.getElementById("search-close").addEventListener("click", closeSearch);
@@ -1697,6 +1896,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     else if (e.key === "/" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); openSearch(); }
     else if (e.key === "f" || e.key === "F") toggleFullscreen();
     else if (e.key === "r" || e.key === "R") { if (scenes[current]) resetCamera(scenes[current]); }
+    else if (e.key === "+" || e.key === "=") { stopTour(); camera.tRadius = clamp(camera.tRadius * .78, .55, 160); maybeSwitchLevelByZoom(); }
+    else if (e.key === "-" || e.key === "_") { stopTour(); camera.tRadius = clamp(camera.tRadius * 1.28, .55, 160); maybeSwitchLevelByZoom(); }
     else if (e.key === "p" || e.key === "P" || e.code === "Space") { e.preventDefault(); paused = !paused; }
     else if (e.key === "Escape") { aboutModal.classList.remove("on"); stopTour(); closeSearch(); closeInfo(); }
   });
@@ -1761,7 +1962,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       var b = document.createElement("button");
       b.type = "button";
       b.className = "result";
-      b.innerHTML = '<span>' + o.name + '</span><small>' + o.type + ' · ' + LEVELS[o.level].name + '</small>';
+      b.innerHTML = '<span>' + o.name + '</span><small>' + objectTypeLabel(o) + ' · ' + LEVELS[o.level].name + '</small>';
       b.addEventListener("click", function () { closeSearch(); selectObject(o); });
       searchResults.appendChild(b);
     });
@@ -1812,11 +2013,32 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     camera.tTheta -= dx * .006;
     camera.tPhi = clamp(camera.tPhi - dy * .005, -1.2, 1.2);
   });
+  function maybeSwitchLevelByZoom() {
+    var scene = scenes[current];
+    if (!scene || Date.now() <= wheelTransition) return false;
+    var base = scene.camera.radius;
+    if (camera.tRadius >= base * 1.75 && current < LEVELS.length - 1) {
+      wheelTransition = Date.now() + 850;
+      activateLevel(current + 1);
+      return true;
+    }
+    if (camera.tRadius <= base * .38 && current > 0) {
+      wheelTransition = Date.now() + 850;
+      activateLevel(current - 1);
+      return true;
+    }
+    return false;
+  }
   function endPointer(e) {
+    var wasPinch = pinch > 0;
     pointers.delete(e.pointerId);
     if (pointers.size === 0) {
       dragging = false;
       canvas.style.cursor = "grab";
+      if (wasPinch) {
+        pinch = 0;
+        if (maybeSwitchLevelByZoom()) return;
+      }
       if (moved < 5 && performance.now() - pointerDownTime < 500) {
         pickAt(e.clientX, e.clientY);
       }
@@ -1877,7 +2099,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
           distance: "z = " + pointBest.z.toFixed(4),
           desc: "Una galaxia real del catálogo SDSS DR18. La posición 3D se infiere a partir de su corrimiento al rojo y su color g-r.",
           level: 5,
-          label: null
+          label: null,
+          fidelity: "real"
         };
       }
     }
@@ -1899,7 +2122,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
           distance: "v = " + Math.round(twoBest.v).toLocaleString("es") + " km/s",
           desc: "Una galaxia real del 2MASS Redshift Survey, en una vista de todo el cielo. La distancia radial está comprimida para poder ver el conjunto.",
           level: 6,
-          label: null
+          label: null,
+          fidelity: "real"
         };
       }
     }

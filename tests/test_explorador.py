@@ -155,6 +155,34 @@ def test_explorer_has_all_sky_2mrs_and_planck_cmb():
     assert CMB_IMAGE.is_file()
 
 
+def test_explorer_has_free_zoom_transitions_and_black_holes():
+    html = _html()
+    for marker in (
+        'id="fade-canvas"',
+        "preserveDrawingBuffer",
+        "maybeSwitchLevelByZoom",
+        "discoverRandom",
+        "info-fidelity",
+        "objectTypeLabel",
+        "uType > 4.5",
+        "Sagitario A*",
+        "Cygnus X-1",
+        "M87*",
+        "TON 618",
+        "3C 273",
+        "Plutón",
+        "Ceres",
+        "Eris",
+        "Titán",
+        "Cinturón de asteroides",
+        "Cinturón de Kuiper",
+    ):
+        assert marker in html
+    assert 'id="random-btn"' in html
+    assert "dato real" in html
+    assert "labelHalf" in html
+
+
 def test_explorer_has_no_external_assets_or_dashboards():
     html = _html()
     assert not re.search(r'<script[^>]+src="https?://', html, re.IGNORECASE)
