@@ -265,9 +265,36 @@
     transition: opacity 1.2s;
   }
   #hint.gone { opacity: 0; }
-  #source {
+  #tour-card {
     position: fixed;
-    right: max(18px, env(safe-area-inset-right, 18px));
+    left: 50%;
+    bottom: max(92px, calc(env(safe-area-inset-bottom, 0px) + 92px));
+    transform: translate(-50%, 8px);
+    z-index: 4;
+    width: min(560px, 88vw);
+    padding: 12px 16px;
+    border: 1px solid rgba(180,205,225,.20);
+    background: rgba(5,10,18,.82);
+    backdrop-filter: blur(8px);
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .5s, transform .5s;
+  }
+  #tour-card.on { opacity: 1; transform: translate(-50%, 0); }
+  .tour-kicker {
+    display: block;
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .22em;
+    color: var(--amber);
+    margin-bottom: 5px;
+  }
+  #tour-title { display: block; font-size: 18px; font-weight: 300; letter-spacing: .06em; }
+  #tour-text { display: block; margin-top: 4px; font-family: var(--mono); font-size: 10px; color: var(--muted); line-height: 1.5; }
+  #tour-btn[aria-pressed="true"] { color: var(--amber); border-color: rgba(245,166,35,.55); }
+  #source {
+    position: fixed;    right: max(18px, env(safe-area-inset-right, 18px));
     top: 50%;
     transform: translateY(60px);
     z-index: 4;
@@ -411,6 +438,8 @@
   </div>
   <div id="actions">
     <button class="hud-btn" id="search-btn" type="button" aria-label="Buscar objeto">BUSCAR /</button>
+    <button class="hud-btn" id="data-btn" type="button" style="display:none">DATOS: CAMELS</button>
+    <button class="hud-btn" id="tour-btn" type="button" aria-pressed="false">TOUR</button>
     <button class="hud-btn" id="about-btn" type="button">ACERCA</button>
     <button class="hud-btn" id="fullscreen-btn" type="button">PANTALLA</button>
   </div>
@@ -418,6 +447,12 @@
 
 <nav id="rail" aria-label="Escalas cósmicas"></nav>
 <div id="source">CAMELS-SIMBA · NASA · escalas normalizadas</div>
+
+<div id="tour-card" role="status" aria-live="polite">
+  <span class="tour-kicker">RECORRIDO GUÍADO</span>
+  <strong id="tour-title">Tierra</strong>
+  <span id="tour-text">El origen de todas las observaciones.</span>
+</div>
 
 <aside id="info" aria-live="polite">
   <div class="type" id="info-type">Objeto</div>
@@ -449,15 +484,16 @@
     <button class="hud-btn modal-close" id="about-close" type="button">CERRAR</button>
     <h2>Un universo, seis escalas</h2>
     <p>Este explorador conecta la Tierra, el Sistema Solar, la Vía Láctea, el Grupo Local, Laniakea y la red cósmica en una sola experiencia. Las escalas son <b>modelos normalizados</b>: tamaños, separaciones y brillos se ajustan para que cada nivel sea visible. No es un modelo físico lineal de 14.000 millones de años luz.</p>
-    <p>La inspiración conceptual son los mapas multi-escala de <a href="https://mapoftheuniverse.net/" target="_blank" rel="noopener">Map of the Universe</a> (SDSS) y <a href="https://universemap.net/3d-map/" target="_blank" rel="noopener">Universe Map</a>. Los datos de la red cósmica son <b>CAMELS-SIMBA EX</b> (CMD); los planetas y estructuras cercanas usan datos públicos/approx. de NASA y catálogos astronómicos.</p>
-    <p>Atajos: <b>1–6</b> escalas, <b>/</b> buscar, <b>doble clic</b> enfocar, <b>F</b> pantalla completa, <b>R</b> reiniciar vista, <b>P</b> pausar rotación.</p>
-    <p style="color:rgba(184,202,217,.45);font-size:11px">Atribución de datos: CAMELS Multifield Dataset (Villaescusa-Navarro et al.), NASA Planetary Fact Sheet. Visualización educativa; no usar para inferencia científica.</p>
+    <p>La inspiración conceptual son los mapas multi-escala de <a href="https://mapoftheuniverse.net/" target="_blank" rel="noopener">Map of the Universe</a> (SDSS) y <a href="https://universemap.net/3d-map/" target="_blank" rel="noopener">Universe Map</a>. La red cósmica combina el <b>mapa SDSS DR18</b> de 45.000 galaxias reales con el campo hidrodinámico <b>CAMELS-SIMBA EX</b> (CMD); los planetas y estructuras cercanas usan datos públicos/approx. de NASA y catálogos astronómicos.</p>
+    <p>Atajos: <b>1–6</b> escalas, <b>/</b> buscar, <b>doble clic</b> enfocar, <b>TOUR</b> recorrido guiado, <b>DATOS</b> alterna SDSS/CAMELS, <b>F</b> pantalla completa, <b>R</b> reiniciar vista, <b>P</b> pausar rotación. La rueda fuera de rango viaja a la escala siguiente.</p>
+    <p style="color:rgba(184,202,217,.45);font-size:11px">Atribución de datos: SDSS DR18 (Sloan Digital Sky Survey), CAMELS Multifield Dataset (Villaescusa-Navarro et al.), NASA Planetary Fact Sheet. Visualización educativa; no usar para inferencia científica.</p>
   </div>
 </div>
 
 <div id="loading">CARGANDO EL UNIVERSO…</div>
 
 <script src="universo_camels.js"></script>
+<script src="explorador_sdss.js"></script>
 <script>
 (function () {
   "use strict";
@@ -468,7 +504,7 @@
     { name: "Vía Láctea", scale: "≈ 100.000 ly", address: "Vía Láctea · ≈ 100.000 ly" },
     { name: "Grupo Local", scale: "≈ 10 Mly", address: "Grupo Local · ≈ 10 Mly" },
     { name: "Laniakea", scale: "≈ 520 Mly", address: "Laniakea · ≈ 520 Mly" },
-    { name: "Red cósmica", scale: "≈ 14 Gly", address: "Red cósmica · ≈ 14 Gly" }
+    { name: "Red cósmica", scale: "25 Mpc/h", address: "Red cósmica · CAMELS 25 Mpc/h" }
   ];
 
   var canvas = document.getElementById("space");
@@ -487,6 +523,12 @@
   var aboutModal = document.getElementById("about-modal");
   var searchInput = document.getElementById("search-input");
   var searchResults = document.getElementById("search-results");
+  var dataBtn = document.getElementById("data-btn");
+  var sourceEl = document.getElementById("source");
+  var tourBtn = document.getElementById("tour-btn");
+  var tourCard = document.getElementById("tour-card");
+  var tourTitleEl = document.getElementById("tour-title");
+  var tourTextEl = document.getElementById("tour-text");
 
   var gl = canvas.getContext("webgl2", { alpha: false, antialias: true, depth: true, powerPreference: "high-performance" });
   if (!gl) {
@@ -874,8 +916,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
 
   function buildEarth() {
     var s = { index: 0, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 4.1, theta: .55, phi: .18 } };
-    s.spheres.push({ name: "Tierra", type: 0, pos: [0,0,0], radius: 1, focusRadius: 2.3, distance: "12.742 km de diámetro", desc: "Nuestro planeta: océanos, continentes, atmósfera y el único mundo conocido con vida. Es el origen de todas las observaciones.", label: "Tierra" });
-    s.spheres.push({ name: "Luna", type: 1, pos: [2.7, .18, .35], radius: .27, focusRadius: .9, distance: "384.400 km", desc: "El satélite natural de la Tierra. Su superficie gris está marcada por cráteres y mares basálticos.", label: "Luna" });
+    s.spheres.push({ name: "Tierra", type: 0, pos: [0,0,0], radius: 1, focusRadius: 2.3, distance: "12.742 km de diámetro", desc: "Nuestro planeta: océanos, continentes, atmósfera y el único mundo conocido con vida. Es el origen de todas las observaciones.", label: "Tierra", aliases: ["Terra", "Planeta Tierra"] });
+    s.spheres.push({ name: "Luna", type: 1, pos: [2.7, .18, .35], radius: .27, focusRadius: .9, distance: "384.400 km", desc: "El satélite natural de la Tierra. Su superficie gris está marcada por cráteres y mares basálticos.", label: "Luna", aliases: ["Moon"] });
     s.spheres.forEach(function (o) { addObject(s, o); });
     var moonOrbit = pointCloud();
     for (var m = 0; m < 260; m++) {
@@ -903,7 +945,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       { name: "Urano", r: .36, color: [.55,.82,.86], color2: [.22,.48,.55], orbit: 12.0, dist: "19,2 AU", label: true },
       { name: "Neptuno", r: .35, color: [.20,.35,.80], color2: [.08,.16,.45], orbit: 13.8, dist: "30,1 AU", label: true }
     ];
-    s.spheres.push({ name: "Sol", type: 2, pos: [0,0,0], radius: .95, focusRadius: 2.8, distance: "1 UA de la Tierra", desc: "La estrella que sostiene el Sistema Solar. Su luz tarda unos 8 minutos en llegar a la Tierra.", label: "Sol" });
+    s.spheres.push({ name: "Sol", type: 2, pos: [0,0,0], radius: .95, focusRadius: 2.8, distance: "1 UA de la Tierra", desc: "La estrella que sostiene el Sistema Solar. Su luz tarda unos 8 minutos en llegar a la Tierra.", label: "Sol", aliases: ["Sun", "Estrella"] });
     var sunGlow = pointCloud();
     addPoint(sunGlow, 0, 0, 0, [1.0,.55,.12], 46, .35);
     addPoint(sunGlow, 0, 0, 0, [1.0,.85,.45], 18, .55);
@@ -959,24 +1001,39 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     addPoint(core, 0, 0, 0, [1.0,.72,.28], 42, .50);
     addPoint(core, 0, 0, 0, [1.0,.94,.70], 15, .80);
     s.points.push(uploadPoints(core));
-    var sun = { name: "Sol", type: "Estrella", pos: [8.2, .12, 1.2], focusRadius: 3.2, distance: "26.000 ly del centro galáctico", desc: "Nuestra estrella, en el brazo de Orión. En esta escala es un punto; su sistema planetario no sería visible.", label: "Sol" };
-    var sgr = { name: "Sagitario A*", type: "Agujero negro", pos: [0,0,0], focusRadius: 3.0, distance: "26.000 ly", desc: "El agujero negro supermasivo del centro de la Vía Láctea, con unos 4 millones de masas solares.", label: "Sgr A*" };
+    var sun = { name: "Sol", type: "Estrella", pos: [8.2, .12, 1.2], focusRadius: 3.2, distance: "26.000 ly del centro galáctico", desc: "Nuestra estrella, en el brazo de Orión. En esta escala es un punto; su sistema planetario no sería visible.", label: "Sol", aliases: ["Sun"] };
+    var sgr = { name: "Sagitario A*", type: "Agujero negro", pos: [0,0,0], focusRadius: 3.0, distance: "26.000 ly", desc: "El agujero negro supermasivo del centro de la Vía Láctea, con unos 4 millones de masas solares.", label: "Sgr A*", aliases: ["Sagittarius A*", "Sgr A*"] };
     addObject(s, sun);
     addObject(s, sgr);
     var sunPoints = pointCloud();
     addPoint(sunPoints, 8.2, .12, 1.2, [.55,.85,1.0], 11, .9);
     s.points.push(uploadPoints(sunPoints));
+    var deepSky = [
+      { name: "Nebulosa de Orión", pos: [8.35, .20, 1.55], type: "Nebulosa", dist: "1.344 ly", desc: "Una guardería estelar cercana, visible en la espada de Orión. Aquí es una marca aproximada dentro de la Vía Láctea.", aliases: ["M42", "Orion Nebula"] },
+      { name: "Nebulosa de Carina", pos: [7.75, -.12, 1.95], type: "Nebulosa", dist: "7.500 ly", desc: "Una nebulosa gigante con formación estelar intensa, hogar de Eta Carinae.", aliases: ["NGC 3372"] },
+      { name: "Nebulosa del Águila", pos: [8.65, .28, 1.02], type: "Nebulosa", dist: "5.700 ly", desc: "Nebulosa de emisión famosa por los Pilares de la Creación.", aliases: ["M16", "Eagle Nebula"] },
+      { name: "Nebulosa del Cangrejo", pos: [8.05, .02, 1.38], type: "Remanente de supernova", dist: "6.500 ly", desc: "Resto de la supernova observada en 1054; contiene un púlsar central.", aliases: ["M1", "Crab Nebula"] }
+    ];
+    deepSky.forEach(function (n) {
+      var glow = pointCloud();
+      addPoint(glow, n.pos[0], n.pos[1], n.pos[2], [.95,.55,.85], 8, .55);
+      s.points.push(uploadPoints(glow));
+      addObject(s, {
+        name: n.name, type: n.type, pos: n.pos, focusRadius: 2.0,
+        distance: n.dist, desc: n.desc, label: null, aliases: n.aliases
+      });
+    });
     return s;
   }
 
   function buildLocalGroup() {
     var s = { index: 3, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [1.15,0,0.2], radius: 5.2, theta: .35, phi: .5 } };
     var galaxies = [
-      { name: "Vía Láctea", pos: [0,0,0], radius: .55, focusRadius: 1.6, distance: "0 ly", desc: "Nuestra galaxia espiral barrada, con más de 100.000 millones de estrellas.", label: true, kind: "spiral" },
-      { name: "Andrómeda (M31)", pos: [2.5,.25,.25], radius: .62, focusRadius: 1.8, distance: "2,5 Mly", desc: "La gran galaxia espiral más cercana; se acerca a la Vía Láctea y se fusionará con ella en miles de millones de años.", label: true, kind: "spiral" },
-      { name: "Triángulo (M33)", pos: [2.05,-.28,.55], radius: .32, focusRadius: 1.2, distance: "2,7 Mly", desc: "Tercera galaxia espiral del Grupo Local, más pequeña que la Vía Láctea y Andrómeda.", label: true, kind: "spiral" },
-      { name: "Gran Nube de Magallanes", pos: [.18,.02,.28], radius: .16, focusRadius: .7, distance: "160.000 ly", desc: "Galaxia satélite irregular de la Vía Láctea, visible desde el hemisferio sur.", label: false, kind: "irregular" },
-      { name: "Pequeña Nube de Magallanes", pos: [.28,-.10,.38], radius: .12, focusRadius: .6, distance: "200.000 ly", desc: "Otra galaxia satélite irregular, compañera de la Gran Nube.", label: false, kind: "irregular" },
+      { name: "Vía Láctea", pos: [0,0,0], radius: .55, focusRadius: 1.6, distance: "0 ly", desc: "Nuestra galaxia espiral barrada, con más de 100.000 millones de estrellas.", label: true, kind: "spiral", aliases: ["Milky Way"] },
+      { name: "Andrómeda (M31)", pos: [2.5,.25,.25], radius: .62, focusRadius: 1.8, distance: "2,5 Mly", desc: "La gran galaxia espiral más cercana; se acerca a la Vía Láctea y se fusionará con ella en miles de millones de años.", label: true, kind: "spiral", aliases: ["M31", "NGC 224"] },
+      { name: "Triángulo (M33)", pos: [2.05,-.28,.55], radius: .32, focusRadius: 1.2, distance: "2,7 Mly", desc: "Tercera galaxia espiral del Grupo Local, más pequeña que la Vía Láctea y Andrómeda.", label: true, kind: "spiral", aliases: ["M33"] },
+      { name: "Gran Nube de Magallanes", pos: [.18,.02,.28], radius: .16, focusRadius: .7, distance: "160.000 ly", desc: "Galaxia satélite irregular de la Vía Láctea, visible desde el hemisferio sur.", label: false, kind: "irregular", aliases: ["LMC"] },
+      { name: "Pequeña Nube de Magallanes", pos: [.28,-.10,.38], radius: .12, focusRadius: .6, distance: "200.000 ly", desc: "Otra galaxia satélite irregular, compañera de la Gran Nube.", label: false, kind: "irregular", aliases: ["SMC"] },
       { name: "Canis Major", pos: [-.22,-.05,.2], radius: .08, focusRadius: .5, distance: "25.000 ly", desc: "Una galaxia enana muy próxima, probablemente parte del disco exterior de la Vía Láctea.", label: false, kind: "dwarf" },
       { name: "Sculptor", pos: [.4,-.2,.5], radius: .07, focusRadius: .5, distance: "290.000 ly", desc: "Galaxia enana del Grupo Local.", label: false, kind: "dwarf" }
     ];
@@ -990,7 +1047,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
         name: g.name,
         type: g.kind === "spiral" ? "Galaxia espiral" : "Galaxia satélite",
         pos: g.pos, focusRadius: g.focusRadius, distance: g.distance,
-        desc: g.desc, label: g.label ? g.name : null
+        desc: g.desc, label: g.label ? g.name : null, aliases: g.aliases || []
       });
     });
     return s;
@@ -1049,6 +1106,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
 
   function buildCosmic() {
     var s = { index: 5, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 4.2, theta: .62, phi: .18 } };
+    sdssPicking = null;
     if (!window.COSMOVerseCAMELS || !window.COSMOVerseCAMELS.data) {
       loading.textContent = "Falta el campo CAMELS (universo_camels.js).";
       return s;
@@ -1131,6 +1189,10 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   // State, camera and rendering.
   // ---------------------------------------------------------------------------
   var current = 0;
+  var dataMode = "camels";
+  var sdssPicking = null;
+  var tour = { active: false, index: 0, timer: 0 };
+  var wheelTransition = 0;
   var selected = null;
   var paused = false;
   var auto = true;
@@ -1147,6 +1209,63 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   var lastFrame = performance.now();
   var DPR = Math.min(window.devicePixelRatio || 1, 2);
 
+  function buildSDSS() {
+    var s = { index: 5, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 1.25, theta: .42, phi: .48 } };
+    sdssPicking = null;
+    if (!window.COSMOVerseSDSS || !window.COSMOVerseSDSS.data) {
+      loading.textContent = "Falta el catálogo SDSS (explorador_sdss.js).";
+      return s;
+    }
+    var count = window.COSMOVerseSDSS.count;
+    var extent = window.COSMOVerseSDSS.extentMpc / 1000.0;
+    var zMax = window.COSMOVerseSDSS.zMax;
+    var raw = atob(window.COSMOVerseSDSS.data);
+    var bytes = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    var view = new DataView(bytes.buffer);
+    var pc = pointCloud();
+    var points = [];
+    var offset = 0;
+    for (var k = 0; k < count; k++) {
+      var x = (view.getUint16(offset, true) / 65535 * 2 - 1) * extent;
+      var y = (view.getUint16(offset + 2, true) / 65535 * 2 - 1) * extent;
+      var z = (view.getUint16(offset + 4, true) / 65535 * 2 - 1) * extent;
+      var red = bytes[offset + 6] / 255;
+      var green = bytes[offset + 7] / 255;
+      var blue = bytes[offset + 8] / 255;
+      var redshift = view.getUint16(offset + 9, true) / 65535 * zMax;
+      offset += 11;
+      var c = [red, green, blue];
+      addPoint(pc, x, y, z, c, 1.0 + 1.4 * (red + green + blue) / 3, .55);
+      points.push({ pos: [x, y, z], z: redshift, color: c });
+    }
+    s.points.push(uploadPoints(pc));
+    sdssPicking = points;
+    s.objects.push({
+      name: "Mapa SDSS",
+      type: "Catálogo espectroscópico",
+      pos: [0,0,0],
+      focusRadius: 1.15,
+      distance: "0.005 < z < 0.15",
+      desc: count.toLocaleString("es") + " galaxias reales del Sloan Digital Sky Survey (DR18), con posición 3D derivada del corrimiento al rojo y color g-r.",
+      label: "SDSS",
+      level: 5
+    });
+    s.labels.push(s.objects[0]);
+    s.objects.push({
+      name: "Vía Láctea",
+      type: "Nuestra galaxia",
+      pos: [0,0,0],
+      focusRadius: .25,
+      distance: "0",
+      desc: "El observador está en el centro de este mapa de SDSS; cada punto es una galaxia real.",
+      label: null,
+      level: 5
+    });
+    catalog.push(s.objects[0], s.objects[1]);
+    return s;
+  }
+
   function buildScene(index) {
     if (scenes[index]) return scenes[index];
     var s;
@@ -1155,7 +1274,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     else if (index === 2) s = buildMilkyWay();
     else if (index === 3) s = buildLocalGroup();
     else if (index === 4) s = buildLaniakea();
-    else s = buildCosmic();
+    else s = dataMode === "sdss" ? buildSDSS() : buildCosmic();
     scenes[index] = s;
     return s;
   }
@@ -1185,6 +1304,22 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     camera.tPhi = scene.camera.phi;
   }
 
+  function updateDataUi() {
+    var cosmic = current === 5;
+    dataBtn.style.display = cosmic ? "inline-block" : "none";
+    dataBtn.textContent = dataMode === "sdss" ? "DATOS: SDSS" : "DATOS: CAMELS";
+    var scale = dataMode === "sdss" ? "≈ 2 Gly (z≤0.15)" : "25 Mpc/h";
+    var addressText = dataMode === "sdss" ? "Red cósmica · SDSS z≤0.15" : "Red cósmica · CAMELS 25 Mpc/h";
+    LEVELS[5].scale = scale;
+    LEVELS[5].address = addressText;
+    var railScale = rail.children[5] ? rail.children[5].querySelector(".scale") : null;
+    if (railScale) railScale.textContent = scale;
+    if (cosmic) address.innerHTML = "<b>Red cósmica</b> · " + addressText.replace("Red cósmica · ", "");
+    sourceEl.textContent = cosmic
+      ? (dataMode === "sdss" ? "SDSS DR18 · galaxias reales · escalas normalizadas" : "CAMELS-SIMBA EX · CMD · escalas normalizadas")
+      : "NASA · catálogos aproximados · escalas normalizadas";
+  }
+
   function activateLevel(index, focusObj) {
     if (index < 0 || index >= LEVELS.length) return;
     fade.classList.add("on");
@@ -1199,6 +1334,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       Array.prototype.forEach.call(rail.children, function (el, i) {
         el.classList.toggle("active", i === index);
       });
+      updateDataUi();
       hideHint();
       fade.classList.remove("on");
       if (focusObj) setTimeout(function () { focusObject(focusObj); }, 180);
@@ -1380,11 +1516,21 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     b.type = "button";
     b.className = "rail-item";
     b.innerHTML = '<span class="num">' + String(index + 1).padStart(2, "0") + '</span><span><span class="name">' + level.name + '</span><span class="scale">' + level.scale + '</span></span>';
-    b.addEventListener("click", function () { activateLevel(index); });
+    b.addEventListener("click", function () { stopTour(); activateLevel(index); });
     rail.appendChild(b);
   });
 
-  document.getElementById("search-btn").addEventListener("click", openSearch);
+  document.getElementById("search-btn").addEventListener("click", function () { stopTour(); openSearch(); });
+  dataBtn.addEventListener("click", function () {
+    stopTour();
+    dataMode = dataMode === "camels" ? "sdss" : "camels";
+    scenes[5] = null;
+    sdssPicking = null;
+    catalog = catalog.filter(function (o) { return o.level !== 5; });
+    closeInfo();
+    activateLevel(5);
+  });
+  tourBtn.addEventListener("click", function () { if (tour.active) stopTour(); else startTour(); });
   document.getElementById("about-btn").addEventListener("click", function () { aboutModal.classList.add("on"); });
   document.getElementById("about-close").addEventListener("click", function () { aboutModal.classList.remove("on"); });
   document.getElementById("search-close").addEventListener("click", closeSearch);
@@ -1402,17 +1548,57 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", function (e) {
     if (e.target === searchInput) return;
-    if (e.key >= "1" && e.key <= "6") activateLevel(Number(e.key) - 1);
-    else if (e.key === "ArrowRight" || e.key === "]") activateLevel(Math.min(LEVELS.length - 1, current + 1));
-    else if (e.key === "ArrowLeft" || e.key === "[") activateLevel(Math.max(0, current - 1));
+    if (e.key >= "1" && e.key <= "6") { stopTour(); activateLevel(Number(e.key) - 1); }
+    else if (e.key === "ArrowRight" || e.key === "]") { stopTour(); activateLevel(Math.min(LEVELS.length - 1, current + 1)); }
+    else if (e.key === "ArrowLeft" || e.key === "[") { stopTour(); activateLevel(Math.max(0, current - 1)); }
     else if (e.key === "/" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); openSearch(); }
     else if (e.key === "f" || e.key === "F") toggleFullscreen();
     else if (e.key === "r" || e.key === "R") { if (scenes[current]) resetCamera(scenes[current]); }
     else if (e.key === "p" || e.key === "P" || e.code === "Space") { e.preventDefault(); paused = !paused; }
-    else if (e.key === "Escape") { aboutModal.classList.remove("on"); closeSearch(); closeInfo(); }
+    else if (e.key === "Escape") { aboutModal.classList.remove("on"); stopTour(); closeSearch(); closeInfo(); }
   });
 
+  var TOUR_STOPS = [
+    { level: 0, title: "Tierra", text: "El origen de todas las observaciones: un planeta entre océanos, continentes y una Luna cercana." },
+    { level: 1, title: "Sistema Solar", text: "Ocho planetas, órbitas y una estrella. Las distancias están comprimidas para poder ver el conjunto." },
+    { level: 2, title: "Vía Láctea", text: "Una galaxia espiral barrada con más de 100.000 millones de estrellas; el Sol vive en uno de sus brazos." },
+    { level: 3, title: "Grupo Local", text: "La Vía Láctea, Andrómeda, Triángulo y galaxias satélite unidas por gravedad." },
+    { level: 4, title: "Laniakea", text: "Un vasto basin de flujos de galaxias: cúmulos, filamentos y vacíos que se mueven hacia el Gran Atractor." },
+    { level: 5, title: "Red cósmica", text: "La estructura a gran escala. Cambiá entre el mapa SDSS real y la simulación hidrodinámica CAMELS." }
+  ];
+
+  function startTour() {
+    stopTour();
+    tour.active = true;
+    tour.index = 0;
+    tourBtn.setAttribute("aria-pressed", "true");
+    tourCard.classList.add("on");
+    showTourStep();
+  }
+  function showTourStep() {
+    var stop = TOUR_STOPS[tour.index];
+    tourTitleEl.textContent = stop.title;
+    tourTextEl.textContent = stop.text;
+    activateLevel(stop.level);
+    tour.timer = window.setTimeout(function () {
+      if (!tour.active) return;
+      tour.index += 1;
+      if (tour.index >= TOUR_STOPS.length) {
+        stopTour();
+      } else {
+        showTourStep();
+      }
+    }, 8000);
+  }
+  function stopTour() {
+    tour.active = false;
+    window.clearTimeout(tour.timer);
+    tourBtn.setAttribute("aria-pressed", "false");
+    tourCard.classList.remove("on");
+  }
+
   function openSearch() {
+    stopTour();
     searchModal.classList.add("on");
     searchInput.value = "";
     renderSearch();
@@ -1423,7 +1609,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   function renderSearch() {
     var q = searchInput.value.trim().toLowerCase();
     var items = catalog.filter(function (o) {
-      return !q || (o.name + " " + o.type + " " + LEVELS[o.level].name).toLowerCase().indexOf(q) !== -1;
+      var haystack = o.name + " " + o.type + " " + LEVELS[o.level].name + " " + ((o.aliases || []).join(" "));
+      return !q || haystack.toLowerCase().indexOf(q) !== -1;
     }).slice(0, 24);
     searchResults.innerHTML = "";
     items.forEach(function (o) {
@@ -1448,6 +1635,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   // Pointer interaction.
   // ---------------------------------------------------------------------------
   canvas.addEventListener("pointerdown", function (e) {
+    stopTour();
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (canvas.setPointerCapture) { try { canvas.setPointerCapture(e.pointerId); } catch (err) {} }
     moved = 0;
@@ -1494,6 +1682,21 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   canvas.addEventListener("pointercancel", endPointer);
   canvas.addEventListener("wheel", function (e) {
     e.preventDefault();
+    stopTour();
+    var scene = scenes[current];
+    if (scene && Date.now() > wheelTransition) {
+      var base = scene.camera.radius;
+      if (e.deltaY > 0 && camera.tRadius >= base * 1.75 && current < LEVELS.length - 1) {
+        wheelTransition = Date.now() + 700;
+        activateLevel(current + 1);
+        return;
+      }
+      if (e.deltaY < 0 && camera.tRadius <= base * .38 && current > 0) {
+        wheelTransition = Date.now() + 700;
+        activateLevel(current - 1);
+        return;
+      }
+    }
     camera.tRadius = clamp(camera.tRadius * Math.exp(e.deltaY * .0011), .55, 160);
     hideHint();
   }, { passive: false });
@@ -1512,6 +1715,28 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       var d = (p.x - x) ** 2 + (p.y - y) ** 2;
       if (d < bestD) { bestD = d; best = o; }
     });
+    if (!best && current === 5 && dataMode === "sdss" && sdssPicking) {
+      var pointBest = null;
+      var pointBestD = 12 * 12;
+      for (var i = 0; i < sdssPicking.length; i++) {
+        var p = projectPoint(sdssPicking[i].pos);
+        if (!p) continue;
+        var d = (p.x - x) ** 2 + (p.y - y) ** 2;
+        if (d < pointBestD) { pointBestD = d; pointBest = sdssPicking[i]; }
+      }
+      if (pointBest) {
+        best = {
+          name: "Galaxia SDSS",
+          type: "Galaxia espectroscópica",
+          pos: pointBest.pos,
+          focusRadius: .055,
+          distance: "z = " + pointBest.z.toFixed(4),
+          desc: "Una galaxia real del catálogo SDSS DR18. La posición 3D se infiere a partir de su corrimiento al rojo y su color g-r.",
+          level: 5,
+          label: null
+        };
+      }
+    }
     return best;
   }
   function pickAt(x, y) {
@@ -1523,6 +1748,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   // Boot.
   // ---------------------------------------------------------------------------
   resize();
+  var dataMatch = window.location.search.match(/data=(sdss|camels)/);
+  if (dataMatch) dataMode = dataMatch[1];
   for (var boot = 0; boot < LEVELS.length; boot++) buildScene(boot);
   var startMatch = window.location.search.match(/level=(\d)/);
   var startLevel = startMatch ? clamp(Number(startMatch[1]), 0, LEVELS.length - 1) : 0;
@@ -1530,6 +1757,9 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   requestAnimationFrame(frame);
   loading.classList.add("gone");
   loading.style.display = "none";
+  if (window.location.search.indexOf("tour=1") !== -1) {
+    setTimeout(startTour, 700);
+  }
   setTimeout(hideHint, 12000);
   setTimeout(function () { document.body.classList.add("idle"); }, 6000);
   window.addEventListener("pointermove", function () {

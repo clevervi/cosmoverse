@@ -115,7 +115,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (131 Unit Tests & Local CI Gate)
+### Run the Test Suite (132 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -238,7 +238,9 @@ Abrí [`docs/explorador.html`](docs/explorador.html): **seis escalas conectadas 
 - Rail de escalas, teclas `1`–`6`, flechas `←`/`→` y `Ctrl/Cmd+K` o `/` para buscar.
 - Búsqueda de planetas, estrellas, galaxias, cúmulos y estructuras; al elegir un resultado, la cámara **vuela** al nivel y al objeto.
 - Clic en un objeto/label para ver su ficha; doble clic para enfocar; arrastre, rueda y pinch para orbitar/zoom.
-- La red cósmica usa el campo real **CAMELS-SIMBA EX** (`Mgas` + `T`).
+- La red cósmica tiene **toggle SDSS/CAMELS**: 45.000 galaxias reales SDSS DR18 (clic sobre una galaxia → redshift) o el campo hidrodinámico CAMELS-SIMBA EX (`Mgas` + `T`).
+- **Tour guiado** de seis paradas, alias de búsqueda (M31, M33, Sgr A*, M42…), nebulosas dentro de la Vía Láctea y **zoom semántico**: al salir del rango de una escala, viaja a la siguiente.
+- Deep links: `?level=5`, `?data=sdss`, `?tour=1`.
 - Escalas normalizadas y modelo educativo: tamaños, distancias y brillos se ajustan para que todo sea visible.
 
 ### Vista volumétrica del gas CAMELS

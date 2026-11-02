@@ -3,6 +3,28 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.10.0] - 2026-11-02
+
+### Added
+- **Mapa SDSS real** en `docs/explorador.html`: 45.000 galaxias espectroscópicas DR18, posiciones 3D derivadas de \(z\), color \(g-r\) y clic sobre cualquier galaxia para ver su redshift (`explorador_sdss.js`, `scripts/prepare_sdss_explorer.py`) (#125, PR #126).
+- **Toggle CAMELS/SDSS** dentro del nivel de red cósmica; escala, fuente y objetos se actualizan en la misma página.
+- **Tour guiado** de seis paradas con captions, pausa y auto-avance.
+- Alias de búsqueda (M31, M33, Sgr A*, M42…), nebulosas de Orión/Carina/Águila/Cangrejo y **zoom semántico** por rueda entre escalas.
+- Deep links `?level=N`, `?data=sdss`, `?tour=1`; botones `DATOS` y `TOUR`.
+- `tests/test_explorador.py`: 6 pruebas estáticas (incluye SDSS y tour).
+
+### Validation
+- `uv run pytest -q tests/test_explorador.py`: **6 passed**.
+- `uv run pytest -q -m "not slow"`: **125 passed**; total **132 tests** (7 lentos).
+- `ruff check .` + `scripts/check_repo.py`: **PASS**.
+- Screenshots desktop \(1440\times900\) y móvil \(390\times844\): SDSS, CAMELS, tour y búsqueda sin errores de shader.
+
+### Notes
+- SDSS cubre \(0.005<z<0.15\) (unas 2 Gly); no es el universo observable completo.
+- El zoom semántico usa escalas normalizadas; no es un zoom físico continuo.
+- Datos: SDSS DR18, CAMELS/CMD y NASA; atribución en "Acerca".
+- Sin cambios en el código científico del paquete.
+
 ## [3.9.0] - 2026-11-02
 
 ### Added
