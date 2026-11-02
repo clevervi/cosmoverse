@@ -278,9 +278,9 @@
 <div id="vignette"></div>
 
 <header id="overlay">
-  <div class="brand">COSMOVERSE · N-BODY 96³</div>
+  <div class="brand">COSMOVERSE · CAMELS-SIMBA · EX 96³</div>
   <h1>EL UNIVERSO</h1>
-  <p>materia oscura · gas · galaxias · z = 0</p>
+  <p>gas density · temperatura · z = 0</p>
 </header>
 
 <div id="controls">
@@ -468,19 +468,23 @@ void main() {
     float t = tNear + (float(i) + 0.5) * stepSize;
     vec3 p = origin + dir * t;
     vec3 uvw = p * 0.5 + 0.5;
-    float d = texture(uVolume, uvw).r;
+    vec2 fields = texture(uVolume, uvw).rg;
+    float d = fields.r;
+    float temp = fields.g;
     float edgeX = smoothstep(0.0, 0.10, uvw.x) * (1.0 - smoothstep(0.90, 1.0, uvw.x));
     float edgeY = smoothstep(0.0, 0.10, uvw.y) * (1.0 - smoothstep(0.90, 1.0, uvw.y));
     float edgeZ = smoothstep(0.0, 0.10, uvw.z) * (1.0 - smoothstep(0.90, 1.0, uvw.z));
     d *= edgeX * edgeY * edgeZ;
     d = smoothstep(0.42, 0.88, d);
     if (d > 0.002) {
+      float hot = smoothstep(0.30, 0.88, temp);
       vec3 col = mix(
         vec3(0.004, 0.020, 0.050),
         vec3(0.08, 0.38, 0.40),
         clamp(d * 1.20, 0.0, 1.0)
       );
-      col += vec3(0.50, 0.28, 0.08) * pow(d, 4.0) * 0.25;
+      col = mix(col, vec3(1.0, 0.58, 0.20), hot * d * 1.35);
+      col += vec3(1.0, 0.90, 0.72) * pow(d, 4.0) * 0.30;
       float alpha = 1.0 - exp(-d * uDensity * stepSize);
       gas += col * alpha;
     }
@@ -510,7 +514,7 @@ void main() {
 }
 </script>
 
-<script src="universo_density.js"></script>
+<script src="universo_camels.js"></script>
 
 <script>
 (function () {
@@ -734,19 +738,22 @@ void main() {
   var nodes = [];
   var voidTarget = [0, 0, 0];
 
-  if (!window.COSMOVerseDensity || !window.COSMOVerseDensity.data) {
-    fail("No se encontró el campo de densidad N-body (universo_density.js).");
+  if (!window.COSMOVerseCAMELS || !window.COSMOVerseCAMELS.data) {
+    fail("No se encontró el campo CAMELS-SIMBA (universo_camels.js).");
     return;
   }
 
-  var VOL = window.COSMOVerseDensity.size;
-  var decoded = atob(window.COSMOVerseDensity.data);
-  var densityField = new Uint8Array(decoded.length);
-  for (var di = 0; di < decoded.length; di++) {
+  var VOL = window.COSMOVerseCAMELS.size;
+  var decoded = atob(window.COSMOVerseCAMELS.data);
+  var voxelCount = VOL * VOL * VOL;
+  var densityField = new Uint8Array(voxelCount);
+  var temperatureField = new Uint8Array(voxelCount);
+  for (var di = 0; di < voxelCount; di++) {
     densityField[di] = decoded.charCodeAt(di);
+    temperatureField[di] = decoded.charCodeAt(di + voxelCount);
   }
-  if (densityField.length !== VOL * VOL * VOL) {
-    fail("El campo de densidad tiene un tamaño inesperado.");
+  if (decoded.length !== voxelCount * 2) {
+    fail("El campo CAMELS tiene un tamaño inesperado.");
     return;
   }
 
@@ -815,6 +822,7 @@ void main() {
     for (var pi = 0; pi < def.count; pi++) {
       var voxel = sampleVoxel(distribution.cdf, distribution.total);
       var localDensity = densityField[voxel] / 255;
+      var localTemp = temperatureField[voxel] / 255;
       var point = coordsFromIndex(voxel);
       var color;
       var size;
@@ -825,11 +833,11 @@ void main() {
         size = 3.0 + 5.0 * localDensity;
         alpha = 0.045 + 0.060 * localDensity;
       } else if (def.kind === 1) {
-        color = mixColor(GAS_STOPS, 0.25 + 0.55 * localDensity);
+        color = mixColor(GAS_STOPS, 0.20 + 0.38 * localTemp + 0.22 * localDensity);
         size = 1.1 + 2.0 * localDensity;
         alpha = 0.20 + 0.30 * localDensity;
       } else {
-        color = mixColor(GALAXY_STOPS, 0.15 + 0.80 * Math.pow(localDensity, 1.2));
+        color = mixColor(GALAXY_STOPS, 0.15 + 0.55 * localTemp + 0.25 * localDensity);
         size = 0.9 + 3.4 * localDensity * localDensity;
         alpha = 0.20 + 0.48 * localDensity;
         if (localDensity > 0.82) {
@@ -986,9 +994,8 @@ void main() {
 
   var volumeData = new Uint8Array(VOL * VOL * VOL * 4);
   for (var vj = 0; vj < densityField.length; vj++) {
-    var value = densityField[vj];
-    volumeData[vj * 4] = value;
-    volumeData[vj * 4 + 1] = 0;
+    volumeData[vj * 4] = densityField[vj];
+    volumeData[vj * 4 + 1] = temperatureField[vj];
     volumeData[vj * 4 + 2] = 0;
     volumeData[vj * 4 + 3] = 255;
   }

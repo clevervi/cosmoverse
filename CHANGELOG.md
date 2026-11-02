@@ -3,6 +3,25 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.8.0] - 2026-11-02
+
+### Added
+- **Gas hidrodinámico real de CAMELS** en `docs/universo.html`: campo `Mgas` y temperatura `T` del conjunto público **CAMELS-SIMBA EX** (CMD, \(128^3\), \(z=0\), realización con \(A_{\rm AGN1}=100\)), bajado a \(96^3\) (#119, PR #120).
+- El volumen de gas usa densidad y temperatura reales con transfer function térmica (gas frío teal, gas caliente ámbar/blanco); las tres capas y el tour se muestrean del mismo campo.
+- `scripts/prepare_camels_universo.py`: descarga los `.npy` públicos de CMD, selecciona una realización, normaliza \(\log_{10}\rho\) y \(\log_{10}T\), y escribe `docs/universo_camels.js` (~2,3 MB).
+- Se retiran el campo ZA sintético anterior y su generador.
+
+### Validation
+- `uv run pytest -q tests/test_universo.py`: **7 passed** (valida las dos canales \(96^3\)).
+- `uv run pytest -q -m "not slow"`: **119 passed**.
+- Screenshots headless desktop \(1440\times900\) y móvil \(390\times844\): gas real, temperatura, volumen y tour sin errores de shader.
+
+### Notes
+- La caja CAMELS usada es de \(25\,\mathrm{Mpc}/h\); un único cubo contiene un cúmulo masivo y filamentos, no una caja de 200 Mpc/h.
+- Es una **realización extrema** del set EX, no un promedio sobre las 1.000 simulaciones LH; no se usa para inferencia de parámetros.
+- Datos: CAMELS Multifield Dataset (Villaescusa-Navarro et al.); atribución en el script y en la documentación.
+- Sin cambios en el código científico del paquete.
+
 ## [3.7.0] - 2026-11-02
 
 ### Added
