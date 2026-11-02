@@ -10,7 +10,7 @@
 - **Paper 2 Extension:** Stage 5 (Field-level inference with JaxPM + preconditioned MCLMC).
 
 ## Key Commands
-- **Run all 133 Unit Tests:** `uv run pytest -v`
+- **Run all 134 Unit Tests:** `uv run pytest -v`
 - **Run the complete Paper 1 MVP Protocol (Results 1–4):** `uv run python experiments/run_paper1_mvp_protocol.py`
 - **Run CLI info:** `uv run cosmoverse info`
 - **Run Result 2 Bias-Variance Frontier table:** `uv run cosmoverse frontier`
