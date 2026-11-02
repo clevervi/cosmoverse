@@ -233,11 +233,12 @@ uv run cosmoverse doctor
 Abrí [`docs/universo.html`](docs/universo.html) — **solo el universo**, sin paneles, sin sliders y sin telemetría.
 Es una vista inmersiva de la estructura a gran escala: más de 200.000 puntos generados de forma determinista
 forman cúmulos, filamentos y vacíos cósmicos, con tres capas visuales (materia oscura, gas, galaxias),
-bloom real, evolución cósmica ilustrativa y cámara cinematográfica.
+bloom real, **gas volumétrico por ray-marching** y un **tour guiado automático** por cúmulos, filamentos y vacíos.
 
 - Arrastrá para orbitar, rueda o pinch para acercarte, doble clic para enfocar un cúmulo.
-- `1`/`2`/`3` ocultan capas, `T` pausa la evolución, `F` abre pantalla completa y `R` reinicia.
-- `Espacio` o el botón `PAUSA` detienen cámara y evolución; las flechas y `+`/`-` también orbitan y hacen zoom.
+- `1`/`2`/`3` ocultan capas, `G` inicia/detiene el tour, `T` pausa la evolución, `F` abre pantalla completa y `R` reinicia.
+- `Espacio` o el botón `PAUSA` detienen cámara, tour y evolución; las flechas y `+`/`-` también orbitan y hacen zoom.
+- En móvil baja la resolución del volumen y el bloom; si el frame time sube, la calidad se reduce sola.
 - Funciona desde `file://` y GitHub Pages; no carga CDN, fuentes ni imágenes externas.
 
 ### Telemetry Dashboards (optional)
