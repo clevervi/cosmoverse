@@ -29,9 +29,11 @@ from cosmoverse.datasets.remote import CAMELSArchiveFetcher, CheckpointManager
 from cosmoverse.emulators.bispectrum import ReducedBispectrumModel
 from cosmoverse.emulators.fno import EMULATOR_BIBLIOGRAPHY_REGISTRY
 from cosmoverse.emulators.mangrove import MangroveMergerTreeGNN
+from cosmoverse.inference.calibration_budget import CalibrationBudgetAnalyzer
 from cosmoverse.inference.compression import FisherScoreCompressor
 from cosmoverse.inference.domain_adaptation import DomainAdaptationPipeline
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
+from cosmoverse.inference.gpu_field_level import GPUFieldLevelBenchmark
 from cosmoverse.inference.light_cone_sbi import LightConeSBIPipeline
 from cosmoverse.inference.multi_family_transfer import MultiFamilyTransferPipeline
 from cosmoverse.inference.multiprobe_sbi import MultiProbeSBIPipeline
@@ -209,6 +211,72 @@ def cmd_field_level(args: argparse.Namespace) -> None:
         "Preconditioned HMC (Plan B)",
         f"Acc = {res['preconditioned_hmc_plan_b']['acceptance_rate']*100:.1f}%",
         f"Marginal Bias = {res['preconditioned_hmc_plan_b']['marginal_alpha_bias']:.4f}",
+    )
+    console.print(table)
+
+
+def cmd_gpu_field_level(args: argparse.Namespace) -> None:
+    """Benchmarks the CuPy field-level posterior and MCLMC chain against NumPy."""
+    if not cupy_available():
+        console.print(
+            "[red]CuPy/CUDA device not available. Install the [gpu] extra on a CUDA host.[/red]"
+        )
+        return
+    benchmark = GPUFieldLevelBenchmark(
+        grid_size=args.grid, box_size=100.0, noise_sigma=0.25, seed=args.seed
+    )
+    res = benchmark.run(
+        n_samples=args.samples, n_leapfrog=args.leapfrog, step_size=0.020
+    )
+
+    table = Table(
+        title=(
+            "Stage 5 GPU Field-Level Benchmark "
+            f"(grid={res['grid_size']}^3, dim={res['dimension']:,})"
+        )
+    )
+    table.add_column("Diagnostic", style="cyan")
+    table.add_column("Value", justify="right", style="green")
+    table.add_row(
+        "Potential relative error",
+        f"{res['potential_relative_error']:.3e}",
+    )
+    table.add_row(
+        "Gradient max abs error",
+        f"{res['grad_max_abs_error']:.3e}",
+    )
+    table.add_row(
+        "CPU potential + gradient",
+        f"{res['cpu_potential_grad_seconds']*1e3:.2f} ms",
+    )
+    table.add_row(
+        "GPU potential + gradient",
+        f"{res['gpu_potential_grad_seconds']*1e3:.2f} ms",
+    )
+    table.add_row(
+        "Potential/gradient speedup",
+        f"{res['potential_grad_speedup']:.2f}x",
+    )
+    table.add_row(
+        "CPU MCLMC chain",
+        f"{res['cpu_chain_seconds']:.2f} s",
+    )
+    table.add_row(
+        "GPU MCLMC chain",
+        f"{res['gpu_chain_seconds']:.2f} s",
+    )
+    table.add_row("Chain speedup", f"{res['chain_speedup']:.2f}x")
+    table.add_row(
+        "EEVPD CPU / GPU",
+        f"{res['cpu_diagnostics']['eevpd']:.3e} / {res['gpu_diagnostics']['eevpd']:.3e}",
+    )
+    table.add_row(
+        "Marginal alpha mean CPU / GPU",
+        f"{res['cpu_marginal_alpha_mean']:.4f} / {res['gpu_marginal_alpha_mean']:.4f}",
+    )
+    table.add_row(
+        "GPU chain shape",
+        str(res["gpu_chain_shape"]),
     )
     console.print(table)
 
@@ -1123,6 +1191,91 @@ def cmd_domain_adapt(args: argparse.Namespace) -> None:
     console.print(table)
 
 
+def cmd_calibration_budget(args: argparse.Namespace) -> None:
+    """Runs the N_cal calibration-budget sweep and writes the SVG curve."""
+    budgets = tuple(
+        int(value.strip())
+        for value in str(args.budgets).split(",")
+        if value.strip()
+    )
+    dashboard = None
+    if args.dashboard:
+        dashboard = ProgressDashboard(args.dashboard_out)
+        dashboard.update(
+            "initializing",
+            {
+                "progress": 0.0,
+                "device": device_summary(),
+                "note": "Starting calibration-budget sweep.",
+            },
+        )
+        dashboard.open()
+
+    analyzer = CalibrationBudgetAnalyzer(
+        family=args.family,
+        budgets=budgets,
+        n_test=int(args.test),
+        fine_tune_epochs=int(args.fine_tune_epochs),
+        seed=42,
+        dashboard=dashboard,
+    )
+    result = analyzer.run()
+
+    table = Table(title="Level 3: Calibration Budget Curve (Domain Adaptation)")
+    table.add_column("N_cal", style="cyan", justify="right")
+    table.add_column("Cov68", justify="right")
+    table.add_column("Cov95", justify="right")
+    table.add_column("Median Bias", justify="right")
+    table.add_column("Delta ICE", justify="right")
+    table.add_column("Gate", justify="center")
+    for entry in result["curve"]:
+        table.add_row(
+            str(entry["n_cal"]),
+            f"{entry['coverage_68']*100:.1f}%",
+            f"{entry['coverage_95']*100:.1f}%",
+            f"{entry['median_bias_in_sigma']:.2f} sigma",
+            f"{entry['delta_tarp_ice']:+.3f}",
+            "PASS" if entry["passes_gate"] else "FAIL",
+        )
+    console.print(table)
+
+    figure_path = pathlib.Path(args.figure_out)
+    figure_path.parent.mkdir(parents=True, exist_ok=True)
+    figure_path.write_text(
+        Paper1FigureGenerator.render_figure8_calibration_budget(result),
+        encoding="utf-8",
+        newline="\n",
+    )
+    summary = Table(title="Calibration Budget Summary")
+    summary.add_column("Diagnostic", style="cyan")
+    summary.add_column("Value", justify="right", style="green")
+    summary.add_row("Target Family", result["family"])
+    summary.add_row("Data Source", ", ".join(result["data_source"]))
+    summary.add_row(
+        "Source SBC + TARP Gate",
+        "PASS" if result["source_calibration"]["passes_joint_sbi_gate"] else "FAIL",
+    )
+    summary.add_row(
+        "Leakage-Free / Disjoint",
+        "PASS"
+        if (
+            result["leakage_check"]["is_leakage_free"]
+            and result["calibration_test_disjoint"]
+        )
+        else "FAIL",
+    )
+    summary.add_row(
+        "Minimum N_cal for Gate",
+        str(result["min_calibration_for_gate"]),
+    )
+    summary.add_row(
+        "Budget Sweep Gate",
+        "PASS" if result["passes_budget_gate"] else "FAIL",
+    )
+    summary.add_row("SVG Figure", str(figure_path))
+    console.print(summary)
+
+
 def cmd_doctor() -> None:
     """Runs the Master Document scientific & methodological verification suite."""
     hmf_ok = HaloMassFunctionModel().evaluate_emulated_hmf_accuracy()["passes_hmf_1pct_gate"]
@@ -1201,6 +1354,15 @@ def cmd_doctor() -> None:
             seed=42,
         ).run()["passes_adaptation_gate"]
     )
+    calibration_budget_ok = bool(
+        CalibrationBudgetAnalyzer(
+            family="CAMELS-SIMBA",
+            budgets=(25, 100, 200),
+            n_test=60,
+            fine_tune_epochs=200,
+            seed=42,
+        ).run()["passes_budget_gate"]
+    )
     hod_ok = bool(HaloOccupationModel().evaluate_assembly_bias_marginalization()["passes_stage4_assembly_bias_gate"])
     bisp_ia_ok = bool(
         ReducedBispectrumModel().evaluate_tunes_bispectrum_accuracy()["passes_bispectrum_1pct_gate"]
@@ -1231,6 +1393,7 @@ def cmd_doctor() -> None:
         ("Level 3: Cross-Simulation Transfer with Trained Flow (Result 4)", flow_transfer_ok),
         ("Level 3: Multi-Family Transfer Audit (TNG, SIMBA, Astrid)", multi_family_ok),
         ("Level 3: Target-Family Domain Adaptation (SIMBA fine-tuning)", domain_adapt_ok),
+        ("Level 3: Calibration Budget Curve (N_cal,min for SIMBA Adaptation)", calibration_budget_ok),
         ("Level 2: HOD + Secondary Assembly Bias P_gm(k) Gate (<0.30 sigma_S4)", hod_ok),
         ("Result 1 & Level 2: Reduced Bispectrum Q(theta) (<1%) + NLA/TATT IA Gate", bisp_ia_ok),
         ("Level 1 & Level 3: w0-wa CPL Dark Energy + Fisher/IMNN Compression (>=98%)", de_imnn_ok),
@@ -1320,6 +1483,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     fl_parser.add_argument("--grid", type=int, default=6, help="3D grid size per dimension")
     fl_parser.add_argument("--samples", type=int, default=40, help="Number of MCMC samples")
     fl_parser.add_argument("--seed", type=int, default=42, help="Random seed")
+
+    # GPU field-level
+    gpu_fl_parser = subparsers.add_parser("gpu-field-level", help="Benchmark CuPy field-level posterior + MCLMC vs NumPy")
+    gpu_fl_parser.add_argument("--grid", type=int, default=64, help="3D grid size per dimension")
+    gpu_fl_parser.add_argument("--samples", type=int, default=12, help="Number of MCLMC samples")
+    gpu_fl_parser.add_argument("--leapfrog", type=int, default=4, help="Leapfrog steps per sample")
+    gpu_fl_parser.add_argument("--seed", type=int, default=42, help="Random seed")
 
     # Citations audit
     subparsers.add_parser("audit-citations", help="Display verified emulator DOIs and blocked references")
@@ -1422,6 +1592,16 @@ def main(argv: Sequence[str] | None = None) -> None:
     da_parser.add_argument("--dashboard", action="store_true", help="Open the live HTML progress dashboard")
     da_parser.add_argument("--dashboard-out", type=str, default="dist/dashboard/domain_adaptation.html", help="Dashboard output path")
 
+    # Calibration-budget curve for domain adaptation
+    budget_parser = subparsers.add_parser("calibration-budget", help="Measure the N_cal budget required for domain adaptation")
+    budget_parser.add_argument("--family", type=str, default="CAMELS-SIMBA", choices=["CAMELS-IllustrisTNG", "CAMELS-SIMBA", "CAMELS-Astrid"], help="Target hydrodynamical family")
+    budget_parser.add_argument("--budgets", type=str, default="25,50,100,200,400", help="Comma-separated calibration budgets")
+    budget_parser.add_argument("--test", type=int, default=100, help="Number of target test points")
+    budget_parser.add_argument("--fine-tune-epochs", type=int, default=200, help="Fine-tuning epochs per budget")
+    budget_parser.add_argument("--figure-out", type=str, default="docs/figures/fig8_calibration_budget.svg", help="SVG output path")
+    budget_parser.add_argument("--dashboard", action="store_true", help="Open the live HTML progress dashboard")
+    budget_parser.add_argument("--dashboard-out", type=str, default="dist/dashboard/calibration_budget.html", help="Dashboard output path")
+
     # Multi-family transfer audit (TNG, SIMBA, Astrid)
     multi_parser = subparsers.add_parser("multi-family-transfer", help="Audit transfer to TNG, SIMBA and Astrid")
     multi_parser.add_argument("--data-dir", type=str, default=None, help="Directory with real CAMELS {sim_id}_Pk.txt tables")
@@ -1443,7 +1623,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     subparsers.add_parser("dark-energy-imnn", help="Evaluate Level 1 w0-wa CPL Dark Energy and Level 3 Fisher/IMNN compression")
 
     # Master system & scientific gate doctor
-    subparsers.add_parser("doctor", help="Run full 21-gate Master Document health & calibration check")
+    subparsers.add_parser("doctor", help="Run full 22-gate Master Document health & calibration check")
 
     args = parser.parse_args(argv)
 
@@ -1459,6 +1639,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_camels_gen2()
     elif args.command == "field-level":
         cmd_field_level(args)
+    elif args.command == "gpu-field-level":
+        cmd_gpu_field_level(args)
     elif args.command == "audit-citations":
         cmd_audit_citations()
     elif args.command == "figures":
@@ -1503,6 +1685,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         cmd_multi_family_transfer(args)
     elif args.command == "domain-adapt":
         cmd_domain_adapt(args)
+    elif args.command == "calibration-budget":
+        cmd_calibration_budget(args)
     elif args.command == "devices":
         cmd_devices()
     elif args.command == "gpu-pm":

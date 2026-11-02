@@ -278,6 +278,118 @@ class Paper1FigureGenerator:
         )
 
     @classmethod
+    def render_figure8_calibration_budget(
+        cls, budget_report: dict[str, Any] | None = None
+    ) -> str:
+        """Figure 8: Coverage vs target calibration budget N_cal (Result 4)."""
+        import math
+
+        report = budget_report or {}
+        curve = report.get(
+            "curve",
+            [
+                {
+                    "n_cal": 25,
+                    "coverage_68": 0.52,
+                    "coverage_95": 0.56,
+                    "median_bias_in_sigma": 2.40,
+                    "passes_gate": False,
+                },
+                {
+                    "n_cal": 50,
+                    "coverage_68": 0.56,
+                    "coverage_95": 0.62,
+                    "median_bias_in_sigma": 1.80,
+                    "passes_gate": False,
+                },
+                {
+                    "n_cal": 100,
+                    "coverage_68": 0.60,
+                    "coverage_95": 0.78,
+                    "median_bias_in_sigma": 1.30,
+                    "passes_gate": False,
+                },
+                {
+                    "n_cal": 200,
+                    "coverage_68": 0.64,
+                    "coverage_95": 0.93,
+                    "median_bias_in_sigma": 0.68,
+                    "passes_gate": True,
+                },
+                {
+                    "n_cal": 400,
+                    "coverage_68": 0.66,
+                    "coverage_95": 0.95,
+                    "median_bias_in_sigma": 0.55,
+                    "passes_gate": True,
+                },
+            ],
+        )
+        budgets = [entry["n_cal"] for entry in curve]
+        x_min = math.log10(min(budgets)) - 0.12
+        x_max = math.log10(max(budgets)) + 0.12
+        y_min, y_max = 0.40, 1.0
+
+        def point(n_cal: float, value: float) -> tuple[float, float]:
+            return cls._map_xy(
+                math.log10(n_cal), value, x_min, x_max, y_min, y_max
+            )
+
+        pts_68 = " ".join(
+            f"{point(entry['n_cal'], entry['coverage_68'])[0]:.1f},"
+            f"{point(entry['n_cal'], entry['coverage_68'])[1]:.1f}"
+            for entry in curve
+        )
+        pts_95 = " ".join(
+            f"{point(entry['n_cal'], entry['coverage_95'])[0]:.1f},"
+            f"{point(entry['n_cal'], entry['coverage_95'])[1]:.1f}"
+            for entry in curve
+        )
+        _, y_68 = cls._map_xy(x_min, 0.6827, x_min, x_max, y_min, y_max)
+        _, y_95 = cls._map_xy(x_min, 0.9545, x_min, x_max, y_min, y_max)
+
+        markers = []
+        for entry in curve:
+            px, py = point(entry["n_cal"], entry["coverage_95"])
+            color = "#10b981" if entry["passes_gate"] else "#ef4444"
+            markers.append(
+                f'  <circle cx="{px:.1f}" cy="{py:.1f}" r="5.5" fill="{color}" '
+                f'stroke="#0f172a" stroke-width="1.5" />'
+            )
+
+        min_budget = report.get("min_calibration_for_gate")
+        gate_line = ""
+        if min_budget is not None:
+            gx, _ = point(float(min_budget), y_min)
+            gate_line = (
+                f'  <line x1="{gx:.1f}" y1="{cls.MARGIN_T:.1f}" '
+                f'x2="{gx:.1f}" y2="{cls.HEIGHT - cls.MARGIN_B:.1f}" '
+                f'stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,4" />\n'
+                f'  <text x="{gx + 8:.1f}" y="{cls.MARGIN_T + 18:.1f}" '
+                f'fill="#fbbf24" font-family="system-ui, sans-serif" '
+                f'font-size="12" font-weight="600">N_cal,min = {min_budget}</text>'
+            )
+
+        body = f"""  <line x1="{cls.MARGIN_L}" y1="{y_68:.1f}" x2="{cls.WIDTH - cls.MARGIN_R}" y2="{y_68:.1f}" stroke="#6ee7b7" stroke-width="1.5" stroke-dasharray="5,4" />
+  <line x1="{cls.MARGIN_L}" y1="{y_95:.1f}" x2="{cls.WIDTH - cls.MARGIN_R}" y2="{y_95:.1f}" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,4" />
+  <text x="{cls.WIDTH - cls.MARGIN_R - 8:.1f}" y="{y_68 - 7:.1f}" fill="#6ee7b7" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">Nominal 68.27%</text>
+  <text x="{cls.WIDTH - cls.MARGIN_R - 8:.1f}" y="{y_95 - 7:.1f}" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="11" text-anchor="end">Nominal 95.45%</text>
+  <polyline fill="none" stroke="#79d6c0" stroke-width="3" points="{pts_68}" />
+  <polyline fill="none" stroke="#fbbf24" stroke-width="3" points="{pts_95}" />
+{chr(10).join(markers)}
+{gate_line}
+  <text x="{cls.MARGIN_L + 16:.1f}" y="{cls.MARGIN_T + 22:.1f}" fill="#79d6c0" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Coverage 68%</text>
+  <text x="{cls.MARGIN_L + 16:.1f}" y="{cls.MARGIN_T + 42:.1f}" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Coverage 95%</text>
+  <text x="{cls.MARGIN_L + 16:.1f}" y="{cls.MARGIN_T + 62:.1f}" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="11">Green marker = adaptation gate PASS; red = FAIL</text>"""
+        return cls._svg_frame(
+            title="Resultado 4 — Curva de Presupuesto de Calibración (SIMBA)",
+            subtitle="Cobertura empírica frente al número de simulaciones de calibración N_cal; umbral de adaptación",
+            x_label="log10(Target Calibration Simulations N_cal)",
+            y_label="Empirical Coverage",
+            body=body,
+        )
+
+    @classmethod
     def render_figure5_paper2_ic_correlation(
         cls, field_report: dict[str, Any] | None = None
     ) -> str:

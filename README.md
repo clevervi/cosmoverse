@@ -13,6 +13,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > **Master Document:** See [`docs/MASTER_DOCUMENT.md`](docs/MASTER_DOCUMENT.md) for the consolidated scientific specification, risks, Plan B contingencies, and acceptance criteria.
+>
+> **Vista inmersiva:** [`docs/universo.html`](docs/universo.html) — solo el universo, sin paneles ni telemetría.
 
 </div>
 
@@ -66,12 +68,16 @@
    - Enforces a strict **Leakage-Free Data Partition Protocol** by disjoint `(ic_seed, cosmo_id, family_id)` (forbidding naive random 80/20 splits).
    - Quantifies coverage and bias degradation when transferring from Family A (e.g. `CAMELS-DMO + BCEmu`) to Family B (e.g. `CAMELS-IllustrisTNG`).
 
+**v3.5 extension — calibration budget:** the target-simulation budget required to restore calibrated posteriors on SIMBA. With a stricter gate than v3.4, **25 calibration simulations fail** (coverage 49% / 77%) while **50 pass** (58% / 91%, median bias 0.72σ), giving \(N_{\rm cal,min}=50\).
+
 <div align="center">
   <img src="docs/figures/fig1_result1_emulator.svg" width="48%" alt="Result 1: TUNeS Emulator Precision" />
   <img src="docs/figures/fig2_result2_frontier.svg" width="48%" alt="Result 2: Bias-Variance Frontier" />
   <br/>
   <img src="docs/figures/fig3_result3_calibration.svg" width="48%" alt="Result 3: SBI TARP/SBC Calibration" />
   <img src="docs/figures/fig4_result4_transfer.svg" width="48%" alt="Result 4: Cross-Simulation Family Transfer" />
+  <br/>
+  <img src="docs/figures/fig8_calibration_budget.svg" width="72%" alt="v3.5: SIMBA calibration budget curve" />
 </div>
 
 ---
@@ -107,7 +113,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (108 Unit Tests & Local CI Gate)
+### Run the Test Suite (125 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -209,18 +215,34 @@ uv run cosmoverse multi-family-transfer --n-test 100
 uv run cosmoverse devices
 uv run cosmoverse gpu-pm --mesh 128 --steps 1
 
+# Benchmark the CuPy field-level posterior + MCLMC chain at 64^3
+uv run cosmoverse gpu-field-level --grid 64 --samples 12 --leapfrog 4
+
 # Fine-tune the flow on SIMBA and watch the live HTML dashboard
 uv run cosmoverse domain-adapt --family CAMELS-SIMBA --dashboard
+
+# Measure the target-simulation calibration budget (N_cal = 25..400)
+uv run cosmoverse calibration-budget --family CAMELS-SIMBA --budgets 25,50,100,200,400
 
 # Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor
 ```
 
-### Visual Progress Dashboard
+### Ver el universo (WebGL, pantalla completa)
 
-Open the pre-rendered **SIMBA domain-adaptation** dashboard:
-[`docs/domain_adaptation_demo.html`](docs/domain_adaptation_demo.html) (also served from GitHub Pages).
-To watch a new run live:
+Abrí [`docs/universo.html`](docs/universo.html) — **solo el universo**, sin paneles, sin sliders y sin telemetría.
+Es una vista inmersiva de la estructura a gran escala: más de 200.000 puntos generados de forma determinista
+forman cúmulos, filamentos y vacíos cósmicos, con tres capas visuales (materia oscura, gas, galaxias),
+bloom real, evolución cósmica ilustrativa y cámara cinematográfica.
+
+- Arrastrá para orbitar, rueda o pinch para acercarte, doble clic para enfocar un cúmulo.
+- `1`/`2`/`3` ocultan capas, `T` pausa la evolución, `F` abre pantalla completa y `R` reinicia.
+- Funciona desde `file://` y GitHub Pages; no carga CDN, fuentes ni imágenes externas.
+
+### Telemetry Dashboards (optional)
+
+The **SIMBA domain-adaptation** dashboard remains available at
+[`docs/domain_adaptation_demo.html`](docs/domain_adaptation_demo.html). To watch a new run live:
 
 ```bash
 uv run cosmoverse domain-adapt --family CAMELS-SIMBA --dashboard
@@ -228,6 +250,27 @@ uv run cosmoverse domain-adapt --family CAMELS-SIMBA --dashboard
 
 The page refreshes every 2 seconds and shows coverage bars, bias/ICE gates, the fine-tuning loss curve, the
 \(\Omega_m\)-\(\sigma_8\) posterior, and the active GPU backend.
+
+The separate WebGL telemetry dashboard is at
+[`docs/webgl_cosmic_web.html`](docs/webgl_cosmic_web.html); it includes the parameter sliders and the 3D
+posterior overlay.
+
+### Calibration Budget & GPU Field-Level (v3.5)
+
+The **calibration-budget** sweep retrains the source flow once and fine-tunes a fresh copy on the first
+\(N_{\rm cal}\) SIMBA simulations. The v3.5 run gives:
+
+| \(N_{\rm cal}\) | Coverage 68% | Coverage 95% | Median bias | \(\Delta\)TARP-ICE | Gate |
+| ---: | ---: | ---: | ---: | ---: | :---: |
+| 25 | 49.0% | 77.0% | 1.00σ | −0.079 | FAIL |
+| 50 | 58.0% | 91.0% | 0.72σ | −0.122 | PASS |
+| 100 | 63.0% | 96.0% | 0.61σ | −0.151 | PASS |
+| 200 | 67.0% | 98.0% | 0.68σ | −0.188 | PASS |
+| 400 | 71.0% | 97.0% | 0.74σ | −0.219 | PASS |
+
+The CuPy field-level port reaches **6.88×** speedup for the \(64^3\) potential+gradient and **14.27×** for
+the full preconditioned MCLMC chain, with potential relative error \(2.4\times10^{-16}\), zero gradient
+difference, and identical EEVPD / marginal \(\alpha\) between CPU and GPU.
 
 ---
 
