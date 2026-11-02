@@ -107,7 +107,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (97 Unit Tests & Local CI Gate)
+### Run the Test Suite (99 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -199,6 +199,9 @@ uv run cosmoverse pm-flow-sbi --n-sims 1600 --n-sbc 100 --n-tarp 100
 
 # Run leakage-free cross-simulation transfer with the trained flow (Result 4)
 uv run cosmoverse flow-transfer --mismatch-strength 1.0 --n-test 100
+
+# Audit transfer to TNG, SIMBA and Astrid (calibrated responses; --data-dir for real tables)
+uv run cosmoverse multi-family-transfer --n-test 100
 
 # Run Master End-to-End Scientific System Doctor
 uv run cosmoverse doctor

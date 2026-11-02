@@ -9,7 +9,7 @@ the fast Limber + Kaiser/FoG + BCEmu projection.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 from scipy import integrate, special
@@ -194,6 +194,75 @@ class PMEmulatorSBIPipeline:
         rsd = RedshiftSpaceDistortionModel(
             b1=b1, growth_rate_f=growth_rate, sigma_fog=3.5
         ).compute_multipoles(self.k_rsd, pk_hydro)
+        p0 = np.asarray(rsd["P0"], dtype=np.float64)
+        p2 = np.asarray(rsd["P2"], dtype=np.float64)
+        p4 = np.asarray(rsd["P4"], dtype=np.float64)
+        data = np.concatenate([w_theta, p0, p2, p4])
+
+        if add_noise:
+            p0_floor = self.rsd_noise_floor_fraction * np.maximum(
+                np.abs(p0), 1e-6
+            )
+            sigma = np.concatenate(
+                [
+                    self.noise_fraction
+                    * np.maximum(np.abs(w_theta), self.noise_floor),
+                    self.noise_fraction * np.maximum(np.abs(p0), p0_floor),
+                    self.noise_fraction * np.maximum(np.abs(p2), p0_floor),
+                    self.noise_fraction * np.maximum(np.abs(p4), p0_floor),
+                ]
+            )
+            data = data + self.rng.normal(0.0, sigma)
+        return data
+
+    def model_data_vector_with_response(
+        self,
+        theta: np.ndarray,
+        response_fn: Callable[[np.ndarray], np.ndarray],
+        add_noise: bool = False,
+    ) -> np.ndarray:
+        """
+        Evaluates the joint data vector with a user-supplied total suppression
+        S_target(k), e.g. a CAMELS hydrodynamical response.
+        """
+        theta_arr = np.asarray(theta, dtype=np.float64)
+        if theta_arr.shape != (4,):
+            raise ValueError(
+                "theta must have shape (4,) = (omega_m, sigma8, b1, A_AGN)"
+            )
+        omega_m, sigma8, b1, _a_agn = (float(value) for value in theta_arr)
+
+        cosmology = Cosmology(
+            CosmologicalParameters(omega_m=omega_m, sigma8=sigma8)
+        )
+        chi = max(float(cosmology.comoving_distance(self.z_eff)), 100.0)
+        k_limber = (self.ell + 0.5) / chi
+        pk_limber = self.emulator.predict_pk(k_limber, omega_m, sigma8)
+        suppression = np.asarray(response_fn(k_limber), dtype=np.float64)
+        suppression = np.broadcast_to(suppression, k_limber.shape)
+        c_ell = (b1**2) * pk_limber * suppression / (chi**2)
+
+        theta_rad = np.deg2rad(self.theta_deg)
+        w_theta = np.array(
+            [
+                integrate.simpson(
+                    self.ell * c_ell * special.j0(self.ell * angle)
+                    / (2.0 * np.pi),
+                    x=self.ell,
+                )
+                for angle in theta_rad
+            ]
+        )
+
+        pk_rsd = self.emulator.predict_pk(self.k_rsd, omega_m, sigma8)
+        suppression_rsd = np.asarray(
+            response_fn(self.k_rsd), dtype=np.float64
+        )
+        suppression_rsd = np.broadcast_to(suppression_rsd, self.k_rsd.shape)
+        growth_rate = float(cosmology.growth_rate(self.z_eff))
+        rsd = RedshiftSpaceDistortionModel(
+            b1=b1, growth_rate_f=growth_rate, sigma_fog=3.5
+        ).compute_multipoles(self.k_rsd, pk_rsd * suppression_rsd)
         p0 = np.asarray(rsd["P0"], dtype=np.float64)
         p2 = np.asarray(rsd["P2"], dtype=np.float64)
         p4 = np.asarray(rsd["P4"], dtype=np.float64)
