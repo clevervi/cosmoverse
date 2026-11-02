@@ -17,6 +17,7 @@ from scipy import integrate, special
 from cosmoverse.baryons.feedback import BCEmuModel
 from cosmoverse.core.cosmology import Cosmology
 from cosmoverse.core.parameters import BaryonParameters, CosmologicalParameters
+from cosmoverse.datasets.camels_spectra import CAMELSHydroSpectraConnector
 from cosmoverse.emulators.pm_pk import PMPowerSpectrumEmulator
 from cosmoverse.inference.sbi import SBIEngine
 from cosmoverse.observations.forward_model import RedshiftSpaceDistortionModel
@@ -119,11 +120,18 @@ class PMEmulatorSBIPipeline:
         self,
         theta: np.ndarray,
         add_noise: bool = False,
+        family: str = "source",
+        mismatch_strength: float = 1.0,
     ) -> np.ndarray:
         """
         Evaluates the joint data vector using the PM-trained P(k) emulator for
         theta = (Omega_m, sigma8, b1, A_AGN).
+
+        `family="target"` applies the IllustrisTNG-like hydrodynamical response
+        on top of the BCEmu source suppression.
         """
+        if family not in {"source", "target"}:
+            raise ValueError("family must be 'source' or 'target'")
         theta_arr = np.asarray(theta, dtype=np.float64)
         if theta_arr.shape != (4,):
             raise ValueError(
@@ -140,7 +148,19 @@ class PMEmulatorSBIPipeline:
         suppression = BCEmuModel(
             BaryonParameters(mode="BCEmu3", A_AGN=a_agn)
         ).suppression_factor(k_limber, z=self.z_eff)
-        c_ell = (b1**2) * pk_limber * suppression / (chi**2)
+        if family == "target":
+            tng_response = CAMELSHydroSpectraConnector.suite_baryonic_response(
+                k_limber,
+                suite_name="CAMELS-IllustrisTNG",
+                a_agn1=a_agn,
+                z=self.z_eff,
+            )
+            response_ratio = 1.0 + float(mismatch_strength) * (
+                tng_response / np.maximum(suppression, 1e-6) - 1.0
+            )
+            c_ell = (b1**2) * pk_limber * suppression * response_ratio / (chi**2)
+        else:
+            c_ell = (b1**2) * pk_limber * suppression / (chi**2)
         theta_rad = np.deg2rad(self.theta_deg)
         w_theta = np.array(
             [
@@ -157,10 +177,23 @@ class PMEmulatorSBIPipeline:
         suppression_rsd = BCEmuModel(
             BaryonParameters(mode="BCEmu3", A_AGN=a_agn)
         ).suppression_factor(self.k_rsd, z=self.z_eff)
+        if family == "target":
+            tng_rsd = CAMELSHydroSpectraConnector.suite_baryonic_response(
+                self.k_rsd,
+                suite_name="CAMELS-IllustrisTNG",
+                a_agn1=a_agn,
+                z=self.z_eff,
+            )
+            rsd_ratio = 1.0 + float(mismatch_strength) * (
+                tng_rsd / np.maximum(suppression_rsd, 1e-6) - 1.0
+            )
+            pk_hydro = pk_rsd * suppression_rsd * rsd_ratio
+        else:
+            pk_hydro = pk_rsd * suppression_rsd
         growth_rate = float(cosmology.growth_rate(self.z_eff))
         rsd = RedshiftSpaceDistortionModel(
             b1=b1, growth_rate_f=growth_rate, sigma_fog=3.5
-        ).compute_multipoles(self.k_rsd, pk_rsd * suppression_rsd)
+        ).compute_multipoles(self.k_rsd, pk_hydro)
         p0 = np.asarray(rsd["P0"], dtype=np.float64)
         p2 = np.asarray(rsd["P2"], dtype=np.float64)
         p4 = np.asarray(rsd["P4"], dtype=np.float64)
