@@ -38,7 +38,9 @@
     height: 100%;
     display: block;
     touch-action: none;
-    outline: none;
+  }
+  body {
+    -webkit-tap-highlight-color: transparent;
   }
   #vignette {
     position: fixed;
@@ -51,8 +53,8 @@
   }
   #overlay {
     position: fixed;
-    top: clamp(18px, 4.4vh, 48px);
-    left: clamp(18px, 4.4vw, 64px);
+    top: max(clamp(18px, 4.4vh, 48px), calc(env(safe-area-inset-top, 0px) + 18px));
+    left: max(clamp(18px, 4.4vw, 64px), calc(env(safe-area-inset-left, 0px) + 18px));
     z-index: 3;
     pointer-events: none;
     transition: opacity 1.6s ease;
@@ -80,6 +82,7 @@
     color: var(--ink);
     text-shadow: 0 0 38px rgba(95, 227, 179, 0.16), 0 2px 24px rgba(0, 0, 0, 0.72);
     transition: opacity 1.4s ease, transform 1.4s ease;
+    text-wrap: balance;
   }
   #overlay p {
     margin: clamp(12px, 2.2vh, 20px) 0 0 0;
@@ -92,7 +95,7 @@
   }
   #legend {
     position: fixed;
-    left: clamp(18px, 4.4vw, 64px);
+    left: max(clamp(18px, 4.4vw, 64px), calc(env(safe-area-inset-left, 0px) + 18px));
     bottom: max(22px, env(safe-area-inset-bottom, 22px));
     z-index: 3;
     display: flex;
@@ -108,6 +111,32 @@
   }
   #legend.gone { opacity: 0; }
   #legend span { white-space: nowrap; }
+  #pause {
+    position: fixed;
+    top: max(18px, calc(env(safe-area-inset-top, 0px) + 18px));
+    right: max(18px, calc(env(safe-area-inset-right, 0px) + 18px));
+    z-index: 3;
+    padding: 6px 10px;
+    border: 1px solid rgba(200, 216, 230, 0.22);
+    border-radius: 2px;
+    background: rgba(2, 4, 10, 0.32);
+    color: rgba(200, 216, 230, 0.62);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  #pause:hover, #pause:focus-visible {
+    opacity: 1;
+    color: var(--ink);
+    border-color: rgba(245, 166, 35, 0.7);
+  }
+  #pause:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.35);
+  }
   .dot {
     display: inline-block;
     width: 6px;
@@ -172,8 +201,8 @@
       transform: none;
       width: 100%;
       padding: 0 14px;
-      font-size: 8px;
-      letter-spacing: 0;
+      font-size: 9px;
+      letter-spacing: 0.02em;
       bottom: max(18px, env(safe-area-inset-bottom, 18px));
     }
   }
@@ -191,6 +220,8 @@
   <h1>EL UNIVERSO</h1>
   <p>materia oscura · gas · galaxias</p>
 </header>
+
+<button id="pause" type="button" aria-label="Pausar movimiento automático" aria-pressed="false">PAUSA</button>
 
 <div id="legend" aria-hidden="true">
   <span><i class="dot dm"></i>materia oscura</span>
@@ -942,6 +973,8 @@ void main() {
   var evolutionAuto = !reducedMotion;
   var evolutionPhase = 0;
   var evolution = 1.0;
+  var pauseButton = document.getElementById("pause");
+  var paused = false;
   var raf = 0;
   var lastFrame = performance.now();
   var legendTimer = 0;
@@ -1001,18 +1034,32 @@ void main() {
     cam.tRadius = cam.baseRadius;
     cam.tTarget = [0, 0, 0];
     cam.focusUntil = 0;
-    auto = !reducedMotion;
+    auto = !reducedMotion && !paused;
     evolutionPhase = 0;
     evolution = 1.0;
   }
 
   function scheduleResume() {
     window.clearTimeout(resumeTimer);
-    if (reducedMotion) return;
+    if (reducedMotion || paused) return;
     resumeTimer = window.setTimeout(function () {
       if (!dragging) auto = true;
     }, 5000);
   }
+
+  function togglePause() {
+    paused = !paused;
+    pauseButton.textContent = paused ? "SEGUIR" : "PAUSA";
+    pauseButton.setAttribute("aria-pressed", paused ? "true" : "false");
+    if (paused) {
+      auto = false;
+      evolutionAuto = false;
+    } else {
+      auto = !reducedMotion;
+      evolutionAuto = !reducedMotion;
+    }
+  }
+  pauseButton.addEventListener("click", togglePause);
 
   function flashLegend() {
     legend.classList.remove("gone");
@@ -1031,7 +1078,7 @@ void main() {
     cam.tTarget = [node.x, node.y, node.z];
     cam.tRadius = 2.15;
     cam.focusUntil = performance.now() + 12000;
-    auto = true;
+    auto = !paused;
     fadeHint();
   }
 
@@ -1187,6 +1234,7 @@ void main() {
   });
 
   window.addEventListener("keydown", function (event) {
+    if (event.target === pauseButton) return;
     var key = event.key;
     if (key === "r" || key === "R") {
       resetCamera();
@@ -1222,9 +1270,33 @@ void main() {
       flashLegend();
     } else if (key === "t" || key === "T") {
       evolutionAuto = !evolutionAuto;
+    } else if (key === "ArrowLeft") {
+      event.preventDefault();
+      cam.tTheta -= 0.08;
+      auto = false;
+    } else if (key === "ArrowRight") {
+      event.preventDefault();
+      cam.tTheta += 0.08;
+      auto = false;
+    } else if (key === "ArrowUp") {
+      event.preventDefault();
+      cam.tPhi = clamp(cam.tPhi + 0.06, -1.16, 1.16);
+      auto = false;
+    } else if (key === "ArrowDown") {
+      event.preventDefault();
+      cam.tPhi = clamp(cam.tPhi - 0.06, -1.16, 1.16);
+      auto = false;
+    } else if (key === "+" || key === "=") {
+      event.preventDefault();
+      cam.tRadius = clamp(cam.tRadius * 0.9, 1.5, 9.0);
+      auto = false;
+    } else if (key === "-" || key === "_") {
+      event.preventDefault();
+      cam.tRadius = clamp(cam.tRadius * 1.1, 1.5, 9.0);
+      auto = false;
     } else if (event.code === "Space") {
       event.preventDefault();
-      auto = !auto;
+      togglePause();
     }
   });
 
