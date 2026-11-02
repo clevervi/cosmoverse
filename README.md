@@ -14,7 +14,7 @@
 
 > **Master Document:** See [`docs/MASTER_DOCUMENT.md`](docs/MASTER_DOCUMENT.md) for the consolidated scientific specification, risks, Plan B contingencies, and acceptance criteria.
 >
-> **Explorador cósmico (una sola página):** [`docs/explorador.html`](docs/explorador.html) — Tierra → Sistema Solar → Vía Láctea → Grupo Local → Laniakea → red cósmica, con búsqueda y vuelo a objetos.
+> **Explorador cósmico (una sola página):** [`docs/explorador.html`](docs/explorador.html) — Tierra → Sistema Solar → Vía Láctea → Grupo Local → Laniakea → red cósmica → universo observable 2MRS/Planck, con búsqueda y vuelo a objetos.
 >
 > **Vista volumétrica CAMELS:** [`docs/universo.html`](docs/universo.html) — gas hidrodinámico real con ray-marching.
 
@@ -115,7 +115,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (132 Unit Tests & Local CI Gate)
+### Run the Test Suite (133 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -232,15 +232,16 @@ uv run cosmoverse doctor
 
 ### Explorador multi-escala (una sola página)
 
-Abrí [`docs/explorador.html`](docs/explorador.html): **seis escalas conectadas en una sola página**, no seis webs distintas.
+Abrí [`docs/explorador.html`](docs/explorador.html): **siete escalas conectadas en una sola página**, no siete webs distintas.
 
-- **Tierra → Sistema Solar → Vía Láctea → Grupo Local → Laniakea → Red cósmica.**
-- Rail de escalas, teclas `1`–`6`, flechas `←`/`→` y `Ctrl/Cmd+K` o `/` para buscar.
+- **Tierra → Sistema Solar → Vía Láctea → Grupo Local → Laniakea → Red cósmica → Universo observable.**
+- Rail de escalas, teclas `1`–`7`, flechas `←`/`→` y `Ctrl/Cmd+K` o `/` para buscar.
 - Búsqueda de planetas, estrellas, galaxias, cúmulos y estructuras; al elegir un resultado, la cámara **vuela** al nivel y al objeto.
 - Clic en un objeto/label para ver su ficha; doble clic para enfocar; arrastre, rueda y pinch para orbitar/zoom.
 - La red cósmica tiene **toggle SDSS/CAMELS**: 45.000 galaxias reales SDSS DR18 (clic sobre una galaxia → redshift) o el campo hidrodinámico CAMELS-SIMBA EX (`Mgas` + `T`).
-- **Tour guiado** de seis paradas, alias de búsqueda (M31, M33, Sgr A*, M42…), nebulosas dentro de la Vía Láctea y **zoom semántico**: al salir del rango de una escala, viaja a la siguiente.
-- Deep links: `?level=5`, `?data=sdss`, `?tour=1`.
+- El **universo observable** usa 43.482 galaxias reales del 2MRS en todo el cielo y el mapa de **Planck** como horizonte CMB; clic sobre una galaxia 2MRS → velocidad radial. Es una vista all-sky con distancias radiales comprimidas.
+- **Tour guiado** de siete paradas, alias de búsqueda (M31, M33, Sgr A*, M42…), nebulosas dentro de la Vía Láctea y **zoom semántico**: al salir del rango de una escala, viaja a la siguiente.
+- Deep links: `?level=6`, `?data=sdss`, `?tour=1`.
 - Escalas normalizadas y modelo educativo: tamaños, distancias y brillos se ajustan para que todo sea visible.
 
 ### Vista volumétrica del gas CAMELS

@@ -7,6 +7,9 @@ import re
 PAGE = pathlib.Path(__file__).resolve().parents[1] / "docs" / "explorador.html"
 CAMELS = pathlib.Path(__file__).resolve().parents[1] / "docs" / "universo_camels.js"
 SDSS = pathlib.Path(__file__).resolve().parents[1] / "docs" / "explorador_sdss.js"
+TWOMRS = pathlib.Path(__file__).resolve().parents[1] / "docs" / "explorador_2mrs.js"
+CMB = pathlib.Path(__file__).resolve().parents[1] / "docs" / "explorador_cmb.js"
+CMB_IMAGE = pathlib.Path(__file__).resolve().parents[1] / "docs" / "explorador_cmb.jpg"
 
 
 def _html() -> str:
@@ -14,7 +17,7 @@ def _html() -> str:
     return PAGE.read_text(encoding="utf-8")
 
 
-def test_explorer_is_a_single_page_with_six_scales():
+def test_explorer_is_a_single_page_with_seven_scales():
     raw = PAGE.read_bytes()
     assert raw[:15] == b"<!DOCTYPE html>"
     assert len(raw) < 200 * 1024
@@ -28,6 +31,7 @@ def test_explorer_is_a_single_page_with_six_scales():
         "Grupo Local",
         "Laniakea",
         "Red cósmica",
+        "Universo observable",
     ):
         assert name in html
     assert 'id="rail"' in html
@@ -43,6 +47,7 @@ def test_explorer_has_all_scene_builders_and_interactions():
         "buildLocalGroup",
         "buildLaniakea",
         "buildCosmic",
+        "buildObservable",
         "activateLevel",
         "focusObject",
         "pickObjectAt",
@@ -72,7 +77,7 @@ def test_explorer_has_search_info_and_fast_navigation():
         "openSearch",
         "renderSearch",
         "selectObject",
-        "key >= \"1\" && e.key <= \"6\"",
+        "key >= \"1\" && e.key <= \"7\"",
         "mapoftheuniverse.net",
         "universemap.net",
     ):
@@ -116,6 +121,38 @@ def test_explorer_has_real_sdss_toggle_and_guided_tour():
     assert "SDSS" in raw
     assert len(base64.b64decode(data.group(1))) == int(count.group(1)) * 11
     assert len(raw) < 3 * 1024 * 1024
+
+
+def test_explorer_has_all_sky_2mrs_and_planck_cmb():
+    html = _html()
+    assert '<script src="explorador_2mrs.js"></script>' in html
+    assert '<script src="explorador_cmb.js"></script>' in html
+    assert "COSMOVerse2MRS" in html
+    assert "COSMOVerseCMB" in html
+    assert "buildObservable" in html
+    assert "twomrsPicking" in html
+    assert "cmbSphere" in html
+    assert "Galaxia 2MRS" in html
+    assert "Planck" in html
+
+    assert TWOMRS.is_file()
+    raw = TWOMRS.read_text(encoding="utf-8")
+    count = re.search(r"count:\s*(\d+)", raw)
+    data = re.search(r'data:\s*"([^"]+)"', raw)
+    assert count is not None
+    assert data is not None
+    assert "2MASS Redshift Survey" in raw
+    assert "radialNote" in raw
+    assert int(count.group(1)) == 43482
+    assert len(base64.b64decode(data.group(1))) == int(count.group(1)) * 11
+    assert len(raw) < 2 * 1024 * 1024
+
+    assert CMB.is_file()
+    cmb_raw = CMB.read_text(encoding="utf-8")
+    cmb_data = re.search(r"data:image/jpeg;base64,([^\"]+)", cmb_raw)
+    assert cmb_data is not None
+    assert len(base64.b64decode(cmb_data.group(1))) > 100 * 1024
+    assert CMB_IMAGE.is_file()
 
 
 def test_explorer_has_no_external_assets_or_dashboards():

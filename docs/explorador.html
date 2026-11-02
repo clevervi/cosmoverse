@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#04070d">
-<meta name="description" content="Explorador cósmico multi-escala: Tierra, Sistema Solar, Vía Láctea, Grupo Local, Laniakea y red cósmica CAMELS en una sola página interactiva.">
+<meta name="description" content="Explorador cósmico multi-escala: Tierra, Sistema Solar, Vía Láctea, Grupo Local, Laniakea, red cósmica SDSS/CAMELS y universo observable 2MRS/Planck en una sola página interactiva.">
 <title>EXPLORADOR CÓSMICO — COSMOVERSE</title>
 <style>
   :root {
@@ -465,7 +465,7 @@
   </div>
 </aside>
 
-<div id="hint">arrastrá para orbitar · rueda/pinch para zoom · clic en un objeto · doble clic para enfocar · 1–6 escalas · ←/→ viajar · / buscar</div>
+<div id="hint">arrastrá para orbitar · rueda/pinch para zoom · clic en un objeto · doble clic para enfocar · 1–7 escalas · ←/→ viajar · / buscar</div>
 
 <div class="modal" id="search-modal" role="dialog" aria-modal="true" aria-label="Buscar objeto">
   <div class="sheet">
@@ -482,11 +482,11 @@
 <div class="modal" id="about-modal" role="dialog" aria-modal="true" aria-label="Acerca del explorador">
   <div class="sheet">
     <button class="hud-btn modal-close" id="about-close" type="button">CERRAR</button>
-    <h2>Un universo, seis escalas</h2>
-    <p>Este explorador conecta la Tierra, el Sistema Solar, la Vía Láctea, el Grupo Local, Laniakea y la red cósmica en una sola experiencia. Las escalas son <b>modelos normalizados</b>: tamaños, separaciones y brillos se ajustan para que cada nivel sea visible. No es un modelo físico lineal de 14.000 millones de años luz.</p>
-    <p>La inspiración conceptual son los mapas multi-escala de <a href="https://mapoftheuniverse.net/" target="_blank" rel="noopener">Map of the Universe</a> (SDSS) y <a href="https://universemap.net/3d-map/" target="_blank" rel="noopener">Universe Map</a>. La red cósmica combina el <b>mapa SDSS DR18</b> de 45.000 galaxias reales con el campo hidrodinámico <b>CAMELS-SIMBA EX</b> (CMD); los planetas y estructuras cercanas usan datos públicos/approx. de NASA y catálogos astronómicos.</p>
-    <p>Atajos: <b>1–6</b> escalas, <b>/</b> buscar, <b>doble clic</b> enfocar, <b>TOUR</b> recorrido guiado, <b>DATOS</b> alterna SDSS/CAMELS, <b>F</b> pantalla completa, <b>R</b> reiniciar vista, <b>P</b> pausar rotación. La rueda fuera de rango viaja a la escala siguiente.</p>
-    <p style="color:rgba(184,202,217,.45);font-size:11px">Atribución de datos: SDSS DR18 (Sloan Digital Sky Survey), CAMELS Multifield Dataset (Villaescusa-Navarro et al.), NASA Planetary Fact Sheet. Visualización educativa; no usar para inferencia científica.</p>
+    <h2>Un universo, siete escalas</h2>
+    <p>Este explorador conecta la Tierra, el Sistema Solar, la Vía Láctea, el Grupo Local, Laniakea, la red cósmica y el universo observable en una sola experiencia. Las escalas son <b>modelos normalizados</b>: tamaños, separaciones y brillos se ajustan para que cada nivel sea visible. No es un modelo físico lineal de 14.000 millones de años luz.</p>
+    <p>La inspiración conceptual son los mapas multi-escala de <a href="https://mapoftheuniverse.net/" target="_blank" rel="noopener">Map of the Universe</a> (SDSS) y <a href="https://universemap.net/3d-map/" target="_blank" rel="noopener">Universe Map</a>. La red cósmica combina el <b>mapa SDSS DR18</b> de 45.000 galaxias reales con el campo hidrodinámico <b>CAMELS-SIMBA EX</b> (CMD). El universo observable usa <b>2MRS</b> (43.482 galaxias en todo el cielo) y el mapa de <b>Planck</b> como horizonte; los planetas y estructuras cercanas usan datos públicos/approx. de NASA y catálogos astronómicos.</p>
+    <p>Atajos: <b>1–7</b> escalas, <b>/</b> buscar, <b>doble clic</b> enfocar, <b>TOUR</b> recorrido guiado, <b>DATOS</b> alterna SDSS/CAMELS, <b>F</b> pantalla completa, <b>R</b> reiniciar vista, <b>P</b> pausar rotación. La rueda fuera de rango viaja a la escala siguiente.</p>
+    <p style="color:rgba(184,202,217,.45);font-size:11px">Atribución de datos: SDSS DR18 (Sloan Digital Sky Survey), CAMELS Multifield Dataset (Villaescusa-Navarro et al.), 2MASS Redshift Survey (Huchra et al. 2012), Planck all-sky map (ESA/Planck, vía NASA/IPAC), NASA Planetary Fact Sheet. Visualización educativa; no usar para inferencia científica.</p>
   </div>
 </div>
 
@@ -494,6 +494,8 @@
 
 <script src="universo_camels.js"></script>
 <script src="explorador_sdss.js"></script>
+<script src="explorador_2mrs.js"></script>
+<script src="explorador_cmb.js"></script>
 <script>
 (function () {
   "use strict";
@@ -504,7 +506,8 @@
     { name: "Vía Láctea", scale: "≈ 100.000 ly", address: "Vía Láctea · ≈ 100.000 ly" },
     { name: "Grupo Local", scale: "≈ 10 Mly", address: "Grupo Local · ≈ 10 Mly" },
     { name: "Laniakea", scale: "≈ 520 Mly", address: "Laniakea · ≈ 520 Mly" },
-    { name: "Red cósmica", scale: "25 Mpc/h", address: "Red cósmica · CAMELS 25 Mpc/h" }
+    { name: "Red cósmica", scale: "25 Mpc/h", address: "Red cósmica · CAMELS 25 Mpc/h" },
+    { name: "Universo observable", scale: "13.8 Gly (CMB)", address: "Universo observable · 13.8 Gly lookback" }
   ];
 
   var canvas = document.getElementById("space");
@@ -646,21 +649,30 @@ uniform mat4 uView;
 uniform mat4 uProj;
 out vec3 vNormal;
 out vec3 vWorld;
+out vec2 vUv;
 void main() {
   vec4 world = uModel * vec4(aPos, 1.0);
   vWorld = world.xyz;
   vNormal = aNormal;
+  vUv = vec2(
+    atan(aNormal.z, aNormal.x) / 6.2831853 + 0.5,
+    acos(clamp(aNormal.y, -1.0, 1.0)) / 3.14159265
+  );
   gl_Position = uProj * uView * world;
 }
 `, `
 #version 300 es
 precision highp float;
+precision highp sampler2D;
 in vec3 vNormal;
 in vec3 vWorld;
+in vec2 vUv;
 uniform vec3 uColor;
 uniform vec3 uColor2;
 uniform vec3 uCam;
 uniform float uType;
+uniform sampler2D uTexture;
+uniform float uUseTexture;
 out vec4 fragColor;
 
 float hash(vec3 p) {
@@ -683,7 +695,15 @@ void main() {
   vec3 n = normalize(vNormal);
   float light = max(dot(n, normalize(vec3(.6,.7,.4))), 0.15);
   vec3 col;
-  if (uType < .5) {
+  if (uType > 3.5) {
+    if (uUseTexture > 0.5) {
+      vec3 cmb = texture(uTexture, vec2(fract(vUv.x + 0.5), vUv.y)).rgb;
+      col = pow(cmb, vec3(0.92)) * vec3(0.30, 0.31, 0.36);
+    } else {
+      col = mix(uColor, uColor2, vUv.y);
+    }
+    light = 1.0;
+  } else if (uType < .5) {
     float f = noise(n * 4.5) * .6 + noise(n * 11.0) * .4;
     float land = smoothstep(.48, .56, f);
     col = mix(vec3(.01,.10,.25), vec3(.12,.42,.18), land);
@@ -748,7 +768,9 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     color: gl.getUniformLocation(sphereProgram, "uColor"),
     color2: gl.getUniformLocation(sphereProgram, "uColor2"),
     cam: gl.getUniformLocation(sphereProgram, "uCam"),
-    type: gl.getUniformLocation(sphereProgram, "uType")
+    type: gl.getUniformLocation(sphereProgram, "uType"),
+    texture: gl.getUniformLocation(sphereProgram, "uTexture"),
+    useTexture: gl.getUniformLocation(sphereProgram, "uUseTexture")
   };
   var lineLoc = {
     pos: gl.getAttribLocation(lineProgram, "aPos"),
@@ -818,6 +840,15 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   var sphereIndexBuf = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIndexBuf);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sphere.indices, gl.STATIC_DRAW);
+
+  var cmbTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, cmbTexture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([20, 30, 60, 255]));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  var cmbTextureReady = false;
 
   function pointCloud() { return { pos: [], col: [], size: [], alpha: [], count: 0 }; }
   function addPoint(pc, x, y, z, color, size, alpha) {
@@ -1191,6 +1222,12 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   var current = 0;
   var dataMode = "camels";
   var sdssPicking = null;
+  var twomrsPicking = null;
+  var cmbImage = new Image();
+  var cmbImageReady = false;
+  var cmbScene = null;
+  var cmbUV = null;
+  var cmbColorData = null;
   var tour = { active: false, index: 0, timer: 0 };
   var wheelTransition = 0;
   var selected = null;
@@ -1266,6 +1303,97 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     return s;
   }
 
+  function buildObservable() {
+    var s = { index: 6, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 3.2, theta: .38, phi: .34 } };
+    twomrsPicking = null;
+    cmbScene = s;
+    if (!window.COSMOVerse2MRS || !window.COSMOVerse2MRS.data) {
+      loading.textContent = "Falta el catálogo 2MRS (explorador_2mrs.js).";
+      return s;
+    }
+    var count = window.COSMOVerse2MRS.count;
+    var extent = window.COSMOVerse2MRS.extent;
+    var vMax = window.COSMOVerse2MRS.vMax;
+    var raw = atob(window.COSMOVerse2MRS.data);
+    var bytes = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    var view = new DataView(bytes.buffer);
+    var pc = pointCloud();
+    var points = [];
+    var offset = 0;
+    for (var k = 0; k < count; k++) {
+      var x = (view.getUint16(offset, true) / 65535 * 2 - 1) * extent;
+      var y = (view.getUint16(offset + 2, true) / 65535 * 2 - 1) * extent;
+      var z = (view.getUint16(offset + 4, true) / 65535 * 2 - 1) * extent;
+      var red = bytes[offset + 6] / 255;
+      var green = bytes[offset + 7] / 255;
+      var blue = bytes[offset + 8] / 255;
+      var velocity = view.getUint16(offset + 9, true) / 65535 * vMax;
+      offset += 11;
+      addPoint(pc, x, y, z, [red, green, blue], 2.0 + 3.0 * (red + green + blue) / 3, .82);
+      points.push({ pos: [x, y, z], v: velocity, color: [red, green, blue] });
+    }
+    s.points.push(uploadPoints(pc));
+    twomrsPicking = points;
+
+    s.cmbSphere = {
+      type: 4,
+      pos: [0, 0, 0],
+      radius: 4.0,
+      color: [0.18, 0.30, 0.65],
+      color2: [0.85, 0.35, 0.15]
+    };
+
+    addObject(s, {
+      name: "Vía Láctea",
+      type: "Observador",
+      pos: [0,0,0],
+      focusRadius: .8,
+      distance: "0",
+      desc: "Estamos en el centro de este mapa de todo el cielo; las direcciones son reales.",
+      label: null
+    });
+    addObject(s, {
+      name: "2MRS",
+      type: "Catálogo all-sky",
+      pos: [0, 1.2, 0],
+      focusRadius: 2.0,
+      distance: "hasta ~400 Mpc",
+      desc: count.toLocaleString("es") + " galaxias reales del 2MASS Redshift Survey, cubriendo el 91% del cielo. Las distancias radiales están comprimidas para una vista única.",
+      label: "2MRS"
+    });
+    addObject(s, {
+      name: "CMB",
+      type: "Horizonte observable",
+      pos: [-1.3, -1.2, -3.2],
+      focusRadius: 2.8,
+      distance: "13.800 millones de años luz (lookback)",
+      desc: "La radiación de fondo de microondas de Planck: la primera luz del universo, a 380.000 años del Big Bang.",
+      label: "CMB"
+    });
+    return s;
+  }
+
+  function uploadCMBTexture() {
+    if (!cmbImageReady) return;
+    gl.bindTexture(gl.TEXTURE_2D, cmbTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, cmbImage);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    cmbTextureReady = true;
+  }
+  cmbImage.onload = function () {
+    cmbImageReady = true;
+    uploadCMBTexture();
+  };
+  cmbImage.src = window.COSMOVerseCMB && window.COSMOVerseCMB.data
+    ? window.COSMOVerseCMB.data
+    : "explorador_cmb.jpg";
+
   function buildScene(index) {
     if (scenes[index]) return scenes[index];
     var s;
@@ -1274,7 +1402,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     else if (index === 2) s = buildMilkyWay();
     else if (index === 3) s = buildLocalGroup();
     else if (index === 4) s = buildLaniakea();
-    else s = dataMode === "sdss" ? buildSDSS() : buildCosmic();
+    else if (index === 5) s = dataMode === "sdss" ? buildSDSS() : buildCosmic();
+    else s = buildObservable();
     scenes[index] = s;
     return s;
   }
@@ -1315,9 +1444,13 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     var railScale = rail.children[5] ? rail.children[5].querySelector(".scale") : null;
     if (railScale) railScale.textContent = scale;
     if (cosmic) address.innerHTML = "<b>Red cósmica</b> · " + addressText.replace("Red cósmica · ", "");
-    sourceEl.textContent = cosmic
-      ? (dataMode === "sdss" ? "SDSS DR18 · galaxias reales · escalas normalizadas" : "CAMELS-SIMBA EX · CMD · escalas normalizadas")
-      : "NASA · catálogos aproximados · escalas normalizadas";
+    if (current === 6) {
+      sourceEl.textContent = "2MRS + Planck CMB · escalas normalizadas";
+    } else if (cosmic) {
+      sourceEl.textContent = dataMode === "sdss" ? "SDSS DR18 · galaxias reales · escalas normalizadas" : "CAMELS-SIMBA EX · CMD · escalas normalizadas";
+    } else {
+      sourceEl.textContent = "NASA · catálogos aproximados · escalas normalizadas";
+    }
   }
 
   function activateLevel(index, focusObj) {
@@ -1435,7 +1568,11 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     gl.uniform3fv(sphereLoc.color, obj.color || [.5, .6, .8]);
     gl.uniform3fv(sphereLoc.color2, obj.color2 || [.2, .3, .5]);
     gl.uniform3fv(sphereLoc.cam, camera.eye);
-    gl.uniform1f(sphereLoc.type, obj.type === 0 ? 0 : obj.type === 1 ? 1 : obj.type === 2 ? 2 : 3);
+    gl.uniform1f(sphereLoc.type, obj.type === 0 ? 0 : obj.type === 1 ? 1 : obj.type === 2 ? 2 : obj.type === 4 ? 4 : 3);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, cmbTexture);
+    gl.uniform1i(sphereLoc.texture, 0);
+    gl.uniform1f(sphereLoc.useTexture, obj.type === 4 && cmbTextureReady ? 1.0 : 0.0);
     gl.drawElements(gl.TRIANGLES, sphere.indices.length, gl.UNSIGNED_SHORT, 0);
   }
 
@@ -1476,11 +1613,17 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     gl.clearColor(.004, .008, .016, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    drawPoints(starfield);
     var scene = scenes[current];
     if (!scene) return;
+    if (scene.cmbSphere) {
+      gl.disable(gl.BLEND);
+      gl.disable(gl.CULL_FACE);
+      drawSphere(scene.cmbSphere);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    } else {
+      drawPoints(starfield);
+    }
     gl.disable(gl.DEPTH_TEST);
     scene.points.forEach(drawPoints);
     gl.disable(gl.BLEND);
@@ -1548,7 +1691,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", function (e) {
     if (e.target === searchInput) return;
-    if (e.key >= "1" && e.key <= "6") { stopTour(); activateLevel(Number(e.key) - 1); }
+    if (e.key >= "1" && e.key <= "7") { stopTour(); activateLevel(Number(e.key) - 1); }
     else if (e.key === "ArrowRight" || e.key === "]") { stopTour(); activateLevel(Math.min(LEVELS.length - 1, current + 1)); }
     else if (e.key === "ArrowLeft" || e.key === "[") { stopTour(); activateLevel(Math.max(0, current - 1)); }
     else if (e.key === "/" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); openSearch(); }
@@ -1564,7 +1707,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     { level: 2, title: "Vía Láctea", text: "Una galaxia espiral barrada con más de 100.000 millones de estrellas; el Sol vive en uno de sus brazos." },
     { level: 3, title: "Grupo Local", text: "La Vía Láctea, Andrómeda, Triángulo y galaxias satélite unidas por gravedad." },
     { level: 4, title: "Laniakea", text: "Un vasto basin de flujos de galaxias: cúmulos, filamentos y vacíos que se mueven hacia el Gran Atractor." },
-    { level: 5, title: "Red cósmica", text: "La estructura a gran escala. Cambiá entre el mapa SDSS real y la simulación hidrodinámica CAMELS." }
+    { level: 5, title: "Red cósmica", text: "La estructura a gran escala. Cambiá entre el mapa SDSS real y la simulación hidrodinámica CAMELS." },
+    { level: 6, title: "Universo observable", text: "El cielo completo: galaxias 2MRS en todas las direcciones y el fondo de microondas de Planck como horizonte." }
   ];
 
   function startTour() {
@@ -1733,6 +1877,28 @@ void main() { fragColor = vec4(vColor, vAlpha); }
           distance: "z = " + pointBest.z.toFixed(4),
           desc: "Una galaxia real del catálogo SDSS DR18. La posición 3D se infiere a partir de su corrimiento al rojo y su color g-r.",
           level: 5,
+          label: null
+        };
+      }
+    }
+    if (!best && current === 6 && twomrsPicking) {
+      var twoBest = null;
+      var twoBestD = 12 * 12;
+      for (var j = 0; j < twomrsPicking.length; j++) {
+        var q = projectPoint(twomrsPicking[j].pos);
+        if (!q) continue;
+        var dq = (q.x - x) ** 2 + (q.y - y) ** 2;
+        if (dq < twoBestD) { twoBestD = dq; twoBest = twomrsPicking[j]; }
+      }
+      if (twoBest) {
+        best = {
+          name: "Galaxia 2MRS",
+          type: "Galaxia infrarroja",
+          pos: twoBest.pos,
+          focusRadius: .07,
+          distance: "v = " + Math.round(twoBest.v).toLocaleString("es") + " km/s",
+          desc: "Una galaxia real del 2MASS Redshift Survey, en una vista de todo el cielo. La distancia radial está comprimida para poder ver el conjunto.",
+          level: 6,
           label: null
         };
       }

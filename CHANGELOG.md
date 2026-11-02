@@ -3,6 +3,27 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.11.0] - 2026-11-02
+
+### Added
+- **Nivel 7: Universo observable all-sky** en `docs/explorador.html`, con 43.482 galaxias reales del **2MASS Redshift Survey (2MRS)** cubriendo el 91% del cielo y una esfera interior con el mapa de **Planck** como horizonte CMB (#128).
+- `docs/explorador_2mrs.js` + `scripts/prepare_2mrs_explorer.py`: parser TDAT de HEASARC, distancias comóviles y compresión radial suave para mostrar el cielo completo en una sola vista normalizada.
+- `docs/explorador_cmb.js` + `docs/explorador_cmb.jpg` + `scripts/embed_cmb_texture.py`: textura equirectangular de Planck empaquetada como data URI para evitar dependencias de red; esfera CMB renderizada desde el interior con shader de textura.
+- Picking de galaxias 2MRS (velocidad radial), fichas de 2MRS/CMB/Vía Láctea, parada de tour y deep link `?level=6`.
+- `tests/test_explorador.py`: cobertura de las siete escalas, 2MRS, Planck y del nuevo nivel all-sky (7 pruebas).
+
+### Validation
+- `uv run pytest -q tests/test_explorador.py`: **7 passed**.
+- `uv run pytest -q -m "not slow"`: **126 passed**; total **133 tests** (7 lentos).
+- `ruff check .` + `scripts/check_repo.py`: **PASS**.
+- Screenshots desktop \(1440\times900\) y móvil \(390\times844\): nivel all-sky, 2MRS, CMB, SDSS/CAMELS y tour sin errores de shader.
+
+### Notes
+- 2MRS es un catálogo cercano (\(z \lesssim 0.1\)); las distancias radiales están comprimidas para que el cielo completo y el CMB entren en la misma escena. No es un mapa lineal a escala.
+- El CMB se muestra como una esfera de textura de Planck, no como un campo de anisotropías analizado científicamente.
+- La cuña SDSS profunda sigue disponible en el nivel 6; el nivel 7 prioriza cobertura angular total, no profundidad.
+- Datos: SDSS DR18, 2MRS (Huchra et al. 2012), Planck (ESA/Planck, vía NASA/IPAC), CAMELS/CMD y NASA; atribución en "Acerca".
+
 ## [3.10.0] - 2026-11-02
 
 ### Added
