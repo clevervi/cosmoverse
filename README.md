@@ -237,6 +237,7 @@ bloom real, evolución cósmica ilustrativa y cámara cinematográfica.
 
 - Arrastrá para orbitar, rueda o pinch para acercarte, doble clic para enfocar un cúmulo.
 - `1`/`2`/`3` ocultan capas, `T` pausa la evolución, `F` abre pantalla completa y `R` reinicia.
+- `Espacio` o el botón `PAUSA` detienen cámara y evolución; las flechas y `+`/`-` también orbitan y hacen zoom.
 - Funciona desde `file://` y GitHub Pages; no carga CDN, fuentes ni imágenes externas.
 
 ### Telemetry Dashboards (optional)

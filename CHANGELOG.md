@@ -3,6 +3,20 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.5.1] - 2026-11-02
+
+### Added
+- `docs/universo.html`: control de pausa accesible (`PAUSA` / `SEGUIR`, `aria-pressed`), navegación por teclado con flechas y `+`/`-`, safe-area insets en overlay/leyenda, hint móvil legible (9 px) y `text-wrap: balance` en el título (#110, PR #111).
+- `tests/test_universo.py`: cobertura estática del control de pausa, teclado y atributos de accesibilidad (6 pruebas).
+
+### Validation
+- `uv run pytest -q tests/test_universo.py`: **6 passed**.
+- `uv run pytest -q -m "not slow"`: **118 passed**.
+- Sin cambios en código científico; la validación de v3.5.0 (doctor 22/22, tests lentos y GPU CI) sigue vigente.
+
+### Notes
+- Parche visual/accesibilidad. El botón `PAUSA` detiene cámara y evolución; `Espacio` hace lo mismo. `H` oculta/muestra la interfaz y `1/2/3` conmutan capas.
+
 ## [3.5.0] - 2026-11-02
 
 ### Added
