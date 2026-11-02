@@ -67,6 +67,7 @@ Entrenar en una familia de simulación y evaluar en otra, cuantificando la degra
 - Métricas de cobertura y sesgo antes y después de la transferencia.
 - Acotado a una transferencia concreta (p. ej. N-body → hidrodinámico, o suite A → suite B), no "generalización entre familias" en abstracto.
 - **Este es el resultado que distingue a COSMOVERSE de la literatura existente.** Se trata como contribución central, no como validación accesoria.
+- **Presupuesto de calibración (v3.5):** en SIMBA, 25 simulaciones de calibración fallan la compuerta estricta de adaptación (cobertura 49% / 77%), mientras que 50 la satisfacen (58% / 91%, sesgo mediano 0.72σ). Por tanto, \(N_{\rm cal,min}=50\). El flujo fuente se entrena una sola vez y cada presupuesto parte de una copia independiente.
 
 ---
 

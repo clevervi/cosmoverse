@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="COSMOVERSE standalone WebGL cosmic-web dashboard with deterministic field parameters, posterior overlay and SIMBA calibrated-response telemetry.">
+<title>COSMOVERSE — WebGL Cosmic Web Dashboard</title>
+<style>
+  :root {
+    --bg: #05080e;
+    --bg-soft: #080d16;
+    --panel: #0a111c;
+    --panel-2: #0d1523;
+    --line: #1b2738;
+    --line-2: #26374e;
+    --text: #e9f0f7;
+    --muted: #8fa0b4;
+    --muted-2: #5d6f84;
+    --amber: #f5a623;
+    --amber-soft: rgba(245, 166, 35, 0.14);
+    --mint: #5fe3b3;
+    --mint-soft: rgba(95, 227, 179, 0.12);
+    --bad: #ff7a7a;
+    --mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); }
+  body {
+    font-family: var(--sans);
+    background: radial-gradient(circle at 72% 18%, #0b1424 0%, var(--bg) 62%);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  [hidden] { display: none !important; }
+  button, input { font: inherit; }
+
+  /* ---------- status strip ---------- */
+  .status {
+    position: relative;
+    z-index: 20;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 11px 22px 10px;
+    background: linear-gradient(180deg, #070b13 0%, #060a11 100%);
+    border-bottom: 1px solid var(--line);
+  }
+  .status::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, var(--amber) 16%, var(--mint) 58%, transparent 92%);
+    opacity: 0.7;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .mark {
+    position: relative;
+    width: 27px;
+    height: 27px;
+    border: 1px solid var(--amber);
+    flex: 0 0 auto;
+  }
+  .mark::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px solid rgba(95, 227, 179, 0.65);
+    border-radius: 50%;
+  }
+  .mark::after {
+    content: "";
+    position: absolute;
+    left: -3px;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    margin-top: -3px;
+    background: var(--amber);
+  }
+  .brand h1 {
+    font-size: 0.96rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    line-height: 1;
+  }
+  .brand p {
+    margin-top: 5px;
+    font-family: var(--mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .live {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 20px;
+    border-left: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    background: #0a101a;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+  .chip b.warn { color: var(--amber); }
+  .chip b.bad { color: var(--bad); }
+  .chip .k { color: var(--muted-2); }
+  .pulse {
+    width: 5px;
+    height: 5px;
+    background: var(--mint);
+    box-shadow: 0 0 0 0 rgba(95, 227, 179, 0.5);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(95, 227, 179, 0.45); }
+    70% { box-shadow: 0 0 0 7px rgba(95, 227, 179, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(95, 227, 179, 0); }
+  }
+  .simba {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    flex-wrap: wrap;
+    padding: 6px 11px;
+    border: 1px solid var(--line);
+    background: #090f18;
+    font-family: var(--mono);
+    font-size: 0.61rem;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .simba-label {
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding-right: 12px;
+    border-right: 1px solid var(--line);
+  }
+  .metric { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .metric b { color: var(--muted); font-weight: 600; }
+  .metric b.after { color: var(--mint); }
+  .metric i { color: var(--muted-2); font-style: normal; }
+  .gate {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    letter-spacing: 0.09em;
+    white-space: nowrap;
+  }
+  .gate b { color: var(--mint); letter-spacing: 0.12em; }
+  .gate-dot { width: 5px; height: 5px; background: var(--mint); }
+
+  /* ---------- viewport ---------- */
+  .viewport {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .stage {
+    position: absolute;
+    inset: 0;
+    background: #04070c;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    outline: none;
+    overflow: hidden;
+  }
+  .stage.is-dragging { cursor: grabbing; }
+  .stage:focus-visible { outline: 1px dashed var(--mint); outline-offset: -3px; }
+  #cosmic-canvas { display: block; width: 100%; height: 100%; background: #04070c; }
+  .stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(233, 240, 247, 0.022) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(115deg, rgba(233, 240, 247, 0.012) 0 1px, transparent 1px 7px);
+  }
+  .stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 46%, rgba(2, 4, 8, 0.62) 100%);
+  }
+
+  .corner {
+    position: absolute;
+    z-index: 2;
+    width: 17px;
+    height: 17px;
+    border: 0 solid rgba(245, 166, 35, 0.3);
+    pointer-events: none;
+  }
+  .corner.tl { top: 10px; left: 10px; border-top-width: 1px; border-left-width: 1px; }
+  .corner.tr { top: 10px; right: 10px; border-top-width: 1px; border-right-width: 1px; }
+  .corner.bl { bottom: 10px; left: 10px; border-bottom-width: 1px; border-left-width: 1px; }
+  .corner.br { bottom: 10px; right: 10px; border-bottom-width: 1px; border-right-width: 1px; }
+
+  .reticle {
+    position: absolute;
+    z-index: 2;
+    left: 50%;
+    top: 50%;
+    width: 62px;
+    height: 62px;
+    margin: -31px 0 0 -31px;
+    border: 1px solid rgba(233, 240, 247, 0.09);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .reticle::before,
+  .reticle::after {
+    content: "";
+    position: absolute;
+    background: rgba(245, 166, 35, 0.22);
+  }
+  .reticle::before { left: 50%; top: -7px; bottom: -7px; width: 1px; }
+  .reticle::after { top: 50%; left: -7px; right: -7px; height: 1px; }
+
+  .mega {
+    position: absolute;
+    z-index: 2;
+    right: 40px;
+    top: 70px;
+    text-align: right;
+    font-size: clamp(2.6rem, 5vw, 4.6rem);
+    font-weight: 200;
+    line-height: 0.86;
+    letter-spacing: 0.03em;
+    color: #dbe6f2;
+    opacity: 0.075;
+    pointer-events: none;
+  }
+  .stage-meta {
+    position: absolute;
+    z-index: 2;
+    right: 24px;
+    top: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    font-family: var(--mono);
+    pointer-events: none;
+  }
+  .meta-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+  }
+  .meta-line i { width: 6px; height: 6px; background: var(--amber); }
+  .meta-sub { font-size: 0.55rem; letter-spacing: 0.1em; color: var(--muted-2); }
+
+  .legend {
+    position: absolute;
+    z-index: 2;
+    left: 26px;
+    bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.12em;
+    color: var(--muted-2);
+    pointer-events: none;
+  }
+  .legend .ramp {
+    width: 104px;
+    height: 4px;
+    background: linear-gradient(90deg, #060b14 0%, #083f49 30%, #4cd6a2 58%, #f8a92d 84%, #fff4dd 100%);
+  }
+  .scalebar { display: inline-flex; align-items: center; gap: 6px; margin-left: 14px; }
+  .scalebar i { display: block; width: 26px; height: 5px; border-left: 1px solid var(--muted-2); border-right: 1px solid var(--muted-2); border-bottom: 1px solid var(--muted-2); }
+  .hint {
+    position: absolute;
+    z-index: 2;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.14em;
+    color: var(--muted-2);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  #truth-tag {
+    position: absolute;
+    z-index: 3;
+    left: 0;
+    top: 0;
+    margin: -34px 0 0 14px;
+    padding: 3px 7px;
+    border: 1px solid rgba(245, 166, 35, 0.55);
+    background: rgba(6, 10, 17, 0.93);
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 0.56rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  #truth-tag::before {
+    content: "";
+    position: absolute;
+    left: -12px;
+    bottom: -2px;
+    width: 12px;
+    height: 1px;
+    background: rgba(245, 166, 35, 0.55);
+  }
+  #truth-marker {
+    position: absolute;
+    z-index: 4;
+    left: 0;
+    top: 0;
+    width: 19px;
+    height: 19px;
+    margin: -9px 0 0 -9px;
+    pointer-events: none;
+  }
+  #truth-marker::before,
+  #truth-marker::after {
+    content: "";
+    position: absolute;
+    background: var(--amber);
+    box-shadow: 0 0 7px rgba(245, 166, 35, 0.65);
+  }
+  #truth-marker::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+  #truth-marker::after { top: 50%; left: 0; right: 0; height: 1px; }
+  .fallback {
+    position: absolute;
+    z-index: 9;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    width: min(420px, calc(100% - 40px));
+    padding: 18px;
+    border: 1px solid rgba(245, 166, 35, 0.5);
+    background: #0a101a;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+  }
+  .fallback-sq { width: 9px; height: 9px; margin-top: 4px; background: var(--amber); flex: 0 0 auto; }
+  .fallback b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  .fallback p { margin-top: 7px; font-size: 0.8rem; line-height: 1.5; color: var(--muted); }
+
+  /* ---------- panels ---------- */
+  .panel {
+    position: absolute;
+    z-index: 5;
+    background: linear-gradient(180deg, rgba(10, 16, 26, 0.97) 0%, rgba(7, 11, 19, 0.95) 100%);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, 0.55);
+    padding: 15px 16px 14px;
+    animation: rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .panel::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 46px;
+    height: 1px;
+    background: var(--amber);
+  }
+  .panel::after {
+    content: "";
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 11px;
+    height: 11px;
+    border-right: 1px solid var(--mint);
+    border-bottom: 1px solid var(--mint);
+    opacity: 0.5;
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 10px;
+  }
+  .idx { font-family: var(--mono); font-size: 0.6rem; color: var(--amber); letter-spacing: 0.08em; }
+  .panel-head h2 {
+    font-size: 0.63rem;
+    font-weight: 600;
+    letter-spacing: 0.17em;
+    text-transform: uppercase;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .tag {
+    margin-left: auto;
+    padding: 2px 6px;
+    border: 1px solid rgba(95, 227, 179, 0.35);
+    background: var(--mint-soft);
+    color: var(--mint);
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+  .tag.amber { border-color: rgba(245, 166, 35, 0.35); background: var(--amber-soft); color: var(--amber); }
+  .panel-note {
+    font-size: 0.68rem;
+    line-height: 1.55;
+    color: var(--muted);
+    margin-bottom: 13px;
+  }
+
+  .controls {
+    top: 24px;
+    left: 24px;
+    width: 318px;
+    max-height: calc(100% - 48px);
+    overflow-y: auto;
+    animation-delay: 0.08s;
+  }
+  .controls::-webkit-scrollbar { width: 6px; }
+  .controls::-webkit-scrollbar-thumb { background: #24344a; }
+  .field { margin-bottom: 12px; }
+  .field-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 3px;
+  }
+  .field-head label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    cursor: pointer;
+    min-width: 0;
+  }
+  .sym {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--amber);
+    white-space: nowrap;
+  }
+  .sym sub { font-size: 0.55em; }
+  .name {
+    font-size: 0.67rem;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .field-head output {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 20px;
+    margin: 2px 0 0;
+    background: transparent;
+    cursor: ew-resize;
+    --fill: 50%;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px;
+    background: linear-gradient(90deg, var(--amber) 0 var(--fill), #1b2637 var(--fill) 100%);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 11px;
+    height: 11px;
+    margin-top: -4.5px;
+    border: 1px solid #1a1205;
+    border-radius: 0;
+    background: var(--amber);
+    box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.12);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.2); }
+  input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.18); }
+  input[type="range"]::-moz-range-track { height: 2px; background: #1b2637; }
+  input[type="range"]::-moz-range-progress { height: 2px; background: var(--amber); }
+  input[type="range"]::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border: 1px solid #1a1205;
+    border-radius: 0;
+    background: var(--amber);
+  }
+  input[type="range"]:focus-visible { outline: 1px dashed var(--mint); outline-offset: 5px; }
+
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .switch-copy b { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text); }
+  .switch-copy small {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.04em;
+    color: var(--muted-2);
+  }
+  .switch { position: relative; flex: 0 0 auto; }
+  .switch input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  .track {
+    display: block;
+    position: relative;
+    width: 38px;
+    height: 18px;
+    border: 1px solid #2a3a51;
+    background: #0b1220;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .knob {
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    background: #71869c;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.2s ease;
+  }
+  .switch input:checked + .track { border-color: rgba(95, 227, 179, 0.55); background: rgba(95, 227, 179, 0.12); }
+  .switch input:checked + .track .knob { transform: translateX(18px); background: var(--mint); }
+  .switch input:focus-visible + .track { outline: 1px dashed var(--mint); outline-offset: 3px; }
+
+  .derived {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0 11px;
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+    color: var(--muted-2);
+  }
+  .derived b { color: var(--mint); font-size: 0.72rem; font-weight: 600; }
+  .derived sup { font-size: 0.7em; }
+
+  .reset {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--line-2);
+    border-radius: 0;
+    background: #0b1320;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+  }
+  .reset:hover { background: var(--amber-soft); border-color: rgba(245, 166, 35, 0.55); transform: translateY(-1px); }
+  .reset:active { transform: translateY(0); }
+  .reset:focus-visible { outline: 1px dashed var(--mint); outline-offset: 3px; }
+  .reset kbd {
+    font-family: var(--mono);
+    font-size: 0.54rem;
+    color: var(--amber);
+    border: 1px solid var(--line-2);
+    padding: 1px 5px;
+  }
+
+  .calibrate {
+    right: 24px;
+    bottom: 24px;
+    width: 326px;
+    animation-delay: 0.16s;
+  }
+  .matrix {
+    display: grid;
+    grid-template-columns: 34px 1fr 1fr;
+    gap: 7px 12px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .m-head {
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    letter-spacing: 0.13em;
+    color: var(--muted-2);
+    text-align: right;
+  }
+  .m-row {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--muted);
+    border-right: 1px solid var(--line);
+    padding-right: 8px;
+    text-align: right;
+  }
+  .m-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .m-cell b { font-family: var(--mono); font-size: 1.02rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .m-cell b.bad { color: var(--muted); }
+  .m-cell b.mint { color: var(--mint); }
+  .m-bar {
+    display: block;
+    width: var(--w);
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255, 122, 122, 0.55), var(--bad));
+  }
+  .m-bar.mint { background: linear-gradient(90deg, rgba(95, 227, 179, 0.4), var(--mint)); }
+
+  .drift { padding-top: 11px; border-top: 1px solid var(--line); }
+  .drift-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.1em;
+    color: var(--muted-2);
+  }
+  .drift-vals { display: inline-flex; align-items: baseline; gap: 5px; font-size: 0.66rem; }
+  .drift-vals s { color: var(--muted); text-decoration-color: rgba(255, 122, 122, 0.6); }
+  .drift-vals em { font-style: normal; color: var(--muted-2); }
+  .drift-vals b { color: var(--mint); font-weight: 600; }
+  .drift-track {
+    position: relative;
+    height: 16px;
+    margin-top: 8px;
+    border-top: 1px solid var(--line-2);
+  }
+  .drift-track::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--mint), var(--amber), var(--bad));
+    opacity: 0.28;
+  }
+  .drift-mark { position: absolute; top: -4px; width: 2px; height: 10px; }
+  .drift-mark.bad { background: var(--bad); }
+  .drift-mark.good { background: var(--mint); box-shadow: 0 0 0 2px rgba(95, 227, 179, 0.14); }
+  .drift-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1px;
+    font-family: var(--mono);
+    font-size: 0.48rem;
+    color: var(--muted-2);
+  }
+  .gate-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 13px;
+    padding-top: 11px;
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.13em;
+    color: var(--muted);
+  }
+  .gate-pass {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 7px;
+    border: 1px solid rgba(95, 227, 179, 0.4);
+    background: var(--mint-soft);
+    color: var(--mint);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+  }
+  .gate-pass i { width: 5px; height: 5px; background: var(--mint); }
+  .fine {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    line-height: 1.6;
+    letter-spacing: 0.04em;
+    color: var(--muted-2);
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 1240px) {
+    .simba { order: 3; width: 100%; margin-left: 0; }
+    .live { margin-left: auto; }
+  }
+  @media (max-width: 980px) {
+    .mega { display: none; }
+    .controls { width: 286px; }
+    .calibrate { width: 300px; }
+    .hint { display: none; }
+  }
+  @media (max-width: 900px) {
+    body {
+      height: auto;
+      min-height: 100vh;
+      min-height: 100svh;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    .status { padding: 10px 14px; gap: 12px; }
+    .brand h1 { font-size: 0.86rem; }
+    .brand p { font-size: 0.5rem; }
+    .live { margin-left: 0; padding-left: 0; border-left: 0; }
+    .simba { font-size: 0.56rem; gap: 9px; padding: 6px 8px; }
+    .simba-label { padding-right: 8px; }
+    .viewport {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      min-height: 0;
+      overflow: visible;
+    }
+    .stage {
+      position: relative;
+      inset: auto;
+      height: 56vh;
+      height: 56svh;
+      min-height: 320px;
+      border: 1px solid var(--line);
+    }
+    .panel {
+      position: static;
+      width: auto;
+      max-height: none;
+      animation-delay: 0s;
+    }
+    .calibrate { order: 2; }
+    .legend { left: 14px; bottom: 14px; font-size: 0.48rem; gap: 6px; }
+    .legend .ramp { width: 70px; }
+    .scalebar { margin-left: 6px; }
+    .stage-meta { right: 14px; top: 14px; }
+    .reticle { display: none; }
+  }
+  @media (max-width: 520px) {
+    .brand p { display: none; }
+    .simba { justify-content: space-between; }
+    .simba-label { width: 100%; border-right: 0; padding-right: 0; }
+    .legend .scalebar { display: none; }
+    .stage-meta { display: none; }
+    .controls, .panel { padding: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header class="status">
+  <div class="brand">
+    <div class="mark" aria-hidden="true"></div>
+    <div>
+      <h1>COSMOVERSE</h1>
+      <p>Calibrated-response observatory</p>
+    </div>
+  </div>
+
+  <div class="live" aria-label="Renderer status">
+    <span class="chip"><span class="pulse" aria-hidden="true"></span>WebGL GPU</span>
+    <span class="chip"><span class="k">FPS</span><b id="fps" aria-hidden="true">--</b></span>
+    <span class="chip"><span class="k">POINTS</span><b id="point-count">36,000</b></span>
+  </div>
+
+  <div class="simba" aria-label="SIMBA calibrated-response demo summary">
+    <span class="simba-label">SIMBA calibrated-response demo</span>
+    <span class="metric">COV 68 <b>54%</b><i>&rarr;</i><b class="after">64%</b></span>
+    <span class="metric">COV 95 <b>57%</b><i>&rarr;</i><b class="after">93%</b></span>
+    <span class="metric">|BIAS| <b>2.32&sigma;</b><i>&rarr;</i><b class="after">0.68&sigma;</b></span>
+    <span class="gate"><span class="gate-dot" aria-hidden="true"></span>GATE <b>PASS</b></span>
+  </div>
+</header>
+
+<main class="viewport">
+  <div class="stage" id="stage" role="img" tabindex="0" aria-label="Interactive rotating 3D cosmic web. Drag to orbit, scroll to zoom, press R to reset the view.">
+    <canvas id="cosmic-canvas"></canvas>
+
+    <span class="corner tl" aria-hidden="true"></span>
+    <span class="corner tr" aria-hidden="true"></span>
+    <span class="corner bl" aria-hidden="true"></span>
+    <span class="corner br" aria-hidden="true"></span>
+    <div class="reticle" aria-hidden="true"></div>
+    <div class="mega" aria-hidden="true">COSMIC<br>WEB</div>
+
+    <div class="stage-meta" aria-hidden="true">
+      <span class="meta-line"><i></i>FIELD / &delta;(x)</span>
+      <span class="meta-sub">z = 0.00 &middot; TUNeS v1 emulator</span>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span>DENSITY</span>
+      <span class="ramp"></span>
+      <span>SPARSE</span>
+      <span>DENSE</span>
+      <span class="scalebar"><i></i>100 Mpc/h</span>
+    </div>
+
+    <div class="hint" aria-hidden="true">DRAG ORBIT &middot; WHEEL ZOOM &middot; R RESET</div>
+    <span id="truth-marker" aria-hidden="true" hidden></span>
+    <div id="truth-tag" hidden>&#952;* TRUTH</div>
+
+    <div id="gl-fallback" class="fallback" role="status" aria-live="polite" hidden>
+      <span class="fallback-sq" aria-hidden="true"></span>
+      <div>
+        <b>GPU context unavailable</b>
+        <p id="fallback-msg">The WebGL renderer could not start on this device.</p>
+      </div>
+    </div>
+  </div>
+
+  <aside class="panel controls" aria-label="Cosmological field controls">
+    <div class="panel-head">
+      <span class="idx">01</span>
+      <h2>Field parameters</h2>
+      <span class="tag">LIVE</span>
+    </div>
+    <p class="panel-note">Deterministic demo field. Each control retracts tracers, rewrites bias weighting and heats dense cores. No backend, no live inference.</p>
+
+    <div class="field">
+      <div class="field-head">
+        <label for="omega-m"><span class="sym">&Omega;<sub>m</sub></span><span class="name">Matter density</span></label>
+        <output id="out-omega-m" for="omega-m">0.315</output>
+      </div>
+      <input type="range" id="omega-m" min="0.18" max="0.45" step="0.005" value="0.315" aria-label="Matter density Omega m">
+    </div>
+
+    <div class="field">
+      <div class="field-head">
+        <label for="sigma8"><span class="sym">&sigma;<sub>8</sub></span><span class="name">Clustering amplitude</span></label>
+        <output id="out-sigma8" for="sigma8">0.810</output>
+      </div>
+      <input type="range" id="sigma8" min="0.65" max="0.95" step="0.005" value="0.810" aria-label="Clustering amplitude sigma 8">
+    </div>
+
+    <div class="field">
+      <div class="field-head">
+        <label for="b1"><span class="sym">b<sub>1</sub></span><span class="name">Galaxy bias</span></label>
+        <output id="out-b1" for="b1">1.45</output>
+      </div>
+      <input type="range" id="b1" min="0.90" max="2.20" step="0.01" value="1.45" aria-label="Linear galaxy bias b 1">
+    </div>
+
+    <div class="field">
+      <div class="field-head">
+        <label for="a-agn"><span class="sym">A<sub>AGN</sub></span><span class="name">AGN feedback</span></label>
+        <output id="out-a-agn" for="a-agn">1.00</output>
+      </div>
+      <input type="range" id="a-agn" min="0.20" max="2.50" step="0.01" value="1.00" aria-label="AGN feedback amplitude">
+    </div>
+
+    <label class="switch-row" for="toggle-posterior">
+      <span class="switch-copy">
+        <b>Posterior overlay</b>
+        <small>1,500 draws &middot; truth marker &theta;*</small>
+      </span>
+      <span class="switch">
+        <input type="checkbox" id="toggle-posterior" checked>
+        <span class="track" aria-hidden="true"><span class="knob"></span></span>
+      </span>
+    </label>
+
+    <div class="derived">
+      <span>S<sub>8</sub> = &sigma;<sub>8</sub>(&Omega;<sub>m</sub>/0.3)<sup>1/2</sup></span>
+      <b id="out-s8">0.830</b>
+    </div>
+
+    <button class="reset" id="reset-view" type="button">
+      <span>Reset view</span>
+      <kbd>R</kbd>
+    </button>
+  </aside>
+
+  <aside class="panel calibrate" aria-label="SIMBA calibration detail">
+    <div class="panel-head">
+      <span class="idx">02</span>
+      <h2>Calibrated response</h2>
+      <span class="tag amber">SIMBA</span>
+    </div>
+    <p class="panel-note">Coverage before and after adaptation on the SIMBA transfer task.</p>
+
+    <div class="matrix">
+      <span class="m-head"></span>
+      <span class="m-head">BEFORE</span>
+      <span class="m-head">AFTER</span>
+
+      <span class="m-row">68%</span>
+      <span class="m-cell"><b class="bad">54%</b><span class="m-bar" style="--w:54%"></span></span>
+      <span class="m-cell"><b class="mint">64%</b><span class="m-bar mint" style="--w:64%"></span></span>
+
+      <span class="m-row">95%</span>
+      <span class="m-cell"><b class="bad">57%</b><span class="m-bar" style="--w:57%"></span></span>
+      <span class="m-cell"><b class="mint">93%</b><span class="m-bar mint" style="--w:93%"></span></span>
+    </div>
+
+    <div class="drift">
+      <div class="drift-head">
+        <span>MEDIAN BIAS</span>
+        <span class="drift-vals"><s>2.32&sigma;</s><em>&rarr;</em><b>0.68&sigma;</b></span>
+      </div>
+      <div class="drift-track" aria-hidden="true">
+        <span class="drift-mark bad" style="left:77.3%"></span>
+        <span class="drift-mark good" style="left:22.7%"></span>
+      </div>
+      <div class="drift-axis" aria-hidden="true"><span>0</span><span>1&sigma;</span><span>2&sigma;</span><span>3&sigma;</span></div>
+    </div>
+
+    <div class="gate-row">
+      <span>ADAPTATION GATE</span>
+      <span class="gate-pass"><i aria-hidden="true"></i>PASS</span>
+    </div>
+    <p class="fine">SIMBA calibrated-response demo &middot; fixed reference summary, not a live run.</p>
+  </aside>
+</main>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+precision highp float;
+
+attribute vec3 aPos;
+attribute float aDensity;
+
+uniform mat4 uMVP;
+uniform float uTime;
+uniform mediump float uBiasN;
+uniform mediump float uAgnN;
+uniform float uSize;
+uniform float uDPR;
+uniform mediump float uMode;
+uniform float uExpansion;
+
+varying mediump float vDensity;
+varying mediump float vFade;
+
+void main() {
+  float d = clamp(aDensity, 0.0, 1.0);
+  float breathe = 1.0 + 0.006 * sin(uTime * 0.55 + d * 6.28318);
+  vec3 p = aPos * breathe * uExpansion;
+  vec4 clip = uMVP * vec4(p, 1.0);
+  gl_Position = clip;
+
+  float dist = max(0.35, clip.w);
+  vFade = clamp(1.32 - dist * 0.095, 0.38, 1.0);
+  vDensity = d;
+
+  float size = uSize * uDPR * (0.42 + 1.30 * pow(d, 0.62)) * (2.55 / dist);
+  size *= 1.0 + 0.20 * uBiasN * d;
+  size *= 1.0 + 0.28 * max(uAgnN, 0.0) * d;
+  if (uMode > 0.5 && uMode < 1.5) size = uSize * uDPR * (2.55 / dist);
+  if (uMode > 2.5) size = uSize * uDPR * 3.2;
+  gl_PointSize = clamp(size, 1.0, 34.0 * uDPR);
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform mediump float uMode;
+uniform mediump float uBiasN;
+uniform mediump float uAgnN;
+uniform float uContrast;
+
+varying mediump float vDensity;
+varying mediump float vFade;
+
+vec3 ramp(float t) {
+  vec3 c0 = vec3(0.024, 0.047, 0.086);
+  vec3 c1 = vec3(0.035, 0.243, 0.286);
+  vec3 c2 = vec3(0.298, 0.839, 0.635);
+  vec3 c3 = vec3(0.973, 0.663, 0.176);
+  vec3 c4 = vec3(1.0, 0.960, 0.870);
+  vec3 col = mix(c0, c1, smoothstep(0.02, 0.30, t));
+  col = mix(col, c2, smoothstep(0.26, 0.58, t));
+  col = mix(col, c3, smoothstep(0.56, 0.84, t));
+  col = mix(col, c4, smoothstep(0.82, 1.0, t));
+  return col;
+}
+
+void main() {
+  if (uMode > 3.5) {
+    gl_FragColor = vec4(0.42, 0.84, 1.0, 0.3);
+    return;
+  }
+
+  if (uMode > 1.5 && uMode < 2.5) {
+    gl_FragColor = vec4(0.98, 0.74, 0.32, 0.85);
+    return;
+  }
+
+  vec2 q = gl_PointCoord * 2.0 - 1.0;
+  float r2 = dot(q, q);
+  if (r2 > 1.0) discard;
+  float sprite = smoothstep(1.0, 0.05, r2);
+
+  if (uMode > 2.5) {
+    float core = pow(smoothstep(1.0, 0.0, r2), 1.6);
+    gl_FragColor = vec4(vec3(1.0, 0.84, 0.46), 0.55 + 0.45 * core);
+    return;
+  }
+
+  if (uMode > 0.5 && uMode < 1.5) {
+    float halo = smoothstep(1.0, 0.0, r2);
+    gl_FragColor = vec4(vec3(0.38, 0.88, 1.0), 0.55 * halo * vFade);
+    return;
+  }
+
+  float d = clamp(vDensity * uContrast, 0.0, 1.0);
+  d = pow(d, mix(1.35, 0.62, uBiasN * 0.5 + 0.5));
+  vec3 col = ramp(d);
+  float heat = clamp(uAgnN, 0.0, 1.0) * smoothstep(0.30, 0.92, d);
+  col = mix(col, vec3(1.0, 0.56, 0.16), 0.50 * heat);
+  float alpha = (0.085 + 0.62 * d) * sprite * vFade;
+  gl_FragColor = vec4(col, alpha);
+}
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var POINTS = 36000;
+  var POSTERIOR_POINTS = 1500;
+  var SEED = 0xC05D0E;
+  var POSTERIOR_SEED = 0xBEE5EED;
+  var GRID = 34;
+  var GRID_ORIGIN = -1.06;
+  var GRID_SPAN = 2.12;
+
+  function clamp(value, lo, hi) {
+    return value < lo ? lo : value > hi ? hi : value;
+  }
+
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function gauss(rng) {
+    var u = 0;
+    var v = 0;
+    while (u === 0) u = rng();
+    while (v === 0) v = rng();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function cross(a, b) {
+    return [
+      a[1] * b[2] - a[2] * b[1],
+      a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0]
+    ];
+  }
+
+  function normalize(v) {
+    var l = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) || 1;
+    return [v[0] / l, v[1] / l, v[2] / l];
+  }
+
+  function buildScene() {
+    var rng = mulberry32(SEED);
+    var nodes = [];
+    var nodeCount = 26;
+    var n;
+    var k;
+
+    for (n = 0; n < nodeCount; n++) {
+      var px = 0;
+      var py = 0;
+      var pz = 0;
+      for (var attempt = 0; attempt < 50; attempt++) {
+        if (rng() < 0.34) {
+          px = clamp(gauss(rng) * 0.34, -1, 1);
+          py = clamp(gauss(rng) * 0.34, -1, 1);
+          pz = clamp(gauss(rng) * 0.34, -1, 1);
+        } else {
+          px = (rng() * 2 - 1) * 0.92;
+          py = (rng() * 2 - 1) * 0.92;
+          pz = (rng() * 2 - 1) * 0.92;
+        }
+        var ok = true;
+        for (k = 0; k < nodes.length; k++) {
+          var ndx = nodes[k][0] - px;
+          var ndy = nodes[k][1] - py;
+          var ndz = nodes[k][2] - pz;
+          if (ndx * ndx + ndy * ndy + ndz * ndz < 0.03) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) break;
+      }
+      nodes.push([px, py, pz, 0.55 + rng() * 1.45]);
+    }
+
+    var edges = [];
+    var edgeSet = {};
+    function addEdge(i, j) {
+      var key = i < j ? i + ":" + j : j + ":" + i;
+      if (i === j || edgeSet[key]) return;
+      edgeSet[key] = true;
+      edges.push([i, j]);
+    }
+
+    for (var i = 0; i < nodeCount; i++) {
+      var ranked = [];
+      for (var j = 0; j < nodeCount; j++) {
+        if (j === i) continue;
+        var dx = nodes[j][0] - nodes[i][0];
+        var dy = nodes[j][1] - nodes[i][1];
+        var dz = nodes[j][2] - nodes[i][2];
+        ranked.push([dx * dx + dy * dy + dz * dz, j]);
+      }
+      ranked.sort(function (a, b) { return a[0] - b[0]; });
+      addEdge(i, ranked[0][1]);
+      addEdge(i, ranked[1][1]);
+      if (rng() < 0.55) addEdge(i, ranked[2][1]);
+    }
+
+    var segments = edges.map(function (edge) {
+      var a = nodes[edge[0]];
+      var b = nodes[edge[1]];
+      var ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+      var dir = normalize(ab);
+      var ref = Math.abs(dir[1]) < 0.85 ? [0, 1, 0] : [1, 0, 0];
+      var u = normalize(cross(dir, ref));
+      var v = cross(dir, u);
+      return {
+        a: [a[0], a[1], a[2]],
+        b: [b[0], b[1], b[2]],
+        u: u,
+        v: v,
+        len: Math.sqrt(ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2]),
+        bend: [(rng() - 0.5) * 0.14, (rng() - 0.5) * 0.14, (rng() - 0.5) * 0.14]
+      };
+    });
+
+    var filamentPoints = POINTS - 3600 - 8400;
+    var weightSum = 0;
+    segments.forEach(function (s) {
+      s.weight = Math.pow(s.len, 0.85);
+      weightSum += s.weight;
+    });
+    var allocated = 0;
+    segments.forEach(function (s, idx) {
+      s.count = idx === segments.length - 1
+        ? filamentPoints - allocated
+        : Math.floor(filamentPoints * s.weight / weightSum);
+      allocated += s.count;
+    });
+
+    var base = new Float32Array(POINTS * 3);
+    var density = new Float32Array(POINTS);
+    var webData = new Float32Array(POINTS * 4);
+    var cursor = 0;
+
+    function pushPoint(x, y, z) {
+      if (cursor >= POINTS) return;
+      base[cursor * 3] = x;
+      base[cursor * 3 + 1] = y;
+      base[cursor * 3 + 2] = z;
+      cursor++;
+    }
+
+    segments.forEach(function (s) {
+      for (var p = 0; p < s.count; p++) {
+        var r = rng();
+        var sign = r < 0.5 ? -1 : 1;
+        var t = 0.5 + 0.5 * sign * Math.pow(Math.abs(2 * r - 1), 0.72);
+        var arc = Math.sin(Math.PI * t);
+        var spread = (0.014 + 0.040 * arc) * (0.55 + 0.90 * rng());
+        var g1 = gauss(rng);
+        var g2 = gauss(rng);
+        var x = s.a[0] + (s.b[0] - s.a[0]) * t + s.bend[0] * arc + s.u[0] * g1 * spread + s.v[0] * g2 * spread;
+        var y = s.a[1] + (s.b[1] - s.a[1]) * t + s.bend[1] * arc + s.u[1] * g1 * spread + s.v[1] * g2 * spread;
+        var z = s.a[2] + (s.b[2] - s.a[2]) * t + s.bend[2] * arc + s.u[2] * g1 * spread + s.v[2] * g2 * spread;
+        pushPoint(x, y, z);
+      }
+    });
+
+    var totalMass = 0;
+    nodes.forEach(function (node) { totalMass += node[3]; });
+
+    for (k = 0; k < 8400; k++) {
+      var pick = rng() * totalMass;
+      var host = nodes[0];
+      for (n = 0; n < nodes.length; n++) {
+        pick -= nodes[n][3];
+        if (pick <= 0) {
+          host = nodes[n];
+          break;
+        }
+      }
+      var roll = rng();
+      var sigma = roll < 0.24 ? 0.016 : roll < 0.84 ? 0.050 : 0.115;
+      pushPoint(
+        clamp(host[0] + gauss(rng) * sigma, -1.06, 1.06),
+        clamp(host[1] + gauss(rng) * sigma, -1.06, 1.06),
+        clamp(host[2] + gauss(rng) * sigma, -1.06, 1.06)
+      );
+    }
+
+    for (k = 0; k < 3600; k++) {
+      var fx = gauss(rng);
+      var fy = gauss(rng);
+      var fz = gauss(rng);
+      var fl = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1;
+      var fr = Math.pow(rng(), 1 / 3) * 0.98;
+      pushPoint(fx / fl * fr, fy / fl * fr, fz / fl * fr);
+    }
+
+    while (cursor < POINTS) {
+      var tx = rng() * 2 - 1;
+      var ty = rng() * 2 - 1;
+      var tz = rng() * 2 - 1;
+      pushPoint(tx, ty, tz);
+    }
+
+    var cells = GRID * GRID * GRID;
+    var counts = new Float32Array(cells);
+    function toCell(value) {
+      return clamp(Math.floor((value - GRID_ORIGIN) / GRID_SPAN * GRID), 0, GRID - 1);
+    }
+    for (i = 0; i < POINTS; i++) {
+      var ix = toCell(base[i * 3]);
+      var iy = toCell(base[i * 3 + 1]);
+      var iz = toCell(base[i * 3 + 2]);
+      counts[ix + iy * GRID + iz * GRID * GRID] += 1;
+    }
+
+    var smooth = new Float32Array(cells);
+    var maxSum = 0;
+    for (var sz = 0; sz < GRID; sz++) {
+      for (var sy = 0; sy < GRID; sy++) {
+        for (var sx = 0; sx < GRID; sx++) {
+          var sum = 0;
+          for (var dz = -1; dz <= 1; dz++) {
+            var z2 = sz + dz;
+            if (z2 < 0 || z2 >= GRID) continue;
+            for (var dy = -1; dy <= 1; dy++) {
+              var y2 = sy + dy;
+              if (y2 < 0 || y2 >= GRID) continue;
+              for (var dx = -1; dx <= 1; dx++) {
+                var x2 = sx + dx;
+                if (x2 < 0 || x2 >= GRID) continue;
+                sum += counts[x2 + y2 * GRID + z2 * GRID * GRID];
+              }
+            }
+          }
+          smooth[sx + sy * GRID + sz * GRID * GRID] = sum;
+          if (sum > maxSum) maxSum = sum;
+        }
+      }
+    }
+    var logMax = Math.log1p(maxSum) || 1;
+    for (i = 0; i < smooth.length; i++) smooth[i] = Math.log1p(smooth[i]) / logMax;
+
+    function densityAt(x, y, z) {
+      var gx = clamp((x - GRID_ORIGIN) / GRID_SPAN * GRID - 0.5, 0, GRID - 1.001);
+      var gy = clamp((y - GRID_ORIGIN) / GRID_SPAN * GRID - 0.5, 0, GRID - 1.001);
+      var gz = clamp((z - GRID_ORIGIN) / GRID_SPAN * GRID - 0.5, 0, GRID - 1.001);
+      var x0 = Math.floor(gx);
+      var y0 = Math.floor(gy);
+      var z0 = Math.floor(gz);
+      var tx = gx - x0;
+      var ty = gy - y0;
+      var tz = gz - z0;
+      var x1 = Math.min(x0 + 1, GRID - 1);
+      var y1 = Math.min(y0 + 1, GRID - 1);
+      var z1 = Math.min(z0 + 1, GRID - 1);
+      var c000 = smooth[x0 + y0 * GRID + z0 * GRID * GRID];
+      var c100 = smooth[x1 + y0 * GRID + z0 * GRID * GRID];
+      var c010 = smooth[x0 + y1 * GRID + z0 * GRID * GRID];
+      var c110 = smooth[x1 + y1 * GRID + z0 * GRID * GRID];
+      var c001 = smooth[x0 + y0 * GRID + z1 * GRID * GRID];
+      var c101 = smooth[x1 + y0 * GRID + z1 * GRID * GRID];
+      var c011 = smooth[x0 + y1 * GRID + z1 * GRID * GRID];
+      var c111 = smooth[x1 + y1 * GRID + z1 * GRID * GRID];
+      var cx00 = c000 + (c100 - c000) * tx;
+      var cx10 = c010 + (c110 - c010) * tx;
+      var cx01 = c001 + (c101 - c001) * tx;
+      var cx11 = c011 + (c111 - c011) * tx;
+      var cy0 = cx00 + (cx10 - cx00) * ty;
+      var cy1 = cx01 + (cx11 - cx01) * ty;
+      return cy0 + (cy1 - cy0) * tz;
+    }
+
+    var anchors = new Int32Array(POINTS);
+    for (i = 0; i < POINTS; i++) {
+      var bx = base[i * 3];
+      var by = base[i * 3 + 1];
+      var bz = base[i * 3 + 2];
+      var raw = densityAt(bx, by, bz);
+      var dvalue = clamp(0.02 + 0.98 * Math.pow(raw, 1.3) * (0.78 + 0.34 * rng()), 0, 1);
+      density[i] = dvalue;
+      webData[i * 4] = bx;
+      webData[i * 4 + 1] = by;
+      webData[i * 4 + 2] = bz;
+      webData[i * 4 + 3] = dvalue;
+
+      var best = 0;
+      var bestD = Infinity;
+      for (n = 0; n < nodeCount; n++) {
+        var ddx = nodes[n][0] - bx;
+        var ddy = nodes[n][1] - by;
+        var ddz = nodes[n][2] - bz;
+        var d2 = ddx * ddx + ddy * ddy + ddz * ddz;
+        if (d2 < bestD) {
+          bestD = d2;
+          best = n;
+        }
+      }
+      anchors[i] = best;
+    }
+
+    return {
+      nodes: nodes,
+      anchors: anchors,
+      base: base,
+      density: density,
+      webData: webData
+    };
+  }
+
+  function buildPosterior() {
+    var rng = mulberry32(POSTERIOR_SEED);
+    var truth = [0.55, 0.42, 0.10];
+    var e1 = normalize([0.80, 0.28, -0.53]);
+    var e2 = normalize(cross(e1, [0.10, 0.95, 0.28]));
+    var e3 = normalize(cross(e1, e2));
+    var data = new Float32Array(POSTERIOR_POINTS * 3);
+
+    for (var i = 0; i < POSTERIOR_POINTS; i++) {
+      var g1 = gauss(rng);
+      var g2 = gauss(rng);
+      var g3 = gauss(rng);
+      var lobe = rng() < 0.18 ? 0.09 : 0;
+      var a = g1 * 0.23;
+      var b = g2 * 0.14 + 0.036 * g1 + lobe;
+      var c = g3 * 0.085;
+      data[i * 3] = truth[0] + e1[0] * a + e2[0] * b + e3[0] * c;
+      data[i * 3 + 1] = truth[1] + e1[1] * a + e2[1] * b + e3[1] * c;
+      data[i * 3 + 2] = truth[2] + e1[2] * a + e2[2] * b + e3[2] * c;
+    }
+
+    var wire = [];
+    function addEllipse(u, v, ru, rv) {
+      var segs = 42;
+      for (var k = 0; k < segs; k++) {
+        var a0 = (k / segs) * Math.PI * 2;
+        var a1 = ((k + 1) / segs) * Math.PI * 2;
+        wire.push(
+          truth[0] + u[0] * Math.cos(a0) * ru + v[0] * Math.sin(a0) * rv,
+          truth[1] + u[1] * Math.cos(a0) * ru + v[1] * Math.sin(a0) * rv,
+          truth[2] + u[2] * Math.cos(a0) * ru + v[2] * Math.sin(a0) * rv,
+          truth[0] + u[0] * Math.cos(a1) * ru + v[0] * Math.sin(a1) * rv,
+          truth[1] + u[1] * Math.cos(a1) * ru + v[1] * Math.sin(a1) * rv,
+          truth[2] + u[2] * Math.cos(a1) * ru + v[2] * Math.sin(a1) * rv
+        );
+      }
+    }
+    addEllipse(e1, e2, 0.53, 0.32);
+    addEllipse(e2, e3, 0.32, 0.20);
+    addEllipse(e1, e3, 0.53, 0.20);
+
+    return { data: data, truth: truth, wire: new Float32Array(wire) };
+  }
+
+  var canvas = document.getElementById("cosmic-canvas");
+  var stage = document.getElementById("stage");
+  var fpsEl = document.getElementById("fps");
+  var pointCountEl = document.getElementById("point-count");
+  var fallback = document.getElementById("gl-fallback");
+  var fallbackMsg = document.getElementById("fallback-msg");
+  var truthTag = document.getElementById("truth-tag");
+  var truthMarker = document.getElementById("truth-marker");
+  var posteriorToggle = document.getElementById("toggle-posterior");
+  var resetButton = document.getElementById("reset-view");
+
+  var sliders = {
+    omega: document.getElementById("omega-m"),
+    sigma8: document.getElementById("sigma8"),
+    b1: document.getElementById("b1"),
+    agn: document.getElementById("a-agn")
+  };
+  var outputs = {
+    omega: document.getElementById("out-omega-m"),
+    sigma8: document.getElementById("out-sigma8"),
+    b1: document.getElementById("out-b1"),
+    agn: document.getElementById("out-a-agn"),
+    s8: document.getElementById("out-s8")
+  };
+
+  var scene = buildScene();
+  var posterior = buildPosterior();
+  var posteriorOn = posteriorToggle.checked;
+
+  var gl = null;
+  var resources = null;
+  var running = false;
+  var lost = false;
+  var rafId = 0;
+  var lastTime = 0;
+  var dpr = 1;
+  var webUploadPending = true;
+  var paramsDirty = false;
+
+  var cam = { yaw: 0.62, pitch: -0.24, zoom: 3.9 };
+  var camTarget = { yaw: 0.62, pitch: -0.24, zoom: 3.9 };
+  var dragging = false;
+  var lastX = 0;
+  var lastY = 0;
+  var activePointer = null;
+
+  var renderState = { biasN: 0, agnN: 0, contrast: 1, expansion: 1 };
+
+  var motionQuery = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+  var reducedMotion = motionQuery ? motionQuery.matches : false;
+
+  var proj = new Float32Array(16);
+  var view = new Float32Array(16);
+  var rot = new Float32Array(16);
+  var rotX = new Float32Array(16);
+  var rotY = new Float32Array(16);
+  var tmpMat = new Float32Array(16);
+  var mvp = new Float32Array(16);
+
+  function mat4Perspective(out, fovy, aspect, near, far) {
+    var f = 1 / Math.tan(fovy / 2);
+    var nf = 1 / (near - far);
+    out.fill(0);
+    out[0] = f / aspect;
+    out[5] = f;
+    out[10] = (far + near) * nf;
+    out[11] = -1;
+    out[14] = 2 * far * near * nf;
+  }
+
+  function mat4Translate(out, x, y, z) {
+    out.fill(0);
+    out[0] = 1;
+    out[5] = 1;
+    out[10] = 1;
+    out[15] = 1;
+    out[12] = x;
+    out[13] = y;
+    out[14] = z;
+  }
+
+  function mat4RotX(out, angle) {
+    var c = Math.cos(angle);
+    var s = Math.sin(angle);
+    out.fill(0);
+    out[0] = 1;
+    out[5] = c;
+    out[6] = s;
+    out[9] = -s;
+    out[10] = c;
+    out[15] = 1;
+  }
+
+  function mat4RotY(out, angle) {
+    var c = Math.cos(angle);
+    var s = Math.sin(angle);
+    out.fill(0);
+    out[0] = c;
+    out[2] = -s;
+    out[5] = 1;
+    out[8] = s;
+    out[10] = c;
+    out[15] = 1;
+  }
+
+  function mat4Multiply(a, b, out) {
+    for (var c = 0; c < 4; c++) {
+      for (var r = 0; r < 4; r++) {
+        out[c * 4 + r] =
+          a[r] * b[c * 4] +
+          a[4 + r] * b[c * 4 + 1] +
+          a[8 + r] * b[c * 4 + 2] +
+          a[12 + r] * b[c * 4 + 3];
+      }
+    }
+  }
+
+  function updateReadouts() {
+    var om = parseFloat(sliders.omega.value);
+    var s8 = parseFloat(sliders.sigma8.value);
+    var b1 = parseFloat(sliders.b1.value);
+    var agn = parseFloat(sliders.agn.value);
+
+    outputs.omega.textContent = om.toFixed(3);
+    outputs.sigma8.textContent = s8.toFixed(3);
+    outputs.b1.textContent = b1.toFixed(2);
+    outputs.agn.textContent = agn.toFixed(2);
+    outputs.s8.textContent = (s8 * Math.sqrt(om / 0.3)).toFixed(3);
+
+    Object.keys(sliders).forEach(function (key) {
+      var el = sliders[key];
+      var min = parseFloat(el.min);
+      var max = parseFloat(el.max);
+      var pct = ((parseFloat(el.value) - min) / (max - min)) * 100;
+      el.style.setProperty("--fill", pct.toFixed(2) + "%");
+    });
+  }
+
+  function applyWebParameters() {
+    var om = parseFloat(sliders.omega.value);
+    var s8 = parseFloat(sliders.sigma8.value);
+    var b1 = parseFloat(sliders.b1.value);
+    var agn = parseFloat(sliders.agn.value);
+
+    var omn = (om - 0.315) / 0.135;
+    var s8n = (s8 - 0.81) / 0.12;
+    var agnN = clamp((agn - 1.0) / 1.5, -0.55, 1.0);
+    var shrink = clamp(1 - 0.36 * s8n - 0.20 * omn, 0.56, 1.42);
+    var feedback = 1 + 0.20 * agnN;
+    var data = scene.webData;
+    var base = scene.base;
+    var density = scene.density;
+    var nodes = scene.nodes;
+    var anchors = scene.anchors;
+
+    for (var i = 0; i < POINTS; i++) {
+      var d = density[i];
+      var k = 0.22 + 0.78 * d;
+      var s = 1 + (shrink - 1) * k;
+      var node = nodes[anchors[i]];
+      var x = node[0] + (base[i * 3] - node[0]) * s;
+      var y = node[1] + (base[i * 3 + 1] - node[1]) * s;
+      var z = node[2] + (base[i * 3 + 2] - node[2]) * s;
+
+      if (d > 0.5) {
+        var push = 1 + (feedback - 1) * (d - 0.5) * 2;
+        x = node[0] + (x - node[0]) * push;
+        y = node[1] + (y - node[1]) * push;
+        z = node[2] + (z - node[2]) * push;
+      }
+
+      data[i * 4] = x;
+      data[i * 4 + 1] = y;
+      data[i * 4 + 2] = z;
+    }
+
+    renderState.biasN = clamp((b1 - 1.45) / 0.55, -1, 1);
+    renderState.agnN = agnN;
+    renderState.contrast = clamp(1 + 0.50 * s8n + 0.25 * omn, 0.65, 1.8);
+    renderState.expansion = 1 + 0.10 * ((0.315 - om) / 0.135);
+    webUploadPending = true;
+  }
+
+  function resize() {
+    var rect = canvas.getBoundingClientRect();
+    var ratio = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = ratio;
+    var width = Math.max(1, Math.round(rect.width * ratio));
+    var height = Math.max(1, Math.round(rect.height * ratio));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    if (gl) gl.viewport(0, 0, width, height);
+  }
+
+  function showFallback(message) {
+    fallbackMsg.textContent = message;
+    fallback.hidden = false;
+  }
+
+  function hideFallback() {
+    fallback.hidden = true;
+  }
+
+  function compileShader(type, source) {
+    var shader = gl.createShader(type);
+    if (!shader) return null;
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) return null;
+    return shader;
+  }
+
+  function initGL() {
+    var options = {
+      alpha: false,
+      antialias: true,
+      depth: false,
+      powerPreference: "high-performance"
+    };
+    var context = null;
+    try {
+      context = canvas.getContext("webgl", options) || canvas.getContext("experimental-webgl", options);
+    } catch (err) {
+      context = null;
+    }
+    if (!context) {
+      showFallback("WebGL is unavailable in this browser. Enable hardware acceleration to render the field.");
+      return false;
+    }
+    gl = context;
+
+    var vertexSource = document.getElementById("vertex-shader").textContent;
+    var fragmentSource = document.getElementById("fragment-shader").textContent;
+    var vertexShader = compileShader(gl.VERTEX_SHADER, vertexSource);
+    if (!vertexShader) {
+      showFallback("Vertex shader compilation failed on this GPU. Try a current desktop browser.");
+      return false;
+    }
+    var fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentSource);
+    if (!fragmentShader) {
+      showFallback("Fragment shader compilation failed on this GPU. Try a current desktop browser.");
+      return false;
+    }
+
+    var program = gl.createProgram();
+    if (!program) {
+      showFallback("GPU program allocation failed.");
+      return false;
+    }
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      showFallback("WebGL program linking failed on this GPU.");
+      return false;
+    }
+
+    var webBuffer = gl.createBuffer();
+    var posteriorBuffer = gl.createBuffer();
+    var wireBuffer = gl.createBuffer();
+    var lineBuffer = gl.createBuffer();
+    var truthBuffer = gl.createBuffer();
+    if (!webBuffer || !posteriorBuffer || !wireBuffer || !lineBuffer || !truthBuffer) {
+      showFallback("GPU buffer allocation failed.");
+      return false;
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, webBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, scene.webData, gl.DYNAMIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, posteriorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, posterior.data, gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, wireBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, posterior.wire, gl.STATIC_DRAW);
+
+    var t = posterior.truth;
+    var span = 0.16;
+    var lines = new Float32Array([
+      t[0] - span, t[1], t[2], t[0] + span, t[1], t[2],
+      t[0], t[1] - span, t[2], t[0], t[1] + span, t[2],
+      t[0], t[1], t[2] - span, t[0], t[1], t[2] + span
+    ]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, lines, gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, truthBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(t), gl.STATIC_DRAW);
+
+    resources = {
+      program: program,
+      aPos: gl.getAttribLocation(program, "aPos"),
+      aDensity: gl.getAttribLocation(program, "aDensity"),
+      u: {
+        mvp: gl.getUniformLocation(program, "uMVP"),
+        time: gl.getUniformLocation(program, "uTime"),
+        bias: gl.getUniformLocation(program, "uBiasN"),
+        agn: gl.getUniformLocation(program, "uAgnN"),
+        size: gl.getUniformLocation(program, "uSize"),
+        dpr: gl.getUniformLocation(program, "uDPR"),
+        mode: gl.getUniformLocation(program, "uMode"),
+        contrast: gl.getUniformLocation(program, "uContrast"),
+        expansion: gl.getUniformLocation(program, "uExpansion")
+      },
+      webBuffer: webBuffer,
+      posteriorBuffer: posteriorBuffer,
+      wireBuffer: wireBuffer,
+      lineBuffer: lineBuffer,
+      truthBuffer: truthBuffer
+    };
+
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.clearColor(0.012, 0.019, 0.031, 1);
+
+    webUploadPending = false;
+    lost = false;
+    resize();
+    hideFallback();
+    return true;
+  }
+
+  function updateCamera(dt) {
+    if (!dragging && !reducedMotion) camTarget.yaw += dt * 0.14;
+    var ease = 1 - Math.exp(-dt * 8);
+    cam.yaw += (camTarget.yaw - cam.yaw) * ease;
+    cam.pitch += (camTarget.pitch - cam.pitch) * ease;
+    cam.zoom += (camTarget.zoom - cam.zoom) * ease;
+  }
+
+  function updateTruthTag() {
+    if (!posteriorOn) {
+      truthTag.hidden = true;
+      truthMarker.hidden = true;
+      return;
+    }
+    var t = posterior.truth;
+    var x = mvp[0] * t[0] + mvp[4] * t[1] + mvp[8] * t[2] + mvp[12];
+    var y = mvp[1] * t[0] + mvp[5] * t[1] + mvp[9] * t[2] + mvp[13];
+    var w = mvp[3] * t[0] + mvp[7] * t[1] + mvp[11] * t[2] + mvp[15];
+    if (w <= 0.02) {
+      truthTag.hidden = true;
+      truthMarker.hidden = true;
+      return;
+    }
+    var nx = x / w;
+    var ny = y / w;
+    if (nx < -1.05 || nx > 1.05 || ny < -1.05 || ny > 1.05) {
+      truthTag.hidden = true;
+      truthMarker.hidden = true;
+      return;
+    }
+    var rect = stage.getBoundingClientRect();
+    var left = (nx * 0.5 + 0.5) * rect.width;
+    var top = (0.5 - ny * 0.5) * rect.height;
+    var transform = "translate(" + left.toFixed(1) + "px," + top.toFixed(1) + "px)";
+    truthTag.hidden = false;
+    truthTag.style.transform = transform;
+    truthMarker.hidden = false;
+    truthMarker.style.transform = transform;
+  }
+
+  function drawScene(time) {
+    if (!gl || !resources || lost) return;
+    if (!canvas.width || !canvas.height) return;
+
+    mat4Perspective(proj, Math.PI / 4, canvas.width / canvas.height, 0.1, 40);
+    mat4RotX(rotX, cam.pitch);
+    mat4RotY(rotY, cam.yaw);
+    mat4Multiply(rotX, rotY, rot);
+    mat4Translate(view, 0, 0, -cam.zoom);
+    mat4Multiply(view, rot, tmpMat);
+    mat4Multiply(proj, tmpMat, mvp);
+
+    if (webUploadPending) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, resources.webBuffer);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, scene.webData);
+      webUploadPending = false;
+    }
+
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(resources.program);
+
+    gl.uniformMatrix4fv(resources.u.mvp, false, mvp);
+    gl.uniform1f(resources.u.time, time);
+    gl.uniform1f(resources.u.dpr, dpr);
+    gl.uniform1f(resources.u.bias, renderState.biasN);
+    gl.uniform1f(resources.u.agn, renderState.agnN);
+    gl.uniform1f(resources.u.contrast, renderState.contrast);
+    gl.uniform1f(resources.u.expansion, renderState.expansion);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, resources.webBuffer);
+    gl.enableVertexAttribArray(resources.aPos);
+    gl.vertexAttribPointer(resources.aPos, 3, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(resources.aDensity);
+    gl.vertexAttribPointer(resources.aDensity, 1, gl.FLOAT, false, 16, 12);
+    gl.uniform1f(resources.u.mode, 0);
+    gl.uniform1f(resources.u.size, 2.1);
+    gl.drawArrays(gl.POINTS, 0, POINTS);
+
+    if (posteriorOn) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, resources.posteriorBuffer);
+      gl.vertexAttribPointer(resources.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.disableVertexAttribArray(resources.aDensity);
+      gl.vertexAttrib1f(resources.aDensity, 0.9);
+      gl.uniform1f(resources.u.mode, 1);
+      gl.uniform1f(resources.u.size, 4.2);
+      gl.drawArrays(gl.POINTS, 0, POSTERIOR_POINTS);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, resources.wireBuffer);
+      gl.vertexAttribPointer(resources.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.uniform1f(resources.u.mode, 4);
+      gl.drawArrays(gl.LINES, 0, posterior.wire.length / 3);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, resources.lineBuffer);
+      gl.vertexAttribPointer(resources.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.uniform1f(resources.u.mode, 2);
+      gl.drawArrays(gl.LINES, 0, 6);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, resources.truthBuffer);
+      gl.vertexAttribPointer(resources.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.uniform1f(resources.u.mode, 3);
+      gl.uniform1f(resources.u.size, 6.0);
+      gl.drawArrays(gl.POINTS, 0, 1);
+    }
+
+    updateTruthTag();
+  }
+
+  function updateFps(now) {
+    if (!updateFps.last) updateFps.last = now;
+    updateFps.frames = (updateFps.frames || 0) + 1;
+    var elapsed = now - updateFps.last;
+    if (elapsed >= 500) {
+      var value = Math.round((updateFps.frames * 1000) / elapsed);
+      fpsEl.textContent = String(value);
+      fpsEl.classList.toggle("warn", value < 45);
+      fpsEl.classList.toggle("bad", value < 25);
+      updateFps.frames = 0;
+      updateFps.last = now;
+    }
+  }
+
+  function loop(now) {
+    if (!running || lost) return;
+    rafId = requestAnimationFrame(loop);
+    var dt = clamp((now - lastTime) / 1000, 0.001, 0.05);
+    lastTime = now;
+
+    if (paramsDirty) {
+      applyWebParameters();
+      paramsDirty = false;
+    }
+    updateCamera(dt);
+    drawScene(now * 0.001);
+    updateFps(now);
+  }
+
+  function start() {
+    if (running) return;
+    running = true;
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function stop() {
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+
+  function resetView() {
+    camTarget.yaw = 0.62;
+    camTarget.pitch = -0.24;
+    camTarget.zoom = 3.9;
+  }
+
+  canvas.addEventListener("webglcontextlost", function (event) {
+    event.preventDefault();
+    lost = true;
+    stop();
+    fpsEl.textContent = "--";
+    fpsEl.classList.remove("warn", "bad");
+    showFallback("WebGL context lost. The point-cloud buffers are intact; rendering will resume automatically when the GPU restores the context.");
+  }, false);
+
+  canvas.addEventListener("webglcontextrestored", function () {
+    lost = false;
+    if (initGL()) {
+      hideFallback();
+      start();
+    }
+  }, false);
+
+  stage.addEventListener("pointerdown", function (event) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (stage.focus) stage.focus({ preventScroll: true });
+    dragging = true;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    activePointer = event.pointerId;
+    if (stage.setPointerCapture) stage.setPointerCapture(event.pointerId);
+    stage.classList.add("is-dragging");
+  });
+
+  stage.addEventListener("pointermove", function (event) {
+    if (!dragging || event.pointerId !== activePointer) return;
+    var dx = event.clientX - lastX;
+    var dy = event.clientY - lastY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    cam.yaw += dx * 0.006;
+    cam.pitch = clamp(cam.pitch + dy * 0.0045, -1.3, 1.3);
+    camTarget.yaw = cam.yaw;
+    camTarget.pitch = cam.pitch;
+  });
+
+  function endPointer(event) {
+    if (!dragging) return;
+    dragging = false;
+    if (stage.hasPointerCapture && event.pointerId === activePointer && stage.hasPointerCapture(event.pointerId)) {
+      stage.releasePointerCapture(event.pointerId);
+    }
+    activePointer = null;
+    stage.classList.remove("is-dragging");
+  }
+
+  stage.addEventListener("pointerup", endPointer);
+  stage.addEventListener("pointercancel", endPointer);
+
+  stage.addEventListener("wheel", function (event) {
+    event.preventDefault();
+    camTarget.zoom = clamp(camTarget.zoom * Math.exp(event.deltaY * 0.001), 2.1, 8.5);
+  }, { passive: false });
+
+  stage.addEventListener("keydown", function (event) {
+    var step = 0.12;
+    if (event.key === "ArrowLeft") {
+      camTarget.yaw -= step;
+    } else if (event.key === "ArrowRight") {
+      camTarget.yaw += step;
+    } else if (event.key === "ArrowUp") {
+      camTarget.pitch = clamp(camTarget.pitch - step, -1.3, 1.3);
+    } else if (event.key === "ArrowDown") {
+      camTarget.pitch = clamp(camTarget.pitch + step, -1.3, 1.3);
+    } else if (event.key === "+" || event.key === "=") {
+      camTarget.zoom = clamp(camTarget.zoom * 0.92, 2.1, 8.5);
+    } else if (event.key === "-" || event.key === "_") {
+      camTarget.zoom = clamp(camTarget.zoom * 1.08, 2.1, 8.5);
+    } else if (event.key === "r" || event.key === "R") {
+      resetView();
+    } else {
+      return;
+    }
+    event.preventDefault();
+  });
+
+  stage.addEventListener("dblclick", resetView);
+  resetButton.addEventListener("click", function () {
+    resetView();
+    if (stage.focus) stage.focus({ preventScroll: true });
+  });
+
+  posteriorToggle.addEventListener("change", function () {
+    posteriorOn = posteriorToggle.checked;
+    if (!posteriorOn) {
+      truthTag.hidden = true;
+      truthMarker.hidden = true;
+    }
+  });
+
+  Object.keys(sliders).forEach(function (key) {
+    sliders[key].addEventListener("input", function () {
+      updateReadouts();
+      paramsDirty = true;
+    });
+  });
+
+  if (motionQuery) {
+    if (motionQuery.addEventListener) {
+      motionQuery.addEventListener("change", function (event) { reducedMotion = event.matches; });
+    } else if (motionQuery.addListener) {
+      motionQuery.addListener(function (event) { reducedMotion = event.matches; });
+    }
+  }
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(resize).observe(stage);
+  }
+  window.addEventListener("resize", resize);
+
+  pointCountEl.textContent = POINTS.toLocaleString("en-US");
+  updateReadouts();
+  applyWebParameters();
+
+  if (initGL()) {
+    start();
+  }
+})();
+</script>
+</body>
+</html>

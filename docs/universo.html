@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#02040a">
+<meta name="description" content="Una visualización cinematográfica de la estructura a gran escala del universo: materia oscura, gas, filamentos, cúmulos y vacíos cósmicos.">
+<title>EL UNIVERSO — COSMOVERSE</title>
+<style>
+  :root {
+    --ink: #eaf2f7;
+    --muted: rgba(189, 207, 221, 0.62);
+    --amber: #f5a623;
+    --mint: #5fe3b3;
+    --blue: #67a9d8;
+    --bg: #02040a;
+    --sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    cursor: grab;
+  }
+  body.idle, body.idle #universo-canvas { cursor: none; }
+  #universo-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    outline: none;
+  }
+  #vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background:
+      radial-gradient(circle at 50% 44%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.10) 44%, rgba(0, 0, 0, 0.48) 78%, rgba(0, 0, 0, 0.86) 100%),
+      linear-gradient(180deg, rgba(2, 4, 10, 0.42) 0%, rgba(2, 4, 10, 0) 22%, rgba(2, 4, 10, 0) 74%, rgba(2, 4, 10, 0.52) 100%);
+  }
+  #overlay {
+    position: fixed;
+    top: clamp(18px, 4.4vh, 48px);
+    left: clamp(18px, 4.4vw, 64px);
+    z-index: 3;
+    pointer-events: none;
+    transition: opacity 1.6s ease;
+  }
+  #overlay.quiet h1 { opacity: 0; transform: translateY(-6px); }
+  #overlay.quiet p { opacity: 0; }
+  #overlay.quiet .brand { opacity: 0.42; }
+  #overlay.hidden, #legend.hidden { opacity: 0; }
+  .brand {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--amber);
+    opacity: 0.92;
+    margin-bottom: clamp(10px, 2vh, 18px);
+    transition: opacity 1.2s ease;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 5.3vw, 62px);
+    font-weight: 300;
+    line-height: 0.94;
+    letter-spacing: 0.16em;
+    color: var(--ink);
+    text-shadow: 0 0 38px rgba(95, 227, 179, 0.16), 0 2px 24px rgba(0, 0, 0, 0.72);
+    transition: opacity 1.4s ease, transform 1.4s ease;
+  }
+  #overlay p {
+    margin: clamp(12px, 2.2vh, 20px) 0 0 0;
+    font-family: var(--mono);
+    font-size: clamp(9px, 1.05vw, 12px);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: opacity 1.2s ease;
+  }
+  #legend {
+    position: fixed;
+    left: clamp(18px, 4.4vw, 64px);
+    bottom: max(22px, env(safe-area-inset-bottom, 22px));
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    pointer-events: none;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: rgba(200, 216, 230, 0.58);
+    transition: opacity 1.4s ease;
+  }
+  #legend.gone { opacity: 0; }
+  #legend span { white-space: nowrap; }
+  .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+    vertical-align: 1px;
+  }
+  .dot.dm { color: var(--blue); }
+  .dot.gas { color: var(--mint); }
+  .dot.gal { color: var(--amber); }
+  #hint {
+    position: fixed;
+    left: 50%;
+    bottom: max(22px, env(safe-area-inset-bottom, 22px));
+    transform: translateX(-50%);
+    z-index: 3;
+    width: min(94vw, 860px);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: rgba(200, 216, 230, 0.52);
+    pointer-events: none;
+    text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9);
+    transition: opacity 1.4s ease;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  #hint.gone { opacity: 0; }
+  #lost {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    background: rgba(2, 4, 10, 0.92);
+  }
+  #lost.on { display: flex; }
+  @media (max-width: 700px) {
+    h1 { letter-spacing: 0.12em; }
+    #legend {
+      left: 50%;
+      transform: translateX(-50%);
+      justify-content: center;
+      bottom: max(48px, env(safe-area-inset-bottom, 48px));
+      width: 94vw;
+      gap: 6px 12px;
+    }
+    #hint {
+      left: 0;
+      transform: none;
+      width: 100%;
+      padding: 0 14px;
+      font-size: 8px;
+      letter-spacing: 0;
+      bottom: max(18px, env(safe-area-inset-bottom, 18px));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #overlay, h1, #legend, #hint { transition: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="universo-canvas" aria-label="Visualización 3D cinematográfica de la estructura a gran escala del universo"></canvas>
+<div id="vignette"></div>
+
+<header id="overlay">
+  <div class="brand">COSMOVERSE · SIMULACIÓN ILUSTRATIVA</div>
+  <h1>EL UNIVERSO</h1>
+  <p>materia oscura · gas · galaxias</p>
+</header>
+
+<div id="legend" aria-hidden="true">
+  <span><i class="dot dm"></i>materia oscura</span>
+  <span><i class="dot gas"></i>gas</span>
+  <span><i class="dot gal"></i>galaxias</span>
+</div>
+
+<div id="hint">arrastra · rueda o pinch · doble clic enfoca un cúmulo<br>1/2/3 capas · T evolución · F pantalla completa · R reinicio</div>
+<div id="lost" role="alert"></div>
+
+<noscript>
+  <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#02040a;color:#f5a623;font-family:monospace;text-align:center;padding:24px;z-index:9;">
+    Necesitás JavaScript y WebGL para ver el universo.
+  </div>
+</noscript>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec3 aPositionLate;
+attribute vec3 aPositionEarly;
+attribute vec3 aColor;
+attribute float aSize;
+attribute float aAlpha;
+attribute float aKind;
+
+uniform mat4 uView;
+uniform mat4 uProj;
+uniform float uPixelRatio;
+uniform float uEvolution;
+uniform float uShowDM;
+uniform float uShowGas;
+uniform float uShowGal;
+
+varying vec3 vColor;
+varying float vAlpha;
+varying float vKind;
+
+void main() {
+  vec3 pos = mix(aPositionEarly, aPositionLate, uEvolution);
+  vec4 viewPos = uView * vec4(pos, 1.0);
+  gl_Position = uProj * viewPos;
+
+  float invDepth = 1.0 / max(0.45, -viewPos.z);
+  gl_PointSize = clamp(aSize * uPixelRatio * (2.3 * invDepth), 0.65, 56.0);
+
+  float fog = 1.0 - smoothstep(2.0, 8.5, -viewPos.z);
+  float visible = 1.0;
+  if (aKind < 0.5) {
+    visible = uShowDM;
+  } else if (aKind < 1.5) {
+    visible = uShowGas;
+  } else {
+    visible = uShowGal;
+  }
+
+  vColor = aColor;
+  vAlpha = aAlpha * mix(0.16, 1.0, fog) * visible;
+  vKind = aKind;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+varying vec3 vColor;
+varying float vAlpha;
+varying float vKind;
+
+void main() {
+  vec2 p = gl_PointCoord - vec2(0.5);
+  float d = length(p);
+  if (d > 0.5) discard;
+  float halo = smoothstep(0.5, 0.0, d);
+  float core = smoothstep(0.16, 0.0, d);
+  vec3 col = vColor;
+  if (vKind > 1.5) {
+    col += core * vec3(0.35, 0.24, 0.12);
+  }
+  gl_FragColor = vec4(col, vAlpha * halo);
+}
+</script>
+
+<script id="quad-vertex-shader" type="x-shader/x-vertex">
+attribute vec2 aQuad;
+varying vec2 vUv;
+
+void main() {
+  vUv = aQuad * 0.5 + 0.5;
+  gl_Position = vec4(aQuad, 0.0, 1.0);
+}
+</script>
+
+<script id="bright-fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform sampler2D uScene;
+uniform float uThreshold;
+varying vec2 vUv;
+
+void main() {
+  vec3 c = texture2D(uScene, vUv).rgb;
+  float brightness = max(max(c.r, c.g), c.b);
+  float factor = smoothstep(uThreshold, 1.0, brightness);
+  gl_FragColor = vec4(c * factor, 1.0);
+}
+</script>
+
+<script id="blur-fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform sampler2D uTexture;
+uniform vec2 uTexel;
+uniform vec2 uDirection;
+varying vec2 vUv;
+
+void main() {
+  vec2 step = uTexel * uDirection;
+  vec3 sum = texture2D(uTexture, vUv).rgb * 0.227027;
+  sum += texture2D(uTexture, vUv + step * 1.384615).rgb * 0.316216;
+  sum += texture2D(uTexture, vUv - step * 1.384615).rgb * 0.316216;
+  sum += texture2D(uTexture, vUv + step * 3.230769).rgb * 0.070270;
+  sum += texture2D(uTexture, vUv - step * 3.230769).rgb * 0.070270;
+  gl_FragColor = vec4(sum, 1.0);
+}
+</script>
+
+<script id="composite-fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform sampler2D uScene;
+uniform sampler2D uBloom;
+uniform float uBloomStrength;
+uniform float uExposure;
+varying vec2 vUv;
+
+void main() {
+  vec3 scene = texture2D(uScene, vUv).rgb;
+  vec3 bloom = texture2D(uBloom, vUv).rgb;
+  vec3 c = scene + bloom * uBloomStrength;
+  c = vec3(1.0) - exp(-c * uExposure);
+  c = pow(c, vec3(1.0 / 2.2));
+  gl_FragColor = vec4(c, 1.0);
+}
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var TARGET_POINTS = 250000;
+  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var isMobile = window.matchMedia("(max-width: 700px)").matches || (navigator.maxTouchPoints || 0) > 1;
+
+  var Q = isMobile ? {
+    nodes: 80,
+    background: 4000,
+    haloBase: 100,
+    haloMass: 300,
+    filamentBase: 120,
+    filamentLength: 300,
+    filamentRandom: 70,
+    gasGlow: 1400,
+    dmHaloFactor: 0.30,
+    dmFilamentFactor: 0.20,
+    bloomScale: 0.30,
+    maxDpr: 1.5
+  } : {
+    nodes: 140,
+    background: 9000,
+    haloBase: 160,
+    haloMass: 480,
+    filamentBase: 190,
+    filamentLength: 500,
+    filamentRandom: 110,
+    gasGlow: 3000,
+    dmHaloFactor: 0.38,
+    dmFilamentFactor: 0.28,
+    bloomScale: 0.50,
+    maxDpr: 2.0
+  };
+
+  var canvas = document.getElementById("universo-canvas");
+  var lost = document.getElementById("lost");
+  var overlay = document.getElementById("overlay");
+  var legend = document.getElementById("legend");
+  var hint = document.getElementById("hint");
+  var hintGone = false;
+
+  function fail(message) {
+    lost.textContent = message;
+    lost.classList.add("on");
+  }
+
+  var gl = canvas.getContext("webgl", {
+    alpha: false,
+    antialias: true,
+    depth: false,
+    powerPreference: "high-performance"
+  });
+  if (!gl) {
+    fail("Tu navegador no pudo iniciar WebGL. Probá con Chrome, Edge o Firefox actualizado.");
+    return;
+  }
+
+  function compile(type, source) {
+    var shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      throw new Error(gl.getShaderInfoLog(shader) || "shader compile error");
+    }
+    return shader;
+  }
+
+  function link(vsSource, fsSource) {
+    var vs = compile(gl.VERTEX_SHADER, vsSource);
+    var fs = compile(gl.FRAGMENT_SHADER, fsSource);
+    var program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(gl.getProgramInfoLog(program) || "program link error");
+    }
+    return program;
+  }
+
+  function source(id) {
+    return document.getElementById(id).textContent;
+  }
+
+  var pointProgram;
+  var brightProgram;
+  var blurProgram;
+  var compositeProgram;
+  try {
+    var quadVS = source("quad-vertex-shader");
+    pointProgram = link(source("vertex-shader"), source("fragment-shader"));
+    brightProgram = link(quadVS, source("bright-fragment-shader"));
+    blurProgram = link(quadVS, source("blur-fragment-shader"));
+    compositeProgram = link(quadVS, source("composite-fragment-shader"));
+  } catch (err) {
+    fail("No se pudo compilar el renderizador WebGL.");
+    return;
+  }
+
+  var pointLoc = {
+    late: gl.getAttribLocation(pointProgram, "aPositionLate"),
+    early: gl.getAttribLocation(pointProgram, "aPositionEarly"),
+    color: gl.getAttribLocation(pointProgram, "aColor"),
+    size: gl.getAttribLocation(pointProgram, "aSize"),
+    alpha: gl.getAttribLocation(pointProgram, "aAlpha"),
+    kind: gl.getAttribLocation(pointProgram, "aKind"),
+    view: gl.getUniformLocation(pointProgram, "uView"),
+    proj: gl.getUniformLocation(pointProgram, "uProj"),
+    pixelRatio: gl.getUniformLocation(pointProgram, "uPixelRatio"),
+    evolution: gl.getUniformLocation(pointProgram, "uEvolution"),
+    showDM: gl.getUniformLocation(pointProgram, "uShowDM"),
+    showGas: gl.getUniformLocation(pointProgram, "uShowGas"),
+    showGal: gl.getUniformLocation(pointProgram, "uShowGal")
+  };
+
+  var brightLoc = {
+    quad: gl.getAttribLocation(brightProgram, "aQuad"),
+    scene: gl.getUniformLocation(brightProgram, "uScene"),
+    threshold: gl.getUniformLocation(brightProgram, "uThreshold")
+  };
+  var blurLoc = {
+    quad: gl.getAttribLocation(blurProgram, "aQuad"),
+    texture: gl.getUniformLocation(blurProgram, "uTexture"),
+    texel: gl.getUniformLocation(blurProgram, "uTexel"),
+    direction: gl.getUniformLocation(blurProgram, "uDirection")
+  };
+  var compositeLoc = {
+    quad: gl.getAttribLocation(compositeProgram, "aQuad"),
+    scene: gl.getUniformLocation(compositeProgram, "uScene"),
+    bloom: gl.getUniformLocation(compositeProgram, "uBloom"),
+    strength: gl.getUniformLocation(compositeProgram, "uBloomStrength"),
+    exposure: gl.getUniformLocation(compositeProgram, "uExposure")
+  };
+
+  gl.disable(gl.DEPTH_TEST);
+
+  // ---------------------------------------------------------------------------
+  // Deterministic large-scale structure: early cloud -> present-day cosmic web.
+  // ---------------------------------------------------------------------------
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var rand = mulberry32(20261102);
+
+  function gauss() {
+    var u = 0;
+    var v = 0;
+    while (u === 0) u = rand();
+    while (v === 0) v = rand();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  }
+
+  function clamp(value, lo, hi) {
+    return value < lo ? lo : (value > hi ? hi : value);
+  }
+
+  function mixColor(stops, t) {
+    t = clamp(t, 0.0, 1.0);
+    var scaled = t * (stops.length - 1);
+    var index = Math.min(stops.length - 2, Math.floor(scaled));
+    var f = scaled - index;
+    var a = stops[index];
+    var b = stops[index + 1];
+    return [
+      a[0] + (b[0] - a[0]) * f,
+      a[1] + (b[1] - a[1]) * f,
+      a[2] + (b[2] - a[2]) * f
+    ];
+  }
+
+  var GALAXY_STOPS = [
+    [0.34, 0.46, 0.62],
+    [0.78, 0.58, 0.26],
+    [0.98, 0.68, 0.22],
+    [1.00, 0.96, 0.84]
+  ];
+  var GAS_STOPS = [
+    [0.055, 0.20, 0.36],
+    [0.10, 0.42, 0.52],
+    [0.30, 0.82, 0.66],
+    [0.72, 1.00, 0.86]
+  ];
+  var DM_STOPS = [
+    [0.025, 0.08, 0.18],
+    [0.045, 0.20, 0.36],
+    [0.10, 0.40, 0.54],
+    [0.24, 0.62, 0.72]
+  ];
+
+  var latePositions = [];
+  var earlyPositions = [];
+  var colors = [];
+  var sizes = [];
+  var alphas = [];
+  var kinds = [];
+
+  function addParticle(x, y, z, color, size, alpha, kind, scatter) {
+    var expansion = 1.24 + rand() * 0.52;
+    var ex = clamp(x * expansion + gauss() * scatter, -2.25, 2.25);
+    var ey = clamp(y * expansion + gauss() * scatter, -2.25, 2.25);
+    var ez = clamp(z * expansion + gauss() * scatter, -2.25, 2.25);
+    var jitter = 0.88 + rand() * 0.24;
+    latePositions.push(x, y, z);
+    earlyPositions.push(ex, ey, ez);
+    colors.push(
+      clamp(color[0] * jitter, 0, 1),
+      clamp(color[1] * jitter, 0, 1),
+      clamp(color[2] * jitter, 0, 1)
+    );
+    sizes.push(size);
+    alphas.push(alpha);
+    kinds.push(kind);
+  }
+
+  var clusterCenters = [];
+  for (var c = 0; c < 12; c++) {
+    clusterCenters.push([
+      (rand() * 2 - 1) * 0.74,
+      (rand() * 2 - 1) * 0.56,
+      (rand() * 2 - 1) * 0.74
+    ]);
+  }
+
+  var nodes = [];
+  for (var i = 0; i < Q.nodes; i++) {
+    var x, y, z;
+    if (i < Math.floor(Q.nodes * 0.82)) {
+      var center = clusterCenters[i % clusterCenters.length];
+      var spread = 0.13 + rand() * 0.10;
+      x = center[0] + gauss() * spread;
+      y = center[1] + gauss() * spread;
+      z = center[2] + gauss() * spread;
+    } else {
+      x = (rand() * 2 - 1) * 0.94;
+      y = (rand() * 2 - 1) * 0.88;
+      z = (rand() * 2 - 1) * 0.94;
+    }
+    nodes.push({
+      x: clamp(x, -1.05, 1.05),
+      y: clamp(y, -1.05, 1.05),
+      z: clamp(z, -1.05, 1.05),
+      mass: 0.30 + rand() * 0.70,
+      cluster: i % clusterCenters.length
+    });
+  }
+
+  function distanceSq(a, b) {
+    var dx = a.x - b.x;
+    var dy = a.y - b.y;
+    var dz = a.z - b.z;
+    return dx * dx + dy * dy + dz * dz;
+  }
+
+  var edgeKeys = {};
+  var edges = [];
+  function addEdge(a, b) {
+    var lo = Math.min(a, b);
+    var hi = Math.max(a, b);
+    var key = lo + ":" + hi;
+    if (edgeKeys[key]) return;
+    edgeKeys[key] = true;
+    edges.push([lo, hi]);
+  }
+
+  for (var n = 0; n < nodes.length; n++) {
+    var nearest = [];
+    for (var m = 0; m < nodes.length; m++) {
+      if (m !== n) nearest.push([distanceSq(nodes[n], nodes[m]), m]);
+    }
+    nearest.sort(function (a, b) { return a[0] - b[0]; });
+    var degree = 2 + (nodes[n].mass > 0.76 ? 1 : 0);
+    for (var d = 0; d < degree && d < nearest.length; d++) {
+      addEdge(n, nearest[d][1]);
+    }
+  }
+
+  var representatives = {};
+  for (var r = 0; r < nodes.length; r++) {
+    if (representatives[nodes[r].cluster] === undefined) {
+      representatives[nodes[r].cluster] = r;
+    }
+  }
+  for (var cc = 0; cc < clusterCenters.length; cc++) {
+    var distances = [];
+    for (var dd = 0; dd < clusterCenters.length; dd++) {
+      if (dd === cc) continue;
+      var dx = clusterCenters[cc][0] - clusterCenters[dd][0];
+      var dy = clusterCenters[cc][1] - clusterCenters[dd][1];
+      var dz = clusterCenters[cc][2] - clusterCenters[dd][2];
+      distances.push([dx * dx + dy * dy + dz * dz, dd]);
+    }
+    distances.sort(function (a, b) { return a[0] - b[0]; });
+    for (var q = 0; q < 2; q++) {
+      addEdge(representatives[cc], representatives[distances[q][1]]);
+    }
+  }
+
+  // Distant field galaxies.
+  for (var bg = 0; bg < Q.background; bg++) {
+    addParticle(
+      (rand() * 2 - 1) * 1.45,
+      (rand() * 2 - 1) * 1.45,
+      (rand() * 2 - 1) * 1.45,
+      mixColor(GALAXY_STOPS, 0.08 + rand() * 0.16),
+      0.45 + rand() * 0.80,
+      0.08 + rand() * 0.16,
+      2,
+      0.08
+    );
+  }
+
+  // Galaxy clusters and their dark-matter halos.
+  for (var h = 0; h < nodes.length; h++) {
+    var node = nodes[h];
+    var haloCount = Q.haloBase + Math.floor(node.mass * Q.haloMass);
+    var sigma = 0.014 + node.mass * 0.030;
+
+    for (var p = 0; p < haloCount; p++) {
+      var radius = Math.abs(gauss()) * sigma;
+      var theta = rand() * Math.PI * 2;
+      var cosPhi = rand() * 2 - 1;
+      var sinPhi = Math.sqrt(Math.max(0, 1 - cosPhi * cosPhi));
+      var core = Math.exp(-radius / Math.max(sigma, 0.001));
+      addParticle(
+        node.x + radius * sinPhi * Math.cos(theta),
+        node.y + radius * cosPhi,
+        node.z + radius * sinPhi * Math.sin(theta),
+        mixColor(GALAXY_STOPS, 0.30 + 0.52 * core + rand() * 0.10),
+        1.0 + 3.0 * core + rand() * 0.7,
+        0.26 + 0.38 * core,
+        2,
+        0.10
+      );
+    }
+
+    var dmCount = Math.floor(haloCount * Q.dmHaloFactor);
+    for (var dp = 0; dp < dmCount; dp++) {
+      var dmRadius = Math.abs(gauss()) * sigma * (2.0 + rand() * 2.2);
+      var dmTheta = rand() * Math.PI * 2;
+      var dmCos = rand() * 2 - 1;
+      var dmSin = Math.sqrt(Math.max(0, 1 - dmCos * dmCos));
+      addParticle(
+        node.x + dmRadius * dmSin * Math.cos(dmTheta),
+        node.y + dmRadius * dmCos,
+        node.z + dmRadius * dmSin * Math.sin(dmTheta),
+        mixColor(DM_STOPS, 0.30 + rand() * 0.55),
+        2.8 + rand() * 5.0,
+        0.028 + rand() * 0.032,
+        0,
+        0.18
+      );
+    }
+  }
+
+  // Filaments: gas and dark matter bridges.
+  for (var e = 0; e < edges.length; e++) {
+    var a = nodes[edges[e][0]];
+    var b = nodes[edges[e][1]];
+    var length = Math.sqrt(distanceSq(a, b));
+    var count = Q.filamentBase + Math.floor(length * Q.filamentLength) + Math.floor(rand() * Q.filamentRandom);
+    var width = 0.012 + rand() * 0.022;
+    var controlX = (a.x + b.x) * 0.5 + gauss() * 0.05;
+    var controlY = (a.y + b.y) * 0.5 + gauss() * 0.05;
+    var controlZ = (a.z + b.z) * 0.5 + gauss() * 0.05;
+
+    for (var f = 0; f < count; f++) {
+      var s = rand();
+      var omt = 1 - s;
+      var filament = 0.5 + 0.5 * Math.sin(Math.PI * s);
+      addParticle(
+        omt * omt * a.x + 2 * omt * s * controlX + s * s * b.x + gauss() * width,
+        omt * omt * a.y + 2 * omt * s * controlY + s * s * b.y + gauss() * width,
+        omt * omt * a.z + 2 * omt * s * controlZ + s * s * b.z + gauss() * width,
+        mixColor(GAS_STOPS, 0.28 + 0.48 * filament + rand() * 0.16),
+        1.0 + rand() * 1.8 + filament * 0.6,
+        0.16 + 0.24 * filament,
+        1,
+        0.10
+      );
+    }
+
+    var dmFilamentCount = Math.floor(count * Q.dmFilamentFactor);
+    for (var df = 0; df < dmFilamentCount; df++) {
+      var ds = rand();
+      var domt = 1 - ds;
+      addParticle(
+        domt * domt * a.x + 2 * domt * ds * controlX + ds * ds * b.x + gauss() * width * 2.7,
+        domt * domt * a.y + 2 * domt * ds * controlY + ds * ds * b.y + gauss() * width * 2.7,
+        domt * domt * a.z + 2 * domt * ds * controlZ + ds * ds * b.z + gauss() * width * 2.7,
+        mixColor(DM_STOPS, 0.18 + rand() * 0.40),
+        2.5 + rand() * 4.0,
+        0.022 + rand() * 0.020,
+        0,
+        0.20
+      );
+    }
+  }
+
+  // Diffuse gas around the largest nodes; feeds the bloom pass.
+  for (var g = 0; g < Q.gasGlow; g++) {
+    var host = nodes[Math.floor(rand() * nodes.length)];
+    var gasRadius = 0.05 + rand() * 0.22;
+    var gasTheta = rand() * Math.PI * 2;
+    var gasCos = rand() * 2 - 1;
+    var gasSin = Math.sqrt(Math.max(0, 1 - gasCos * gasCos));
+    addParticle(
+      host.x + gasRadius * gasSin * Math.cos(gasTheta),
+      host.y + gasRadius * gasCos,
+      host.z + gasRadius * gasSin * Math.sin(gasTheta),
+      mixColor(GAS_STOPS, 0.22 + rand() * 0.28),
+      10 + rand() * 24,
+      0.004 + rand() * 0.008,
+      1,
+      0.16
+    );
+  }
+
+  // Center the web on the origin so the camera always frames it.
+  var meanX = 0;
+  var meanY = 0;
+  var meanZ = 0;
+  for (var ci = 0; ci < nodes.length; ci++) {
+    meanX += nodes[ci].x;
+    meanY += nodes[ci].y;
+    meanZ += nodes[ci].z;
+  }
+  meanX /= nodes.length;
+  meanY /= nodes.length;
+  meanZ /= nodes.length;
+  for (var pi = 0; pi < latePositions.length; pi += 3) {
+    latePositions[pi] -= meanX;
+    latePositions[pi + 1] -= meanY;
+    latePositions[pi + 2] -= meanZ;
+    earlyPositions[pi] -= meanX;
+    earlyPositions[pi + 1] -= meanY;
+    earlyPositions[pi + 2] -= meanZ;
+  }
+  for (var ni = 0; ni < nodes.length; ni++) {
+    nodes[ni].x -= meanX;
+    nodes[ni].y -= meanY;
+    nodes[ni].z -= meanZ;
+  }
+
+  var pointCount = latePositions.length / 3;
+  canvas.dataset.points = String(pointCount);
+
+  var lateData = new Float32Array(latePositions);
+  var earlyData = new Float32Array(earlyPositions);
+  var colorData = new Float32Array(colors);
+  var sizeData = new Float32Array(sizes);
+  var alphaData = new Float32Array(alphas);
+  var kindData = new Float32Array(kinds);
+
+  function makeBuffer(data) {
+    var buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    return buf;
+  }
+
+  var lateBuffer = makeBuffer(lateData);
+  var earlyBuffer = makeBuffer(earlyData);
+  var colorBuffer = makeBuffer(colorData);
+  var sizeBuffer = makeBuffer(sizeData);
+  var alphaBuffer = makeBuffer(alphaData);
+  var kindBuffer = makeBuffer(kindData);
+  var quadBuffer = makeBuffer(new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]));
+
+  function disableAttributes() {
+    var max = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+    for (var idx = 0; idx < max; idx++) {
+      gl.disableVertexAttribArray(idx);
+    }
+  }
+
+  function bindPointAttributes() {
+    disableAttributes();
+    gl.bindBuffer(gl.ARRAY_BUFFER, lateBuffer);
+    gl.enableVertexAttribArray(pointLoc.late);
+    gl.vertexAttribPointer(pointLoc.late, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, earlyBuffer);
+    gl.enableVertexAttribArray(pointLoc.early);
+    gl.vertexAttribPointer(pointLoc.early, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    gl.enableVertexAttribArray(pointLoc.color);
+    gl.vertexAttribPointer(pointLoc.color, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+    gl.enableVertexAttribArray(pointLoc.size);
+    gl.vertexAttribPointer(pointLoc.size, 1, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, alphaBuffer);
+    gl.enableVertexAttribArray(pointLoc.alpha);
+    gl.vertexAttribPointer(pointLoc.alpha, 1, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, kindBuffer);
+    gl.enableVertexAttribArray(pointLoc.kind);
+    gl.vertexAttribPointer(pointLoc.kind, 1, gl.FLOAT, false, 0, 0);
+  }
+
+  function bindQuadAttributes(location) {
+    disableAttributes();
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+    gl.enableVertexAttribArray(location);
+    gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Render targets and bloom.
+  // ---------------------------------------------------------------------------
+  var sceneTarget = null;
+  var bloomA = null;
+  var bloomB = null;
+  var bloomEnabled = true;
+  var dpr = 1;
+  var qualityFrames = 0;
+  var qualityTime = 0;
+  var qualityAdjusted = false;
+
+  function deleteTarget(target) {
+    if (!target) return;
+    gl.deleteFramebuffer(target.fb);
+    gl.deleteTexture(target.tex);
+  }
+
+  function createTarget(width, height) {
+    var tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    var fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+      gl.deleteFramebuffer(fb);
+      gl.deleteTexture(tex);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      return null;
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fb: fb, tex: tex, w: width, h: height };
+  }
+
+  function resizeTargets() {
+    dpr = Math.min(window.devicePixelRatio || 1, Q.maxDpr);
+    var width = Math.max(1, Math.floor(window.innerWidth * dpr));
+    var height = Math.max(1, Math.floor(window.innerHeight * dpr));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    deleteTarget(sceneTarget);
+    deleteTarget(bloomA);
+    deleteTarget(bloomB);
+    sceneTarget = createTarget(width, height);
+    var bloomW = Math.max(1, Math.floor(width * Q.bloomScale));
+    var bloomH = Math.max(1, Math.floor(height * Q.bloomScale));
+    bloomW = Math.max(1, Math.floor(width * Q.bloomScale));
+    bloomH = Math.max(1, Math.floor(height * Q.bloomScale));
+    bloomA = createTarget(bloomW, bloomH);
+    bloomB = createTarget(bloomW, bloomH);
+    var available = Boolean(sceneTarget && bloomA && bloomB);
+    bloomEnabled = available && (qualityAdjusted ? bloomEnabled : true);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Camera.
+  // ---------------------------------------------------------------------------
+  var view = new Float32Array(16);
+  var proj = new Float32Array(16);
+  var cam = {
+    theta: 0.62,
+    phi: 0.16,
+    radius: 4.0,
+    tTheta: 0.62,
+    tPhi: 0.16,
+    tRadius: 4.0,
+    baseRadius: 4.0,
+    target: [0, 0, 0],
+    tTarget: [0, 0, 0],
+    focusUntil: 0
+  };
+  var auto = !reducedMotion;
+  var resumeTimer = 0;
+  var dragging = false;
+  var lastX = 0;
+  var lastY = 0;
+  var pointers = new Map();
+  var pinchStartDistance = 0;
+  var pinchStartRadius = 0;
+  var layers = { dm: true, gas: true, gal: true };
+  var evolutionAuto = !reducedMotion;
+  var evolutionPhase = 0;
+  var evolution = 1.0;
+  var raf = 0;
+  var lastFrame = performance.now();
+  var legendTimer = 0;
+
+  function perspective(out, fovy, aspect, near, far) {
+    var f = 1.0 / Math.tan(fovy / 2);
+    var nf = 1.0 / (near - far);
+    out[0] = f / aspect; out[1] = 0; out[2] = 0; out[3] = 0;
+    out[4] = 0; out[5] = f; out[6] = 0; out[7] = 0;
+    out[8] = 0; out[9] = 0; out[10] = (far + near) * nf; out[11] = -1;
+    out[12] = 0; out[13] = 0; out[14] = 2 * far * near * nf; out[15] = 0;
+  }
+
+  function lookAt(out, eye, center, up) {
+    var zx = eye[0] - center[0];
+    var zy = eye[1] - center[1];
+    var zz = eye[2] - center[2];
+    var zl = 1 / Math.sqrt(zx * zx + zy * zy + zz * zz);
+    zx *= zl; zy *= zl; zz *= zl;
+    var xx = up[1] * zz - up[2] * zy;
+    var xy = up[2] * zx - up[0] * zz;
+    var xz = up[0] * zy - up[1] * zx;
+    var xl = 1 / Math.sqrt(xx * xx + xy * xy + xz * xz);
+    xx *= xl; xy *= xl; xz *= xl;
+    var yx = zy * xz - zz * xy;
+    var yy = zz * xx - zx * xz;
+    var yz = zx * xy - zy * xx;
+    out[0] = xx; out[1] = yx; out[2] = zx; out[3] = 0;
+    out[4] = xy; out[5] = yy; out[6] = zy; out[7] = 0;
+    out[8] = xz; out[9] = yz; out[10] = zz; out[11] = 0;
+    out[12] = -(xx * eye[0] + xy * eye[1] + xz * eye[2]);
+    out[13] = -(yx * eye[0] + yy * eye[1] + yz * eye[2]);
+    out[14] = -(zx * eye[0] + zy * eye[1] + zz * eye[2]);
+    out[15] = 1;
+  }
+
+  function projectPoint(x, y, z) {
+    var vx = view[0] * x + view[4] * y + view[8] * z + view[12];
+    var vy = view[1] * x + view[5] * y + view[9] * z + view[13];
+    var vz = view[2] * x + view[6] * y + view[10] * z + view[14];
+    var cw = proj[3] * vx + proj[7] * vy + proj[11] * vz + proj[15];
+    if (cw <= 0.001) return null;
+    var nx = (proj[0] * vx + proj[4] * vy + proj[8] * vz + proj[12]) / cw;
+    var ny = (proj[1] * vx + proj[5] * vy + proj[9] * vz + proj[13]) / cw;
+    var nz = (proj[2] * vx + proj[6] * vy + proj[10] * vz + proj[14]) / cw;
+    if (nz < -1 || nz > 1) return null;
+    return {
+      x: (nx * 0.5 + 0.5) * window.innerWidth,
+      y: (1 - (ny * 0.5 + 0.5)) * window.innerHeight,
+      z: nz
+    };
+  }
+
+  function resetCamera() {
+    cam.tTheta = 0.62;
+    cam.tPhi = 0.16;
+    cam.tRadius = cam.baseRadius;
+    cam.tTarget = [0, 0, 0];
+    cam.focusUntil = 0;
+    auto = !reducedMotion;
+    evolutionPhase = 0;
+    evolution = 1.0;
+  }
+
+  function scheduleResume() {
+    window.clearTimeout(resumeTimer);
+    if (reducedMotion) return;
+    resumeTimer = window.setTimeout(function () {
+      if (!dragging) auto = true;
+    }, 5000);
+  }
+
+  function flashLegend() {
+    legend.classList.remove("gone");
+    window.clearTimeout(legendTimer);
+    legendTimer = window.setTimeout(function () {
+      legend.classList.add("gone");
+    }, 4200);
+  }
+
+  function fadeHint() {
+    hint.classList.add("gone");
+    hintGone = true;
+  }
+
+  function focusNode(node) {
+    cam.tTarget = [node.x, node.y, node.z];
+    cam.tRadius = 2.15;
+    cam.focusUntil = performance.now() + 12000;
+    auto = true;
+    fadeHint();
+  }
+
+  function pickAndFocus(clientX, clientY) {
+    var best = null;
+    var bestDistance = 70 * 70;
+    for (var i = 0; i < nodes.length; i++) {
+      var p = projectPoint(nodes[i].x, nodes[i].y, nodes[i].z);
+      if (!p) continue;
+      var dx = p.x - clientX;
+      var dy = p.y - clientY;
+      var dist = dx * dx + dy * dy;
+      if (dist < bestDistance) {
+        bestDistance = dist;
+        best = nodes[i];
+      }
+    }
+    if (best) {
+      focusNode(best);
+    } else {
+      resetCamera();
+    }
+  }
+
+  function updateCamera(dt, now) {
+    if (cam.focusUntil && now > cam.focusUntil) {
+      cam.focusUntil = 0;
+      cam.tTarget = [0, 0, 0];
+      cam.tRadius = cam.baseRadius;
+    }
+    if (auto) {
+      cam.tTheta += dt * 0.045;
+      if (!cam.focusUntil) {
+        cam.tPhi = 0.16 + Math.sin(now * 0.00006) * 0.05;
+        cam.tRadius = cam.baseRadius + 0.85 * (1.0 - evolution) + Math.sin(now * 0.00008) * 0.20;
+      }
+    }
+    var ease = Math.min(1, dt * 4.2);
+    cam.theta += (cam.tTheta - cam.theta) * ease;
+    cam.phi += (cam.tPhi - cam.phi) * ease;
+    cam.radius += (cam.tRadius - cam.radius) * ease;
+    for (var i = 0; i < 3; i++) {
+      cam.target[i] += (cam.tTarget[i] - cam.target[i]) * ease;
+    }
+
+    var cosPhi = Math.cos(cam.phi);
+    var eye = [
+      cam.target[0] + cam.radius * cosPhi * Math.sin(cam.theta),
+      cam.target[1] + cam.radius * Math.sin(cam.phi),
+      cam.target[2] + cam.radius * cosPhi * Math.cos(cam.theta)
+    ];
+    lookAt(view, eye, cam.target, [0, 1, 0]);
+    perspective(proj, (42 * Math.PI) / 180, canvas.width / Math.max(1, canvas.height), 0.1, 100);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Interaction.
+  // ---------------------------------------------------------------------------
+  window.setTimeout(function () { overlay.classList.add("quiet"); }, 9000);
+  window.setTimeout(fadeHint, 12000);
+  window.setTimeout(function () { legend.classList.add("gone"); }, 16000);
+
+  var idleTimer = window.setTimeout(function () {
+    document.body.classList.add("idle");
+  }, 4200);
+
+  function wake() {
+    document.body.classList.remove("idle");
+    window.clearTimeout(idleTimer);
+    idleTimer = window.setTimeout(function () {
+      document.body.classList.add("idle");
+    }, 4200);
+  }
+  window.addEventListener("pointermove", wake);
+  window.addEventListener("pointerdown", wake);
+
+  canvas.addEventListener("pointerdown", function (event) {
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (canvas.setPointerCapture) {
+      try { canvas.setPointerCapture(event.pointerId); } catch (err) { /* ignore */ }
+    }
+    fadeHint();
+    if (pointers.size === 1) {
+      dragging = true;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      auto = false;
+      window.clearTimeout(resumeTimer);
+      canvas.style.cursor = "grabbing";
+    } else if (pointers.size === 2) {
+      dragging = false;
+      var pts = Array.from(pointers.values());
+      var dx = pts[0].x - pts[1].x;
+      var dy = pts[0].y - pts[1].y;
+      pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
+      pinchStartRadius = cam.tRadius;
+      auto = false;
+    }
+  });
+
+  canvas.addEventListener("pointermove", function (event) {
+    if (!pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.size >= 2) {
+      var pts = Array.from(pointers.values());
+      var dx = pts[0].x - pts[1].x;
+      var dy = pts[0].y - pts[1].y;
+      var distance = Math.sqrt(dx * dx + dy * dy);
+      if (pinchStartDistance > 0 && distance > 0) {
+        cam.tRadius = clamp(pinchStartRadius * (pinchStartDistance / distance), 1.5, 9.0);
+      }
+      return;
+    }
+    if (!dragging) return;
+    var mx = event.clientX - lastX;
+    var my = event.clientY - lastY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    cam.tTheta -= mx * 0.006;
+    cam.tPhi = clamp(cam.tPhi - my * 0.005, -1.16, 1.16);
+  });
+
+  function endPointer(event) {
+    pointers.delete(event.pointerId);
+    if (event && canvas.releasePointerCapture) {
+      try { canvas.releasePointerCapture(event.pointerId); } catch (err) { /* ignore */ }
+    }
+    if (pointers.size === 0) {
+      dragging = false;
+      canvas.style.cursor = "grab";
+      scheduleResume();
+    } else if (pointers.size === 1) {
+      dragging = false;
+      var remaining = Array.from(pointers.values())[0];
+      lastX = remaining.x;
+      lastY = remaining.y;
+      pinchStartDistance = 0;
+    }
+  }
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
+
+  canvas.addEventListener("wheel", function (event) {
+    event.preventDefault();
+    cam.tRadius = clamp(cam.tRadius * Math.exp(event.deltaY * 0.0012), 1.5, 9.0);
+    auto = false;
+    scheduleResume();
+    fadeHint();
+  }, { passive: false });
+
+  canvas.addEventListener("dblclick", function (event) {
+    pickAndFocus(event.clientX, event.clientY);
+  });
+
+  window.addEventListener("keydown", function (event) {
+    var key = event.key;
+    if (key === "r" || key === "R") {
+      resetCamera();
+      fadeHint();
+    } else if (key === "f" || key === "F") {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(function () { /* ignore */ });
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen().catch(function () { /* ignore */ });
+      }
+    } else if (key === "h" || key === "H") {
+      var hidden = overlay.classList.contains("hidden");
+      if (hidden) {
+        overlay.classList.remove("hidden");
+        overlay.classList.remove("quiet");
+        legend.classList.remove("hidden");
+        legend.classList.remove("gone");
+        if (hintGone) hint.classList.remove("gone");
+      } else {
+        overlay.classList.add("hidden");
+        legend.classList.add("hidden");
+        hint.classList.add("gone");
+        hintGone = true;
+      }
+    } else if (key === "1") {
+      layers.dm = !layers.dm;
+      flashLegend();
+    } else if (key === "2") {
+      layers.gas = !layers.gas;
+      flashLegend();
+    } else if (key === "3") {
+      layers.gal = !layers.gal;
+      flashLegend();
+    } else if (key === "t" || key === "T") {
+      evolutionAuto = !evolutionAuto;
+    } else if (event.code === "Space") {
+      event.preventDefault();
+      auto = !auto;
+    }
+  });
+
+  window.addEventListener("resize", function () {
+    resizeTargets();
+    lastFrame = performance.now();
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      window.cancelAnimationFrame(raf);
+    } else {
+      lastFrame = performance.now();
+      raf = window.requestAnimationFrame(frame);
+    }
+  });
+
+  canvas.addEventListener("webglcontextlost", function (event) {
+    event.preventDefault();
+    window.cancelAnimationFrame(raf);
+    fail("Se perdió el contexto WebGL. Recargá la página para volver al universo.");
+  });
+  canvas.addEventListener("webglcontextrestored", function () {
+    window.location.reload();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Render passes.
+  // ---------------------------------------------------------------------------
+  function drawPoints(target) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fb : null);
+    gl.viewport(0, 0, target ? target.w : canvas.width, target ? target.h : canvas.height);
+    gl.clearColor(0.003, 0.006, 0.014, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.useProgram(pointProgram);
+    gl.uniformMatrix4fv(pointLoc.view, false, view);
+    gl.uniformMatrix4fv(pointLoc.proj, false, proj);
+    gl.uniform1f(pointLoc.pixelRatio, dpr);
+    gl.uniform1f(pointLoc.evolution, evolution);
+    gl.uniform1f(pointLoc.showDM, layers.dm ? 1.0 : 0.0);
+    gl.uniform1f(pointLoc.showGas, layers.gas ? 1.0 : 0.0);
+    gl.uniform1f(pointLoc.showGal, layers.gal ? 1.0 : 0.0);
+    bindPointAttributes();
+    gl.drawArrays(gl.POINTS, 0, pointCount);
+  }
+
+  function drawBright() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, bloomA.fb);
+    gl.viewport(0, 0, bloomA.w, bloomA.h);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.BLEND);
+    gl.useProgram(brightProgram);
+    bindQuadAttributes(brightLoc.quad);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, sceneTarget.tex);
+    gl.uniform1i(brightLoc.scene, 0);
+    gl.uniform1f(brightLoc.threshold, 0.38);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function blurPass(source, target, dx, dy) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb);
+    gl.viewport(0, 0, target.w, target.h);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.BLEND);
+    gl.useProgram(blurProgram);
+    bindQuadAttributes(blurLoc.quad);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, source.tex);
+    gl.uniform1i(blurLoc.texture, 0);
+    gl.uniform2f(blurLoc.texel, 1.0 / source.w, 1.0 / source.h);
+    gl.uniform2f(blurLoc.direction, dx, dy);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function drawComposite() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.BLEND);
+    gl.useProgram(compositeProgram);
+    bindQuadAttributes(compositeLoc.quad);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, sceneTarget.tex);
+    gl.uniform1i(compositeLoc.scene, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, bloomA.tex);
+    gl.uniform1i(compositeLoc.bloom, 1);
+    gl.uniform1f(compositeLoc.strength, 1.05);
+    gl.uniform1f(compositeLoc.exposure, 1.18);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function render() {
+    if (bloomEnabled) {
+      drawPoints(sceneTarget);
+      drawBright();
+      blurPass(bloomA, bloomB, 1, 0);
+      blurPass(bloomB, bloomA, 0, 1);
+      drawComposite();
+    } else {
+      drawPoints(null);
+    }
+  }
+
+  function frame(now) {
+    var dt = Math.min(0.05, Math.max(0.001, (now - lastFrame) / 1000));
+    lastFrame = now;
+    if (!qualityAdjusted) {
+      qualityFrames += 1;
+      qualityTime += dt;
+      if (qualityFrames >= 90) {
+        if (qualityTime / qualityFrames > 0.028) {
+          bloomEnabled = false;
+        }
+        qualityAdjusted = true;
+      }
+    }
+    updateCamera(dt, now);
+    if (evolutionAuto) {
+      evolutionPhase += dt * (Math.PI * 2 / 55.0);
+    }
+    evolution = 1.0 - 0.55 * (0.5 - 0.5 * Math.cos(evolutionPhase));
+    render();
+    raf = window.requestAnimationFrame(frame);
+  }
+
+  resizeTargets();
+  lastFrame = performance.now();
+  raf = window.requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

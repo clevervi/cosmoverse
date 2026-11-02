@@ -5,12 +5,14 @@ Unit tests for COSMOVERSE CLI subcommands (info, frontier, camels, field-level, 
 import json
 import pathlib
 
+import pytest
+
 from cosmoverse import __version__
 from cosmoverse.cli import main
 
 
 def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
-    assert __version__ == "3.4.0"
+    assert __version__ == "3.5.0"
     main(["info"])
     main(["frontier"])
     main(["camels"])
@@ -34,7 +36,6 @@ def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
     main(["hod-mocks", "--out-dir", str(tmp_path / "mocks"), "--n-galaxies", "20"])
     main(["bispectrum-ia"])
     main(["dark-energy-imnn"])
-    main(["doctor"])
     main(["train", "--out-dir", str(tmp_path / "ckpt")])
     main(["fetch-camels", "--cache-dir", str(tmp_path / "cache"), "--n", "1"])
     main(["dashboard"])
@@ -51,5 +52,10 @@ def test_cli_version_and_subcommands(tmp_path: pathlib.Path):
     root = pathlib.Path(__file__).resolve().parents[1]
     assert (root / "docs" / "index.html").exists()
     zenodo = json.loads((root / ".zenodo.json").read_text(encoding="utf-8"))
-    assert zenodo["version"] == "3.4.0"
+    assert zenodo["version"] == "3.5.0"
     assert zenodo["license"] == "MIT"
+
+
+@pytest.mark.slow
+def test_cli_doctor_full_22_gate_suite():
+    main(["doctor"])

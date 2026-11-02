@@ -201,9 +201,10 @@
       <p>Section 10 Diffusion Layer: Exploring physical parameters, BCEmu3 baryonic feedback, observational RSD, and cross-suite transfer</p>
     </div>
     <div class="badges">
-      <span class="badge">v3.4.0</span>
+      <span class="badge">v3.5.0</span>
       <span class="badge">TUNeS + BCEmu3 + RealNVP + JaxPM/MCLMC + Mangrove</span>
       <span class="badge pass" id="global-gate-badge">Stage-IV Gate: PASS</span>
+      <a href="universo.html" style="display:inline-block; margin-left:8px; padding:6px 14px; border:1px solid var(--accent-amber, #f5a623); border-radius:999px; color:#f5a623; text-decoration:none; font-size:0.78rem; font-weight:700; letter-spacing:0.08em;">VER EL UNIVERSO &rarr;</a>
     </div>
   </header>
 
@@ -349,11 +350,33 @@
       <img src="figures/fig4_result4_transfer.svg" alt="Result 4: Cross-Simulation Transfer" style="width:100%; border-radius:10px; border:1px solid var(--border);" />
       <img src="figures/fig5_paper2_ic_reconstruction.svg" alt="Paper 2: 3D IC Reconstruction r(k)" style="width:100%; border-radius:10px; border:1px solid var(--border);" />
       <img src="figures/fig7_simulation_budget_scaling.svg" alt="Simulation Budget Scaling Law" style="width:100%; border-radius:10px; border:1px solid var(--border);" />
+      <img src="figures/fig8_calibration_budget.svg" alt="v3.5: SIMBA calibration budget curve" style="width:100%; border-radius:10px; border:1px solid var(--border);" />
     </div>
   </section>
 
+  <section class="card" style="max-width: 1380px; margin: 20px auto 0 auto;">
+    <h2>
+      <span>v3.5 GPU Field-Level &amp; Cosmic Web</span>
+      <span class="level-pill lvl-3">CUDA + WebGL</span>
+    </h2>
+    <p class="subtitle">
+      CuPy field-level port: 6.88&times; potential+gradient and 14.27&times; full MCLMC chain at 64&sup3;
+      (262,145 dimensions). SIMBA calibration budget: N<sub>cal,min</sub> = 50.
+      La vista inmersiva suma tres capas (materia oscura, gas, galaxias), bloom real y evolución cósmica.
+    </p>
+    <p style="margin: 0 0 10px 0;">
+      <a href="universo.html" style="color: var(--mint, #5fe3b3); font-weight: 700;">
+        VER EL UNIVERSO &rarr;
+      </a>
+    </p>
+    <p style="margin: 0; font-size: 0.82rem; color: var(--text-muted, #8fa0b4);">
+      Vista inmersiva sin paneles: materia oscura, gas y galaxias con bloom real y evolución cósmica.
+      <a href="webgl_cosmic_web.html" style="color: var(--text-muted, #8fa0b4); margin-left: 10px;">Telemetry dashboard (optional)</a>
+    </p>
+  </section>
+
   <footer>
-    COSMOVERSE v1.0.0 &mdash; Reproducible Hybrid Cosmological Inference Protocol &bull;
+    COSMOVERSE v3.5.0 &mdash; Reproducible Hybrid Cosmological Inference Protocol &bull;
     <a href="https://github.com/clevervi/cosmoverse" target="_blank" rel="noopener">GitHub Repository (clevervi/cosmoverse)</a>
   </footer>
 
