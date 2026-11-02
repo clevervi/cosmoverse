@@ -231,15 +231,16 @@ uv run cosmoverse doctor
 ### Ver el universo (WebGL, pantalla completa)
 
 Abrí [`docs/universo.html`](docs/universo.html) — **solo el universo**, sin paneles, sin sliders y sin telemetría.
-Es una vista inmersiva construida sobre un **campo de densidad N-body ZA \(96^3\)** (520.000 partículas, caja periódica de \(200\,\mathrm{Mpc}/h\), \(z=0\)):
-unos 350.000 puntos muestreados del campo forman cúmulos, filamentos y vacíos, con tres capas visuales
-(materia oscura, gas, galaxias), bloom real, **gas volumétrico por ray-marching** y un **tour guiado automático**.
+Ahora usa **gas hidrodinámico real de CAMELS-SIMBA EX**: densidad de gas `Mgas` y temperatura `T` del
+CAMELS Multifield Dataset (\(128^3\), \(z=0\), caja de \(25\,\mathrm{Mpc}/h\), realización extrema \(A_{\rm AGN1}=100\)),
+bajadas a \(96^3\). Unos 350.000 puntos muestreados del campo forman las capas de materia oscura, gas y galaxias,
+con bloom real, **gas volumétrico por ray-marching con transfer function térmica** y un **tour guiado automático**.
 
 - Arrastrá para orbitar, rueda o pinch para acercarte, doble clic para enfocar un cúmulo.
 - `1`/`2`/`3` ocultan capas, `G` inicia/detiene el tour, `F` abre pantalla completa y `R` reinicia.
 - `Espacio` o el botón `PAUSA` detienen cámara y tour; las flechas y `+`/`-` también orbitan y hacen zoom.
 - En móvil baja la resolución del volumen y el bloom; si el frame time sube, la calidad se reduce sola.
-- El campo se genera con [`scripts/generate_universo_density.py`](scripts/generate_universo_density.py) y se carga desde [`docs/universo_density.js`](docs/universo_density.js). Es N-body, no hidrodinámico.
+- El campo se prepara con [`scripts/prepare_camels_universo.py`](scripts/prepare_camels_universo.py) y se carga desde [`docs/universo_camels.js`](docs/universo_camels.js). Es una realización extrema del set EX, no un promedio LH.
 - Funciona desde `file://` y GitHub Pages; no carga CDN, fuentes ni imágenes externas.
 
 ### Telemetry Dashboards (optional)
