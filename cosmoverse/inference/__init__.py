@@ -3,6 +3,7 @@ Bayesian inference, Simulation-Based Inference (SBI), Normalizing Flows, and MCM
 """
 
 from cosmoverse.inference.compression import FisherScoreCompressor
+from cosmoverse.inference.domain_adaptation import DomainAdaptationPipeline
 from cosmoverse.inference.field_level import FieldLevelInferenceEngine
 from cosmoverse.inference.flows import AffineCouplingLayer, ConditionalRealNVP
 from cosmoverse.inference.light_cone_sbi import LightConeSBIPipeline
@@ -27,4 +28,5 @@ __all__ = [
     "PMEmulatorSBIPipeline",
     "FlowTransferPipeline",
     "MultiFamilyTransferPipeline",
+    "DomainAdaptationPipeline",
 ]

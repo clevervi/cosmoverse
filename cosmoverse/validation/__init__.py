@@ -19,6 +19,7 @@ from cosmoverse.validation.budget import SimulationBudgetAnalyzer
 from cosmoverse.validation.coverage import EmpiricalCoverage
 from cosmoverse.validation.misspecification import ScaleDependentMisspecification
 from cosmoverse.validation.plotting import Paper1FigureGenerator
+from cosmoverse.validation.progress_dashboard import ProgressDashboard
 from cosmoverse.validation.reporting import ScientificBenchmarkReporter
 from cosmoverse.validation.sbc import SimulationBasedCalibration
 from cosmoverse.validation.tarp import TARPCalibration
@@ -36,6 +37,7 @@ __all__ = [
     "CrossSimulationTransferEvaluator",
     "ScientificBenchmarkReporter",
     "Paper1FigureGenerator",
+    "ProgressDashboard",
     "SimulationBudgetAnalyzer",
     "ArxivSubmissionPackager",
     "generate_latin_hypercube_samples",

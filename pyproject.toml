@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cosmoverse"
-version = "3.3.0"
+version = "3.4.0"
 description = "Cosmological Modeling and Inference Engine - An Open Framework for Computational Cosmology"
 readme = "README.md"
 authors = [
@@ -55,6 +55,15 @@ jax = [
 torch = [
     "torch>=2.1.0",
 ]
+gpu = [
+    "cupy-cuda12x>=14.0.0",
+    "nvidia-cublas-cu12==12.9.2.10",
+    "nvidia-cuda-nvrtc-cu12==12.9.86",
+    "nvidia-cuda-runtime-cu12==12.9.79",
+    "nvidia-cufft-cu12==11.4.1.4",
+    "nvidia-curand-cu12==10.3.10.19",
+    "nvidia-nvjitlink-cu12==12.9.86",
+]
 inference = [
     "sbi>=0.22.0",
     "corner>=2.2.2",
@@ -88,6 +97,9 @@ minversion = "7.0"
 addopts = "-ra -q --strict-markers"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "slow: long-running calibration, transfer and domain-adaptation tests",
+]
 
 [tool.ruff]
 line-length = 100

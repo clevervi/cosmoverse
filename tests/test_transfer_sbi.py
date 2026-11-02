@@ -5,9 +5,12 @@ Unit test for leakage-free cross-simulation transfer with the trained flow
 
 from __future__ import annotations
 
+import pytest
+
 from cosmoverse.inference import FlowTransferPipeline
 
 
+@pytest.mark.slow
 def test_flow_transfer_physical_mismatch_gate() -> None:
     pipeline = FlowTransferPipeline(
         mismatch_strength=1.0,
