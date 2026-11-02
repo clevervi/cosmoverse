@@ -3,6 +3,26 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.3.0] - 2026-11-01
+
+### Added
+- `MultiFamilyTransferPipeline` (`cosmoverse.inference.multi_family_transfer`): auditoría de transferencia a `CAMELS-IllustrisTNG`, `CAMELS-SIMBA` y `CAMELS-Astrid`, con partición leakage-free y flujo PM + MLP como fuente (#101, PR #102).
+- `model_data_vector_with_response` en el pipeline PM para inyectar una supresión objetivo arbitraria \(S_{\rm target}(k)\).
+- Hook `--data-dir` para cargar tablas reales `{sim_id}_Pk.txt`; por defecto se usan curvas CAMELS calibradas y el resultado se etiqueta `calibrated_camels_response` o `disk_table`.
+- Subcomando `cosmoverse multi-family-transfer`, vigésima compuerta en `cosmoverse doctor` y pruebas unitarias en `tests/test_multi_family_transfer.py` (`99 passed`).
+
+### Validation
+- Fuente calibrada y partición leakage-free: **PASS**.
+- Pre-transferencia: cobertura 65.9% / 93.2%, mediana de sesgo 0.75 $\sigma$, TARP-ICE 0.021.
+- TNG: post 67% / 75%, mediana 1.39 $\sigma$, $\Delta$TARP-ICE $+0.225$; cota **FAIL**.
+- SIMBA: post 49% / 58%, mediana 2.35 $\sigma$, $\Delta$TARP-ICE $+0.148$; cota **FAIL**.
+- Astrid: post 74% / 79%, mediana 1.37 $\sigma$, $\Delta$TARP-ICE $+0.221$; cota **FAIL**.
+- Compuerta metodológica multi-familia: **PASS**; cota de degradación para las tres familias: **FAIL**. Resultado negativo del Resultado 4: el flujo entrenado en DMO + BCEmu no transfiere robustamente a las respuestas hidrodinámicas calibradas.
+
+### Notes
+- El repositorio **no incluye tablas CAMELS reales**. El `CAMELSArchiveFetcher` existente genera archivos a partir de las curvas calibradas; no descarga datos públicos.
+- El hook `--data-dir` carga tablas reales si el usuario las provee, pero usa la **forma de la respuesta** de la tabla; no realiza una inferencia completa de parámetros CAMELS reales (redshift y parameterización quedan como limitaciones declaradas).
+
 ## [3.2.0] - 2026-11-01
 
 ### Added
