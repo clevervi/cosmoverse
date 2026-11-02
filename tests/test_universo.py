@@ -66,6 +66,10 @@ def test_universo_has_layers_bloom_and_cinematic_camera():
     assert "prefers-reduced-motion" in html
     assert "visibilitychange" in html
     assert "qualityAdjusted" in html
+    assert 'id="pause"' in html
+    assert 'aria-label="Pausar movimiento automático"' in html
+    assert "togglePause" in html
+    assert "ArrowLeft" in html
 
 
 def test_universo_documents_the_three_scientific_layers():
