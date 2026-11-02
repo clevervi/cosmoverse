@@ -4,10 +4,12 @@ The page is intentionally NOT a dashboard: it must contain no controls,
 telemetry panels or external assets, only the full-screen cosmic-web view.
 """
 
+import base64
 import pathlib
 import re
 
 PAGE = pathlib.Path(__file__).resolve().parents[1] / "docs" / "universo.html"
+DENSITY = pathlib.Path(__file__).resolve().parents[1] / "docs" / "universo_density.js"
 
 
 def _html() -> str:
@@ -54,11 +56,11 @@ def test_universo_has_layers_bloom_and_cinematic_camera():
     assert match is not None
     assert int(match.group(1)) >= 150000
 
-    assert "uEvolution" in html
-    assert "aPositionEarly" in html
     assert "uShowDM" in html
     assert "uShowGas" in html
     assert "uShowGal" in html
+    assert "COSMOVerseDensity" in html
+    assert "densityField" in html
     assert "uThreshold" in html
     assert "uBloomStrength" in html
     assert "dblclick" in html
@@ -86,10 +88,26 @@ def test_universo_documents_the_three_scientific_layers():
     html = _html()
     for label in ("materia oscura", "gas", "galaxias"):
         assert label in html
-    assert "SIMULACIÓN ILUSTRATIVA" in html
+    assert "N-BODY 96³" in html
+    assert "z = 0" in html
     assert "isMobile" in html
     assert "maxDpr" in html
     assert "bloomScale" in html
+
+
+def test_universo_uses_an_embedded_n_body_density_field():
+    assert DENSITY.is_file(), f"missing density field: {DENSITY}"
+    raw = DENSITY.read_text(encoding="utf-8")
+    assert raw.startswith("window.COSMOVerseDensity")
+    size_match = re.search(r"size:\s*(\d+)", raw)
+    data_match = re.search(r'data:\s*"([^"]+)"', raw)
+    assert size_match is not None
+    assert data_match is not None
+    size = int(size_match.group(1))
+    assert size >= 80
+    decoded = base64.b64decode(data_match.group(1))
+    assert len(decoded) == size ** 3
+    assert len(raw) < 3 * 1024 * 1024
 
 
 def test_universo_has_no_dashboard_controls_or_telemetry():

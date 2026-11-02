@@ -3,6 +3,24 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.7.0] - 2026-11-02
+
+### Added
+- **Campo de densidad N-body real** para `docs/universo.html`: aproximación de Zel'dovich en una caja periódica de \(200\,\mathrm{Mpc}/h\), malla \(96^3\), 520.000 partículas y \(z=0\). Se precomputa en `docs/universo_density.js` (~1,2 MB) y reemplaza por completo la red procedural de nodos/filamentos (#116, PR #117).
+- Las tres capas (materia oscura, gas, galaxias) se muestrean del mismo campo con pesos de densidad distintos; el volumen de gas usa exactamente ese campo y una transfer function por densidad.
+- El tour guiado toma sus paradas de los picos de densidad y de un vacío real del campo.
+- Script reproducible `scripts/generate_universo_density.py`.
+
+### Validation
+- `uv run pytest -q tests/test_universo.py`: **7 passed** (incluye validación del campo \(96^3\)).
+- `uv run pytest -q -m "not slow"`: **119 passed**.
+- Screenshots headless desktop \(1440\times900\) y móvil \(390\times844\): campo N-body, volumen, tour y captions sin errores de shader.
+
+### Notes
+- Es un campo **N-body ZA**, no hidrodinámico; no reemplaza una simulación de gas de CAMELS.
+- El campo es estático a \(z=0\); se eliminó la evolución interpolada anterior para no mezclar una animación sintética con un campo físico.
+- La malla \(96^3\) pesa ~1,2 MB en base64 y se carga como script local; funciona desde `file://` y GitHub Pages.
+
 ## [3.6.0] - 2026-11-02
 
 ### Added

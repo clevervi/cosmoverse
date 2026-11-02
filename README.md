@@ -113,7 +113,7 @@ uv run python experiments/run_paper2_field_level_benchmark.py
 uv run python experiments/generate_paper1_figures.py
 ```
 
-### Run the Test Suite (125 Unit Tests & Local CI Gate)
+### Run the Test Suite (126 Unit Tests & Local CI Gate)
 
 ```bash
 uv run pytest -v
@@ -231,14 +231,15 @@ uv run cosmoverse doctor
 ### Ver el universo (WebGL, pantalla completa)
 
 Abrí [`docs/universo.html`](docs/universo.html) — **solo el universo**, sin paneles, sin sliders y sin telemetría.
-Es una vista inmersiva de la estructura a gran escala: más de 200.000 puntos generados de forma determinista
-forman cúmulos, filamentos y vacíos cósmicos, con tres capas visuales (materia oscura, gas, galaxias),
-bloom real, **gas volumétrico por ray-marching** y un **tour guiado automático** por cúmulos, filamentos y vacíos.
+Es una vista inmersiva construida sobre un **campo de densidad N-body ZA \(96^3\)** (520.000 partículas, caja periódica de \(200\,\mathrm{Mpc}/h\), \(z=0\)):
+unos 350.000 puntos muestreados del campo forman cúmulos, filamentos y vacíos, con tres capas visuales
+(materia oscura, gas, galaxias), bloom real, **gas volumétrico por ray-marching** y un **tour guiado automático**.
 
 - Arrastrá para orbitar, rueda o pinch para acercarte, doble clic para enfocar un cúmulo.
-- `1`/`2`/`3` ocultan capas, `G` inicia/detiene el tour, `T` pausa la evolución, `F` abre pantalla completa y `R` reinicia.
-- `Espacio` o el botón `PAUSA` detienen cámara, tour y evolución; las flechas y `+`/`-` también orbitan y hacen zoom.
+- `1`/`2`/`3` ocultan capas, `G` inicia/detiene el tour, `F` abre pantalla completa y `R` reinicia.
+- `Espacio` o el botón `PAUSA` detienen cámara y tour; las flechas y `+`/`-` también orbitan y hacen zoom.
 - En móvil baja la resolución del volumen y el bloom; si el frame time sube, la calidad se reduce sola.
+- El campo se genera con [`scripts/generate_universo_density.py`](scripts/generate_universo_density.py) y se carga desde [`docs/universo_density.js`](docs/universo_density.js). Es N-body, no hidrodinámico.
 - Funciona desde `file://` y GitHub Pages; no carga CDN, fuentes ni imágenes externas.
 
 ### Telemetry Dashboards (optional)
