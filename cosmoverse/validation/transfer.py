@@ -159,9 +159,13 @@ class CrossSimulationTransferEvaluator:
         stds = np.maximum(np.std(posterior_draws_all, axis=1), 1e-3)
         # Systematic bias per parameter: |< (mu_i - theta*_i) / sigma_i >|
         bias_sigma = np.abs(np.mean((means - true_thetas) / stds, axis=0))
+        abs_z = np.abs((means - true_thetas) / stds)
 
         return {
             "mean_bias_in_sigma": float(np.mean(bias_sigma)),
+            "median_bias_in_sigma": float(np.median(abs_z)),
+            "p95_bias_in_sigma": float(np.percentile(abs_z, 95)),
+            "fraction_within_1sigma": float(np.mean(abs_z < 1.0)),
             "per_param_bias_in_sigma": {
                 name: float(bias_sigma[j]) for j, name in enumerate(self.param_names)
             },
@@ -212,4 +216,7 @@ class CrossSimulationTransferEvaluator:
                 "delta_tarp_ice": float(post_metrics["tarp_ice"] - pre_metrics["tarp_ice"]),
             },
             "is_transfer_bounded": bool(post_metrics["mean_bias_in_sigma"] < 1.0),
+            "is_transfer_bounded_robust": bool(
+                post_metrics["median_bias_in_sigma"] < 1.0
+            ),
         }

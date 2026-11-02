@@ -12,11 +12,12 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+from scipy import integrate, special
 
 from cosmoverse.baryons.feedback import BCEmuModel
 from cosmoverse.core.cosmology import Cosmology
 from cosmoverse.core.parameters import BaryonParameters, CosmologicalParameters
-from cosmoverse.inference.light_cone_sbi import compute_light_cone_w_theta
+from cosmoverse.datasets.camels_spectra import CAMELSHydroSpectraConnector
 from cosmoverse.inference.sbi import SBIEngine
 from cosmoverse.observations.forward_model import RedshiftSpaceDistortionModel
 from cosmoverse.validation.sbc import SimulationBasedCalibration
@@ -141,11 +142,18 @@ class MultiProbeSBIPipeline:
         self,
         theta: np.ndarray,
         add_noise: bool = False,
+        family: str = "source",
+        mismatch_strength: float = 1.0,
     ) -> np.ndarray:
         """
         Evaluates the joint noiseless (or noisy) data vector for
         theta = (Omega_m, sigma8, b1, A_AGN).
+
+        `family="target"` replaces the BCEmu suppression with the
+        IllustrisTNG-like response multiplied by a controllable mismatch.
         """
+        if family not in {"source", "target"}:
+            raise ValueError("family must be 'source' or 'target'")
         theta_arr = np.asarray(theta, dtype=np.float64)
         if theta_arr.shape != (4,):
             raise ValueError(
@@ -153,23 +161,72 @@ class MultiProbeSBIPipeline:
             )
         omega_m, sigma8, b1, a_agn = (float(value) for value in theta_arr)
 
-        w_theta = compute_light_cone_w_theta(
-            omega_m,
-            sigma8,
-            b1,
-            a_agn,
-            self.z_eff,
-            self.theta_deg,
-            self.ell,
+        cosmology = Cosmology(
+            CosmologicalParameters(omega_m=omega_m, sigma8=sigma8)
         )
-        rsd = compute_rsd_multipoles(
-            omega_m,
-            sigma8,
-            b1,
-            a_agn,
-            self.z_eff,
-            self.k_rsd,
+        chi = max(float(cosmology.comoving_distance(self.z_eff)), 100.0)
+        k_limber = (self.ell + 0.5) / chi
+        pk_m = np.asarray(
+            cosmology.linear_matter_power_spectrum(k_limber, z=self.z_eff),
+            dtype=np.float64,
+        ) * (1.0 + 0.45 * ((k_limber / 0.25) ** 0.8))
+        bcemu_suppression = BCEmuModel(
+            BaryonParameters(mode="BCEmu3", A_AGN=a_agn)
+        ).suppression_factor(k_limber, z=self.z_eff)
+        if family == "target":
+            tng_response = CAMELSHydroSpectraConnector.suite_baryonic_response(
+                k_limber,
+                suite_name="CAMELS-IllustrisTNG",
+                a_agn1=a_agn,
+                z=self.z_eff,
+            )
+            response_ratio = 1.0 + float(mismatch_strength) * (
+                tng_response / np.maximum(bcemu_suppression, 1e-6) - 1.0
+            )
+            c_ell = (
+                (b1**2) * pk_m * bcemu_suppression * response_ratio / (chi**2)
+            )
+        else:
+            c_ell = (b1**2) * pk_m * bcemu_suppression / (chi**2)
+
+        theta_rad = np.deg2rad(self.theta_deg)
+        w_theta = np.array(
+            [
+                integrate.simpson(
+                    self.ell * c_ell * special.j0(self.ell * angle)
+                    / (2.0 * np.pi),
+                    x=self.ell,
+                )
+                for angle in theta_rad
+            ]
         )
+
+        pk_rsd = np.asarray(
+            cosmology.linear_matter_power_spectrum(self.k_rsd, z=self.z_eff),
+            dtype=np.float64,
+        )
+        bcemu_rsd = BCEmuModel(
+            BaryonParameters(mode="BCEmu3", A_AGN=a_agn)
+        ).suppression_factor(self.k_rsd, z=self.z_eff)
+        if family == "target":
+            tng_rsd = CAMELSHydroSpectraConnector.suite_baryonic_response(
+                self.k_rsd,
+                suite_name="CAMELS-IllustrisTNG",
+                a_agn1=a_agn,
+                z=self.z_eff,
+            )
+            rsd_ratio = 1.0 + float(mismatch_strength) * (
+                tng_rsd / np.maximum(bcemu_rsd, 1e-6) - 1.0
+            )
+            pk_hydro = pk_rsd * bcemu_rsd * rsd_ratio
+        else:
+            pk_hydro = pk_rsd * bcemu_rsd
+        growth_rate = float(cosmology.growth_rate(self.z_eff))
+        rsd = RedshiftSpaceDistortionModel(
+            b1=b1,
+            growth_rate_f=growth_rate,
+            sigma_fog=3.5,
+        ).compute_multipoles(self.k_rsd, pk_hydro)
         p0 = np.asarray(rsd["P0"], dtype=np.float64)
         p2 = np.asarray(rsd["P2"], dtype=np.float64)
         p4 = np.asarray(rsd["P4"], dtype=np.float64)

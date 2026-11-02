@@ -67,6 +67,7 @@ class SBIEngine:
         self.flow_n_layers = int(flow_n_layers)
         self.flow_hidden_dim = int(flow_hidden_dim)
         self._is_fitted = False
+        self._infer_counter = 0
 
         self.theta_bank: Optional[np.ndarray] = None
         self.x_bank: Optional[np.ndarray] = None
@@ -203,10 +204,14 @@ class SBIEngine:
         obs_norm = (obs_arr - self._x_mean) / self._x_std
 
         if self.density_estimator == "flow":
+            sample_seed = seed
+            if sample_seed is None:
+                sample_seed = self.seed + self._infer_counter
+                self._infer_counter += 1
             theta_norm = self.flow.sample(
                 obs_norm,
                 n_samples=n_posterior_samples,
-                seed=seed,
+                seed=sample_seed,
             )
             samples = (
                 theta_norm * self._theta_std[np.newaxis, :]

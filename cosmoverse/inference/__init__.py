@@ -11,6 +11,7 @@ from cosmoverse.inference.multiprobe_sbi import MultiProbeSBIPipeline
 from cosmoverse.inference.pm_emulator_sbi import PMEmulatorSBIPipeline
 from cosmoverse.inference.posterior import PosteriorSummary
 from cosmoverse.inference.sbi import SBIEngine
+from cosmoverse.inference.transfer_sbi import FlowTransferPipeline
 
 __all__ = [
     "ConditionalRealNVP",
@@ -23,4 +24,5 @@ __all__ = [
     "LightConeSBIPipeline",
     "MultiProbeSBIPipeline",
     "PMEmulatorSBIPipeline",
+    "FlowTransferPipeline",
 ]
