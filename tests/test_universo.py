@@ -34,6 +34,7 @@ def test_universo_has_layered_webgl_shaders_and_render_loop():
     assert '<script id="quad-vertex-shader" type="x-shader/x-vertex">' in html
     assert '<script id="bright-fragment-shader" type="x-shader/x-fragment">' in html
     assert '<script id="blur-fragment-shader" type="x-shader/x-fragment">' in html
+    assert '<script id="volume-fragment-shader" type="x-shader/x-fragment">' in html
     assert '<script id="composite-fragment-shader" type="x-shader/x-fragment">' in html
     assert "gl_Position" in html
     assert "gl_PointCoord" in html
@@ -43,6 +44,8 @@ def test_universo_has_layered_webgl_shaders_and_render_loop():
     assert "gl.drawArrays" in html
     assert "createFramebuffer" in html
     assert "webglcontextlost" in html
+    assert 'getContext("webgl2"' in html
+    assert "sampler3D" in html
 
 
 def test_universo_has_layers_bloom_and_cinematic_camera():
@@ -65,11 +68,18 @@ def test_universo_has_layers_bloom_and_cinematic_camera():
     assert "pinchStartDistance" in html
     assert "prefers-reduced-motion" in html
     assert "visibilitychange" in html
-    assert "qualityAdjusted" in html
+    assert "qualityStage" in html
     assert 'id="pause"' in html
     assert 'aria-label="Pausar movimiento automático"' in html
     assert "togglePause" in html
     assert "ArrowLeft" in html
+    assert 'id="tour"' in html
+    assert 'id="tour-caption"' in html
+    assert "tourStops" in html
+    assert "startTour" in html
+    assert "uVolume" in html
+    assert "volumeTexture" in html
+    assert "uCameraPos" in html
 
 
 def test_universo_documents_the_three_scientific_layers():
