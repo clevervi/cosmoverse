@@ -216,6 +216,19 @@ uv run cosmoverse domain-adapt --family CAMELS-SIMBA --dashboard
 uv run cosmoverse doctor
 ```
 
+### Visual Progress Dashboard
+
+Open the pre-rendered **SIMBA domain-adaptation** dashboard:
+[`docs/domain_adaptation_demo.html`](docs/domain_adaptation_demo.html) (also served from GitHub Pages).
+To watch a new run live:
+
+```bash
+uv run cosmoverse domain-adapt --family CAMELS-SIMBA --dashboard
+```
+
+The page refreshes every 2 seconds and shows coverage bars, bias/ICE gates, the fine-tuning loss curve, the
+\(\Omega_m\)-\(\sigma_8\) posterior, and the active GPU backend.
+
 ---
 
 ## 6. Instructions for AI Models & Autonomous Agents
