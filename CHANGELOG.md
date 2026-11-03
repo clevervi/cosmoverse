@@ -3,6 +3,29 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.14.0] - 2026-11-02
+
+### Added
+- **Texturas planetarias reales** para Mercurio, Venus, Tierra, Marte, Júpiter, Saturno, Urano, Neptuno, la Luna y el Sol, empaquetadas como data URIs locales (sin red) (#134).
+- Rotación visible de planetas y lunas; la Tierra y la Luna muestran mapas reconocibles en el nivel Tierra.
+- Iluminación ambiental mínima para que el lado nocturno de los planetas texturizados no quede completamente negro.
+- `docs/explorador_planetas.js` + `docs/planetas/*.jpg` + `scripts/embed_planet_textures.py` para reproducir el atlas.
+- Atribución de las texturas de Solar System Scope (CC BY 4.0) en "Acerca" y en el índice.
+- `tests/test_explorador.py`: cobertura del atlas planetario, rotación y shader (10 pruebas).
+
+### Validation
+- `uv run pytest -q tests/test_explorador.py`: **10 passed**.
+- `uv run pytest -q -m "not slow"`: **129 passed**; total **136 tests** (7 lentos).
+- `ruff check .` + `scripts/check_repo.py` + `scripts/ci.ps1`: **PASS**.
+- `uv run python experiments/run_paper1_mvp_protocol.py`: las cuatro compuertas pasan.
+- Screenshots de Tierra, Sistema Solar y móvil revisados.
+
+### Notes
+- Las texturas son mapas equirectangulares de 512×256; no incluyen nubes, luces nocturnas ni estaciones.
+- La rotación y las órbitas están comprimidas para que el movimiento sea visible.
+- Sigue siendo una jerarquía de siete marcos normalizados, no un zoom continuo de precisión arbitraria.
+- Sin cambios en el código científico del paquete.
+
 ## [3.13.0] - 2026-11-02
 
 ### Added

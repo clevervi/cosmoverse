@@ -518,7 +518,7 @@
     <p>La inspiración conceptual son los mapas multi-escala de <a href="https://mapoftheuniverse.net/" target="_blank" rel="noopener">Map of the Universe</a> (SDSS) y <a href="https://universemap.net/3d-map/" target="_blank" rel="noopener">Universe Map</a>. La red cósmica combina el <b>mapa SDSS DR18</b> de 45.000 galaxias reales con el campo hidrodinámico <b>CAMELS-SIMBA EX</b> (CMD). El universo observable usa <b>2MRS</b> (43.482 galaxias en todo el cielo) y el mapa de <b>Planck</b> como horizonte; los planetas y estructuras cercanas usan datos públicos/approx. de NASA y catálogos astronómicos.</p>
     <p>Cada ficha indica su <b>fidelidad</b>: dato real, aproximado o ilustrativo. Los agujeros negros, planetas enanos, lunas y estructuras se muestran con tamaños y anillos esquemáticos; el zoom hace una transición suave entre marcos y la búsqueda puede llevarte a cualquiera de ellos.</p>
     <p>Atajos: <b>1–7</b> escalas, <b>/</b> buscar, <b>doble clic</b> enfocar, <b>TOUR</b> recorrido guiado, <b>DESCUBRIR</b> objeto sorpresa, <b>+</b>/<b>−</b> zoom, <b>DATOS</b> alterna SDSS/CAMELS, <b>F</b> pantalla completa, <b>R</b> reiniciar vista, <b>P</b> pausar rotación y órbitas. La rueda fuera de rango viaja a la escala siguiente. Enlaces directos: <b>?level=6</b>, <b>?focus=Sgr%20A%2A</b>, <b>?data=sdss</b>, <b>?tour=1</b>.</p>
-    <p style="color:rgba(184,202,217,.45);font-size:11px">Atribución de datos: SDSS DR18 (Sloan Digital Sky Survey), CAMELS Multifield Dataset (Villaescusa-Navarro et al.), 2MASS Redshift Survey (Huchra et al. 2012), Planck all-sky map (ESA/Planck, vía NASA/IPAC), NASA Planetary Fact Sheet. Visualización educativa; no usar para inferencia científica.</p>
+    <p style="color:rgba(184,202,217,.45);font-size:11px">Atribución de datos: SDSS DR18 (Sloan Digital Sky Survey), CAMELS Multifield Dataset (Villaescusa-Navarro et al.), 2MASS Redshift Survey (Huchra et al. 2012), Planck all-sky map (ESA/Planck, vía NASA/IPAC), NASA Planetary Fact Sheet, texturas planetarias de Solar System Scope (CC BY 4.0). Visualización educativa; no usar para inferencia científica.</p>
   </div>
 </div>
 
@@ -528,6 +528,7 @@
 <script src="explorador_sdss.js"></script>
 <script src="explorador_2mrs.js"></script>
 <script src="explorador_cmb.js"></script>
+<script src="explorador_planetas.js"></script>
 <script>
 (function () {
   "use strict";
@@ -707,6 +708,7 @@ uniform vec3 uCam;
 uniform float uType;
 uniform sampler2D uTexture;
 uniform float uUseTexture;
+uniform float uSpin;
 out vec4 fragColor;
 
 float hash(vec3 p) {
@@ -729,6 +731,7 @@ void main() {
   vec3 n = normalize(vNormal);
   float light = max(dot(n, normalize(vec3(.6,.7,.4))), 0.15);
   vec3 col;
+  vec2 texUv = vec2(fract(vUv.x + uSpin), vUv.y);
   if (uType > 4.5) {
     col = vec3(.006, .003, .008);
     light = 1.0;
@@ -741,24 +744,41 @@ void main() {
     }
     light = 1.0;
   } else if (uType < .5) {
-    float f = noise(n * 4.5) * .6 + noise(n * 11.0) * .4;
-    float land = smoothstep(.48, .56, f);
-    col = mix(vec3(.01,.10,.25), vec3(.12,.42,.18), land);
-    col = mix(col, vec3(.55,.50,.38), land * smoothstep(.55,.75,noise(n*18.0)) * .55);
-    col = mix(col, vec3(.82,.92,1.0), smoothstep(.72, .98, abs(n.y)));
+    if (uUseTexture > 0.5) {
+      col = texture(uTexture, texUv).rgb;
+    } else {
+      float f = noise(n * 4.5) * .6 + noise(n * 11.0) * .4;
+      float land = smoothstep(.48, .56, f);
+      col = mix(vec3(.01,.10,.25), vec3(.12,.42,.18), land);
+      col = mix(col, vec3(.55,.50,.38), land * smoothstep(.55,.75,noise(n*18.0)) * .55);
+      col = mix(col, vec3(.82,.92,1.0), smoothstep(.72, .98, abs(n.y)));
+    }
   } else if (uType < 1.5) {
-    float f = noise(n * 8.0);
-    col = mix(vec3(.16,.16,.16), vec3(.48,.46,.42), f);
+    if (uUseTexture > 0.5) {
+      col = texture(uTexture, texUv).rgb;
+    } else {
+      float f = noise(n * 8.0);
+      col = mix(vec3(.16,.16,.16), vec3(.48,.46,.42), f);
+    }
   } else if (uType < 2.5) {
-    col = mix(vec3(1.0,.58,.14), vec3(1.0,.94,.66), .45 + .55 * (1.0 - n.y*n.y));
+    if (uUseTexture > 0.5) {
+      col = texture(uTexture, texUv).rgb * 1.25;
+    } else {
+      col = mix(vec3(1.0,.58,.14), vec3(1.0,.94,.66), .45 + .55 * (1.0 - n.y*n.y));
+    }
     light = 1.0;
   } else if (uType < 3.5) {
-    float bands = sin(n.y * 25.0 + noise(n * 7.0) * 2.0) * .5 + .5;
-    col = mix(uColor, uColor2, bands * .65);
+    if (uUseTexture > 0.5) {
+      col = texture(uTexture, texUv).rgb;
+    } else {
+      float bands = sin(n.y * 25.0 + noise(n * 7.0) * 2.0) * .5 + .5;
+      col = mix(uColor, uColor2, bands * .65);
+    }
   } else {
     col = uColor;
   }
   float rim = pow(1.0 - max(dot(n, normalize(uCam - vWorld)), 0.0), 3.0);
+  if (uUseTexture > 0.5 && uType < 3.5) light = max(light, .30);
   if (uType > 4.5) {
     float disk = smoothstep(0.16, 0.0, abs(n.y));
     col += vec3(1.0, .44, .08) * disk * .95;
@@ -812,7 +832,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     cam: gl.getUniformLocation(sphereProgram, "uCam"),
     type: gl.getUniformLocation(sphereProgram, "uType"),
     texture: gl.getUniformLocation(sphereProgram, "uTexture"),
-    useTexture: gl.getUniformLocation(sphereProgram, "uUseTexture")
+    useTexture: gl.getUniformLocation(sphereProgram, "uUseTexture"),
+    spin: gl.getUniformLocation(sphereProgram, "uSpin")
   };
   var lineLoc = {
     pos: gl.getAttribLocation(lineProgram, "aPos"),
@@ -891,6 +912,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   var cmbTextureReady = false;
+  var planetTextures = {};
 
   function pointCloud() { return { pos: [], col: [], size: [], alpha: [], count: 0 }; }
   function addPoint(pc, x, y, z, color, size, alpha) {
@@ -995,8 +1017,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
 
   function buildEarth() {
     var s = { index: 0, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 4.1, theta: .55, phi: .18 } };
-    s.spheres.push({ name: "Tierra", type: 0, pos: [0,0,0], radius: 1, focusRadius: 2.3, distance: "12.742 km de diámetro", desc: "Nuestro planeta: océanos, continentes, atmósfera y el único mundo conocido con vida. Es el origen de todas las observaciones.", label: "Tierra", aliases: ["Terra", "Planeta Tierra"] });
-    s.spheres.push({ name: "Luna", type: 1, pos: [2.7, .18, .35], radius: .27, focusRadius: .9, distance: "384.400 km", desc: "El satélite natural de la Tierra. Su superficie gris está marcada por cráteres y mares basálticos.", label: "Luna", aliases: ["Moon"] });
+    s.spheres.push({ name: "Tierra", type: 0, pos: [0,0,0], radius: 1, focusRadius: 2.3, distance: "12.742 km de diámetro", desc: "Nuestro planeta: océanos, continentes, atmósfera y el único mundo conocido con vida. Es el origen de todas las observaciones.", label: "Tierra", aliases: ["Terra", "Planeta Tierra"], texture: "earth", spin: .3 });
+    s.spheres.push({ name: "Luna", type: 1, pos: [2.7, .18, .35], radius: .27, focusRadius: .9, distance: "384.400 km", desc: "El satélite natural de la Tierra. Su superficie gris está marcada por cráteres y mares basálticos.", label: "Luna", aliases: ["Moon"], texture: "moon", spin: .1 });
     s.spheres.forEach(function (o) { addObject(s, o); });
     var moonOrbit = pointCloud();
     for (var m = 0; m < 260; m++) {
@@ -1016,21 +1038,21 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     var s = { index: 1, points: [], spheres: [], lines: [], objects: [], labels: [], dynamicPlanets: [], dynamicMoons: [], camera: { target: [0,0,0], radius: 22, theta: .55, phi: .52 } };
     solarScene = s;
     var planets = [
-      { name: "Mercurio", r: .16, color: [.55,.50,.45], color2: [.28,.25,.23], orbit: 3.0, period: .241, dist: "0,39 AU", label: true },
-      { name: "Venus", r: .26, color: [.95,.75,.40], color2: [.55,.35,.14], orbit: 4.1, period: .615, dist: "0,72 AU", label: true },
-      { name: "Tierra", r: .27, color: [.16,.45,.75], color2: [.15,.55,.25], orbit: 5.2, period: 1.0, dist: "1,00 AU", label: true },
-      { name: "Marte", r: .20, color: [.75,.32,.18], color2: [.35,.15,.08], orbit: 6.4, period: 1.881, dist: "1,52 AU", label: true },
-      { name: "Júpiter", r: .58, color: [.78,.62,.42], color2: [.45,.28,.14], orbit: 8.2, period: 11.86, dist: "5,20 AU", label: true },
-      { name: "Saturno", r: .50, color: [.85,.76,.52], color2: [.50,.40,.22], orbit: 10.1, period: 29.46, dist: "9,58 AU", label: true },
-      { name: "Urano", r: .36, color: [.55,.82,.86], color2: [.22,.48,.55], orbit: 12.0, period: 84.01, dist: "19,2 AU", label: true },
-      { name: "Neptuno", r: .35, color: [.20,.35,.80], color2: [.08,.16,.45], orbit: 13.8, period: 164.8, dist: "30,1 AU", label: true },
+      { name: "Mercurio", r: .16, color: [.55,.50,.45], color2: [.28,.25,.23], orbit: 3.0, period: .241, dist: "0,39 AU", label: true, texture: "mercury" },
+      { name: "Venus", r: .26, color: [.95,.75,.40], color2: [.55,.35,.14], orbit: 4.1, period: .615, dist: "0,72 AU", label: true, texture: "venus" },
+      { name: "Tierra", r: .27, color: [.16,.45,.75], color2: [.15,.55,.25], orbit: 5.2, period: 1.0, dist: "1,00 AU", label: true, texture: "earth" },
+      { name: "Marte", r: .20, color: [.75,.32,.18], color2: [.35,.15,.08], orbit: 6.4, period: 1.881, dist: "1,52 AU", label: true, texture: "mars" },
+      { name: "Júpiter", r: .58, color: [.78,.62,.42], color2: [.45,.28,.14], orbit: 8.2, period: 11.86, dist: "5,20 AU", label: true, texture: "jupiter" },
+      { name: "Saturno", r: .50, color: [.85,.76,.52], color2: [.50,.40,.22], orbit: 10.1, period: 29.46, dist: "9,58 AU", label: true, texture: "saturn" },
+      { name: "Urano", r: .36, color: [.55,.82,.86], color2: [.22,.48,.55], orbit: 12.0, period: 84.01, dist: "19,2 AU", label: true, texture: "uranus" },
+      { name: "Neptuno", r: .35, color: [.20,.35,.80], color2: [.08,.16,.45], orbit: 13.8, period: 164.8, dist: "30,1 AU", label: true, texture: "neptune" },
       { name: "Ceres", r: .08, color: [.50,.48,.44], color2: [.24,.23,.21], orbit: 7.15, period: 4.60, dist: "2,77 AU", label: true, dwarf: true },
       { name: "Plutón", r: .10, color: [.72,.62,.52], color2: [.30,.24,.20], orbit: 15.4, period: 248.0, dist: "39,5 AU", label: true, dwarf: true },
       { name: "Haumea", r: .08, color: [.78,.82,.86], color2: [.35,.40,.48], orbit: 16.1, period: 285.0, dist: "43,1 AU", label: true, dwarf: true },
       { name: "Makemake", r: .09, color: [.70,.42,.28], color2: [.30,.16,.10], orbit: 16.6, period: 306.0, dist: "45,8 AU", label: true, dwarf: true },
       { name: "Eris", r: .11, color: [.82,.84,.90], color2: [.38,.40,.48], orbit: 17.4, period: 558.0, dist: "67,8 AU", label: true, dwarf: true }
     ];
-    s.spheres.push({ name: "Sol", type: 2, pos: [0,0,0], radius: .95, focusRadius: 2.8, distance: "1 UA de la Tierra", desc: "La estrella que sostiene el Sistema Solar. Su luz tarda unos 8 minutos en llegar a la Tierra.", label: "Sol", aliases: ["Sun", "Estrella"] });
+    s.spheres.push({ name: "Sol", type: 2, pos: [0,0,0], radius: .95, focusRadius: 2.8, distance: "1 UA de la Tierra", desc: "La estrella que sostiene el Sistema Solar. Su luz tarda unos 8 minutos en llegar a la Tierra.", label: "Sol", aliases: ["Sun", "Estrella"], texture: "sun" });
     var sunGlow = pointCloud();
     addPoint(sunGlow, 0, 0, 0, [1.0,.55,.12], 46, .35);
     addPoint(sunGlow, 0, 0, 0, [1.0,.85,.45], 18, .55);
@@ -1043,7 +1065,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       var pos = [Math.cos(angle) * p.orbit, Math.sin(angle) * p.orbit * .18, Math.sin(angle) * p.orbit];
       planetPositions[p.name] = pos;
       var kind = p.dwarf ? "Planeta enano" : "Planeta";
-      var o = { name: p.name, type: 3, pos: pos, radius: p.r, focusRadius: Math.max(.8, p.r * 3.2), distance: p.dist, desc: p.name + ": " + (p.dwarf ? "un planeta enano del Sistema Solar." : "un mundo del Sistema Solar.") + " Tamaño y distancia de la órbita están comprimidos para que sea visible; su órbita se anima con el tiempo.", color: p.color, color2: p.color2, label: p.label ? p.name : null, kind: kind, fidelity: "approx", orbit: { radius: p.orbit, period: p.period, phase: angle, yScale: .18 } };
+      var o = { name: p.name, type: 3, pos: pos, radius: p.r, focusRadius: Math.max(.8, p.r * 3.2), distance: p.dist, desc: p.name + ": " + (p.dwarf ? "un planeta enano del Sistema Solar." : "un mundo del Sistema Solar.") + " Tamaño y distancia de la órbita están comprimidos para que sea visible; su órbita se anima con el tiempo.", color: p.color, color2: p.color2, label: p.label ? p.name : null, kind: kind, fidelity: "approx", texture: p.texture || null, spin: 0, orbit: { radius: p.orbit, period: p.period, phase: angle, yScale: .18 } };
       s.spheres.push(o);
       addObject(s, o);
       s.dynamicPlanets.push(o);
@@ -1071,7 +1093,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     });
 
     var moons = [
-      { parent: "Tierra", name: "Luna", r: .065, off: [.42,.02,.10], period: 27.32, dist: "384.400 km", label: true, aliases: ["Moon"] },
+      { parent: "Tierra", name: "Luna", r: .065, off: [.42,.02,.10], period: 27.32, dist: "384.400 km", label: true, aliases: ["Moon"], texture: "moon" },
       { parent: "Marte", name: "Fobos", r: .035, off: [.30,.02,.06], period: .319, dist: "9.376 km", label: false },
       { parent: "Marte", name: "Deimos", r: .030, off: [-.34,.03,.08], period: 1.263, dist: "23.463 km", label: false },
       { parent: "Júpiter", name: "Ío", r: .055, off: [.70,.04,.12], period: 1.769, dist: "421.700 km", label: true, aliases: ["Io"] },
@@ -1099,6 +1121,8 @@ void main() { fragColor = vec4(vColor, vAlpha); }
         label: moon.label ? moon.name : null,
         aliases: moon.aliases || [],
         fidelity: "approx",
+        texture: moon.texture || null,
+        spin: 0,
         orbit: {
           parent: planetObjects[moon.parent],
           radius: Math.hypot(moon.off[0], moon.off[2]),
@@ -1648,6 +1672,26 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     ? window.COSMOVerseCMB.data
     : "explorador_cmb.jpg";
 
+  function loadPlanetTextures() {
+    if (!window.COSMOVersePlanets || !window.COSMOVersePlanets.textures) return;
+    Object.keys(window.COSMOVersePlanets.textures).forEach(function (key) {
+      var img = new Image();
+      img.onload = function () {
+        var tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        planetTextures[key] = tex;
+      };
+      img.src = window.COSMOVersePlanets.textures[key];
+    });
+  }
+
   function buildScene(index) {
     if (scenes[index]) return scenes[index];
     var s;
@@ -1838,10 +1882,12 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     gl.uniform3fv(sphereLoc.color2, obj.color2 || [.2, .3, .5]);
     gl.uniform3fv(sphereLoc.cam, camera.eye);
     gl.uniform1f(sphereLoc.type, obj.type === 0 ? 0 : obj.type === 1 ? 1 : obj.type === 2 ? 2 : obj.type === 4 ? 4 : obj.type === 5 ? 5 : 3);
+    var texture = obj.type === 4 && cmbTextureReady ? cmbTexture : (obj.texture && planetTextures[obj.texture] ? planetTextures[obj.texture] : null);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, cmbTexture);
+    gl.bindTexture(gl.TEXTURE_2D, texture || cmbTexture);
     gl.uniform1i(sphereLoc.texture, 0);
-    gl.uniform1f(sphereLoc.useTexture, obj.type === 4 && cmbTextureReady ? 1.0 : 0.0);
+    gl.uniform1f(sphereLoc.useTexture, texture ? 1.0 : 0.0);
+    gl.uniform1f(sphereLoc.spin, obj.spin || 0);
     gl.drawElements(gl.TRIANGLES, sphere.indices.length, gl.UNSIGNED_SHORT, 0);
   }
 
@@ -1968,6 +2014,12 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     var dt = Math.min(.05, Math.max(.001, (now - lastFrame) / 1000));
     lastFrame = now;
     updateSolarMotion(dt);
+    if (!paused) {
+      var active = scenes[current];
+      if (active) active.spheres.forEach(function (obj) {
+        if (obj.texture) obj.spin = (obj.spin || 0) + dt * .18;
+      });
+    }
     updateCamera(dt);
     render();
     requestAnimationFrame(frame);
@@ -2268,6 +2320,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
   // Boot.
   // ---------------------------------------------------------------------------
   resize();
+  loadPlanetTextures();
   var dataMatch = window.location.search.match(/data=(sdss|camels)/);
   if (dataMatch) dataMode = dataMatch[1];
   for (var boot = 0; boot < LEVELS.length; boot++) buildScene(boot);

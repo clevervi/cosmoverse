@@ -207,6 +207,24 @@ def test_explorer_has_animated_orbits_and_deep_catalog():
     assert "focusRadius: .42" in html
 
 
+def test_explorer_has_local_planet_textures_and_spin():
+    html = _html()
+    assert '<script src="explorador_planetas.js"></script>' in html
+    assert "COSMOVersePlanets" in html
+    assert "loadPlanetTextures" in html
+    assert "obj.spin" in html
+    assert "uSpin" in html
+    planets_js = pathlib.Path(__file__).resolve().parents[1] / "docs" / "explorador_planetas.js"
+    assert planets_js.is_file()
+    raw = planets_js.read_text(encoding="utf-8")
+    assert "data:image/jpeg;base64," in raw
+    assert "earth:" in raw
+    assert "jupiter:" in raw
+    assert len(raw) > 150 * 1024
+    for name in ("earth", "moon", "sun", "saturn"):
+        assert (planets_js.parent / "planetas" / f"{name}.jpg").is_file()
+
+
 def test_explorer_has_no_external_assets_or_dashboards():
     html = _html()
     assert not re.search(r'<script[^>]+src="https?://', html, re.IGNORECASE)
