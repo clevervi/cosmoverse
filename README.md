@@ -243,7 +243,7 @@ Abrí [`docs/explorador.html`](docs/explorador.html): **siete escalas conectadas
 - **Tour guiado** de siete paradas, alias de búsqueda (M31, M33, Sgr A*, M42…), nebulosas dentro de la Vía Láctea y **zoom con transición suave**: al salir del rango de una escala, el fotograma anterior se funde con el siguiente.
 - **Zoom libre** con rueda, pinch, `+`/`−` y doble clic; la cámara conserva la orientación y el nivel de detalle se ajusta por escala.
 - Catálogo ampliado: 8 planetas, 5 planetas enanos, 11 lunas mayores, cinturones de asteroides/Kuiper, cometas y asteroides cercanos, estrellas, exoplanetas, púlsares, cúmulos, galaxias notables y **agujeros negros** (Sgr A*, Cygnus X-1, M87*, TON 618, 3C 273, Gaia BH1, V404 Cygni).
-- **Sistema Solar animado**: las órbitas de planetas, planetas enanos y lunas se mueven con el tiempo; `P` pausa la rotación y las órbitas. Texturas planetarias locales de 512×256 y rotación de cada mundo.
+- **Sistema Solar animado**: las órbitas de planetas, planetas enanos y lunas se mueven con el tiempo; `P` pausa la rotación y las órbitas. Texturas planetarias locales de 512×256, rotación de cada mundo y, en la Tierra, nubes y luces nocturnas.
 - **Fichas con fidelidad** (`dato real`, `aproximado`, `ilustrativo`), etiquetas sin solapamiento y botón **DESCUBRIR** para saltar a un objeto al azar.
 - Deep links: `?level=6`, `?focus=Sgr%20A%2A`, `?data=sdss`, `?tour=1`.
 - Escalas normalizadas y modelo educativo: tamaños, distancias y brillos se ajustan para que todo sea visible.

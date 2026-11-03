@@ -707,7 +707,11 @@ uniform vec3 uColor2;
 uniform vec3 uCam;
 uniform float uType;
 uniform sampler2D uTexture;
+uniform sampler2D uNightTexture;
+uniform sampler2D uCloudTexture;
 uniform float uUseTexture;
+uniform float uUseNight;
+uniform float uUseClouds;
 uniform float uSpin;
 out vec4 fragColor;
 
@@ -745,7 +749,15 @@ void main() {
     light = 1.0;
   } else if (uType < .5) {
     if (uUseTexture > 0.5) {
-      col = texture(uTexture, texUv).rgb;
+      float ndl = dot(n, normalize(vec3(.6,.7,.4)));
+      vec3 dayColor = texture(uTexture, texUv).rgb;
+      vec3 nightColor = uUseNight > 0.5 ? texture(uNightTexture, texUv).rgb * 1.6 : vec3(0.0);
+      col = mix(nightColor, dayColor, smoothstep(-0.18, 0.22, ndl));
+      if (uUseClouds > 0.5) {
+        float clouds = texture(uCloudTexture, texUv).r;
+        col = mix(col, vec3(.92,.96,1.0), clouds * .58);
+      }
+      light = 1.0;
     } else {
       float f = noise(n * 4.5) * .6 + noise(n * 11.0) * .4;
       float land = smoothstep(.48, .56, f);
@@ -832,7 +844,11 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     cam: gl.getUniformLocation(sphereProgram, "uCam"),
     type: gl.getUniformLocation(sphereProgram, "uType"),
     texture: gl.getUniformLocation(sphereProgram, "uTexture"),
+    nightTexture: gl.getUniformLocation(sphereProgram, "uNightTexture"),
+    cloudTexture: gl.getUniformLocation(sphereProgram, "uCloudTexture"),
     useTexture: gl.getUniformLocation(sphereProgram, "uUseTexture"),
+    useNight: gl.getUniformLocation(sphereProgram, "uUseNight"),
+    useClouds: gl.getUniformLocation(sphereProgram, "uUseClouds"),
     spin: gl.getUniformLocation(sphereProgram, "uSpin")
   };
   var lineLoc = {
@@ -1017,7 +1033,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
 
   function buildEarth() {
     var s = { index: 0, points: [], spheres: [], lines: [], objects: [], labels: [], camera: { target: [0,0,0], radius: 4.1, theta: .55, phi: .18 } };
-    s.spheres.push({ name: "Tierra", type: 0, pos: [0,0,0], radius: 1, focusRadius: 2.3, distance: "12.742 km de diámetro", desc: "Nuestro planeta: océanos, continentes, atmósfera y el único mundo conocido con vida. Es el origen de todas las observaciones.", label: "Tierra", aliases: ["Terra", "Planeta Tierra"], texture: "earth", spin: .3 });
+    s.spheres.push({ name: "Tierra", type: 0, pos: [0,0,0], radius: 1, focusRadius: 2.3, distance: "12.742 km de diámetro", desc: "Nuestro planeta: océanos, continentes, atmósfera y el único mundo conocido con vida. Es el origen de todas las observaciones.", label: "Tierra", aliases: ["Terra", "Planeta Tierra"], texture: "earth", nightTexture: "earth_night", cloudTexture: "earth_clouds", spin: .3 });
     s.spheres.push({ name: "Luna", type: 1, pos: [2.7, .18, .35], radius: .27, focusRadius: .9, distance: "384.400 km", desc: "El satélite natural de la Tierra. Su superficie gris está marcada por cráteres y mares basálticos.", label: "Luna", aliases: ["Moon"], texture: "moon", spin: .1 });
     s.spheres.forEach(function (o) { addObject(s, o); });
     var moonOrbit = pointCloud();
@@ -1065,7 +1081,7 @@ void main() { fragColor = vec4(vColor, vAlpha); }
       var pos = [Math.cos(angle) * p.orbit, Math.sin(angle) * p.orbit * .18, Math.sin(angle) * p.orbit];
       planetPositions[p.name] = pos;
       var kind = p.dwarf ? "Planeta enano" : "Planeta";
-      var o = { name: p.name, type: 3, pos: pos, radius: p.r, focusRadius: Math.max(.8, p.r * 3.2), distance: p.dist, desc: p.name + ": " + (p.dwarf ? "un planeta enano del Sistema Solar." : "un mundo del Sistema Solar.") + " Tamaño y distancia de la órbita están comprimidos para que sea visible; su órbita se anima con el tiempo.", color: p.color, color2: p.color2, label: p.label ? p.name : null, kind: kind, fidelity: "approx", texture: p.texture || null, spin: 0, orbit: { radius: p.orbit, period: p.period, phase: angle, yScale: .18 } };
+      var o = { name: p.name, type: 3, pos: pos, radius: p.r, focusRadius: Math.max(.8, p.r * 3.2), distance: p.dist, desc: p.name + ": " + (p.dwarf ? "un planeta enano del Sistema Solar." : "un mundo del Sistema Solar.") + " Tamaño y distancia de la órbita están comprimidos para que sea visible; su órbita se anima con el tiempo.", color: p.color, color2: p.color2, label: p.label ? p.name : null, kind: kind, fidelity: "approx", texture: p.texture || null, nightTexture: p.texture === "earth" ? "earth_night" : null, cloudTexture: p.texture === "earth" ? "earth_clouds" : null, spin: 0, orbit: { radius: p.orbit, period: p.period, phase: angle, yScale: .18 } };
       s.spheres.push(o);
       addObject(s, o);
       s.dynamicPlanets.push(o);
@@ -1883,10 +1899,20 @@ void main() { fragColor = vec4(vColor, vAlpha); }
     gl.uniform3fv(sphereLoc.cam, camera.eye);
     gl.uniform1f(sphereLoc.type, obj.type === 0 ? 0 : obj.type === 1 ? 1 : obj.type === 2 ? 2 : obj.type === 4 ? 4 : obj.type === 5 ? 5 : 3);
     var texture = obj.type === 4 && cmbTextureReady ? cmbTexture : (obj.texture && planetTextures[obj.texture] ? planetTextures[obj.texture] : null);
+    var nightTexture = obj.nightTexture && planetTextures[obj.nightTexture] ? planetTextures[obj.nightTexture] : null;
+    var cloudTexture = obj.cloudTexture && planetTextures[obj.cloudTexture] ? planetTextures[obj.cloudTexture] : null;
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, nightTexture || texture || cmbTexture);
+    gl.uniform1i(sphereLoc.nightTexture, 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, cloudTexture || texture || cmbTexture);
+    gl.uniform1i(sphereLoc.cloudTexture, 2);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture || cmbTexture);
     gl.uniform1i(sphereLoc.texture, 0);
     gl.uniform1f(sphereLoc.useTexture, texture ? 1.0 : 0.0);
+    gl.uniform1f(sphereLoc.useNight, nightTexture ? 1.0 : 0.0);
+    gl.uniform1f(sphereLoc.useClouds, cloudTexture ? 1.0 : 0.0);
     gl.uniform1f(sphereLoc.spin, obj.spin || 0);
     gl.drawElements(gl.TRIANGLES, sphere.indices.length, gl.UNSIGNED_SHORT, 0);
   }

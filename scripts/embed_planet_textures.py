@@ -13,6 +13,8 @@ KEYS = (
     "mercury",
     "venus",
     "earth",
+    "earth_clouds",
+    "earth_night",
     "mars",
     "jupiter",
     "saturn",
