@@ -3,6 +3,28 @@
 Todos los cambios relevantes de **COSMOVERSE** se documentan en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.15.0] - 2026-11-02
+
+### Added
+- **Tierra viva**: capa de nubes, mapa de luces nocturnas y mezcla día/noche en el shader de la Tierra (#136).
+- Texturas locales de nubes y luces nocturnas (`docs/planetas/earth_clouds.jpg`, `earth_night.jpg`), empaquetadas como data URIs.
+- Atmósfera/limbo azul conservado y lado nocturno con ciudades visibles.
+- El atlas planetario pasa a 12 texturas; el generador `scripts/embed_planet_textures.py` las reproduce.
+- Tests actualizados para las nuevas capas y texturas (10 pruebas del explorador).
+
+### Validation
+- `uv run pytest -q tests/test_explorador.py`: **10 passed**.
+- `uv run pytest -q -m "not slow"`: **129 passed**; total **136 tests** (7 lentos).
+- `ruff check .` + `scripts/check_repo.py` + `scripts/ci.ps1`: **PASS**.
+- `uv run python experiments/run_paper1_mvp_protocol.py`: las cuatro compuertas pasan.
+- Screenshot de la Tierra con nubes revisado.
+
+### Notes
+- Las nubes y las luces nocturnas son mapas estáticos de 512×256; no simulan clima ni estaciones.
+- La rotación y las órbitas están comprimidas para que el movimiento sea visible.
+- Sigue siendo una jerarquía de siete marcos normalizados, no un zoom continuo de precisión arbitraria.
+- Sin cambios en el código científico del paquete.
+
 ## [3.14.0] - 2026-11-02
 
 ### Added

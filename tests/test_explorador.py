@@ -214,14 +214,20 @@ def test_explorer_has_local_planet_textures_and_spin():
     assert "loadPlanetTextures" in html
     assert "obj.spin" in html
     assert "uSpin" in html
+    assert "uNightTexture" in html
+    assert "uCloudTexture" in html
+    assert "uUseNight" in html
+    assert "uUseClouds" in html
     planets_js = pathlib.Path(__file__).resolve().parents[1] / "docs" / "explorador_planetas.js"
     assert planets_js.is_file()
     raw = planets_js.read_text(encoding="utf-8")
     assert "data:image/jpeg;base64," in raw
     assert "earth:" in raw
     assert "jupiter:" in raw
-    assert len(raw) > 150 * 1024
-    for name in ("earth", "moon", "sun", "saturn"):
+    assert "earth_clouds:" in raw
+    assert "earth_night:" in raw
+    assert len(raw) > 200 * 1024
+    for name in ("earth", "earth_clouds", "earth_night", "moon", "sun", "saturn"):
         assert (planets_js.parent / "planetas" / f"{name}.jpg").is_file()
 
 
